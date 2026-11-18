@@ -12,9 +12,9 @@ build must stay a fully static `dist/` with relative paths (`base: './'` in `vit
 ## Architecture
 
 ```
-src/sim/     simulation: pure logic, no DOM, unit-tested with Vitest
+src/sim/     simulation: pure logic, no DOM, unit-tested with Vitest (incl. scene.ts, the save format)
 src/render/  turns the sim's arrays into pixels (one ImageData buffer)
-src/ui/      palette, toolbar, keyboard, pointer/touch input, game state
+src/ui/      palette, toolbar, keyboard, pointer/touch input, game state, scene storage and links
 src/main.ts  creates World + Renderer + UI and runs the requestAnimationFrame loop
 ```
 
@@ -23,7 +23,13 @@ src/main.ts  creates World + Renderer + UI and runs the requestAnimationFrame lo
   `eslint.config.js`). render and ui may import from sim, through `src/sim/index.ts`.
 - `World` (`src/sim/world.ts`) holds the grid as parallel typed arrays indexed by `i = y * width + x`:
   `mat` (material id), `shade` (colour variation), `life` (lifetime), `burn` (burn timer or fuse),
-  `vel` (frames spent falling). `swap()` moves all of them together; use it for every move.
+  `vel` (frames spent falling), `temp` (temperature), `vx`/`vy` (flight velocity in 1/8 cells per
+  frame). `swap()` moves all of them together; use it for every move. If you add a per-cell array,
+  add it to `swap()`, `setCell()` and `clear()`.
+- `temp` is double-buffered and the array object is replaced every frame, so read `world.temp`
+  fresh each time instead of keeping a reference.
+- Each `step()` first spreads heat (`updateTemperature`), then updates cells. Use `transform(i, m)`
+  instead of `setCell` for phase changes (melting, boiling), so the cell keeps its temperature.
 - `step()` updates bottom-up, alternating the row direction each frame. A `stamp` array makes sure
   each cell moves at most once a frame. Anything created with `setCell`/`set` also waits until the
   next frame.
@@ -33,19 +39,21 @@ src/main.ts  creates World + Renderer + UI and runs the requestAnimationFrame lo
 
 ## Adding a material
 
-1. Append an id to `M` in `src/sim/ids.ts`. Never renumber existing ids.
+1. Append an id to `M` in `src/sim/ids.ts`. Never renumber existing ids: saved scenes and share links
+   store them.
 2. Add an entry to `defs` in `src/sim/materials.ts`: name, shortcut key, `kind`
    (`static` / `powder` / `liquid` / `gas`), density, colour, and whichever of flammability,
-   burn time, lifetime, decay, dispersion, viscosity, rise or explosive apply. The comments on
-   `MaterialDef` explain each field.
+   burn time, lifetime, decay, dispersion, viscosity, rise, explosive, conductivity, heat, above
+   (phase change), ignitesAt and wind apply. The comments on `MaterialDef` explain each field. The
+   "has sane values" test checks the ranges.
 3. Add the id to `PALETTE` at the bottom of `materials.ts` so it can be drawn.
 4. If the generic rules aren't enough (reactions, growth, condensing and so on), write one small
    function in `src/sim/behaviours.ts` with the `UpdateFn` signature and set it as `update`. Return
-   `true` if it handled the cell (so generic movement is skipped). Use `World` methods (`get`, `set`,
-   `setCell`, `isSolid`, `ignite`, `igniteNeighbours`, `explode`, `rng`) and only `import type` from
-   `world.ts`, which keeps imports free of cycles.
-5. Add a Vitest test in `src/sim/world.test.ts` for its key behaviour, and a row to the README's
-   materials table.
+   `true` if it handled the cell (so generic movement is skipped). Use `World` methods (`get`,
+   `defAt`, `set`, `setCell`, `transform`, `isSolid`, `ignite`, `igniteNeighbours`, `explode`,
+   `launch`, `temp`, `rng`) and only `import type` from `world.ts`, which keeps imports free of cycles.
+5. Add a Vitest test in `src/sim/world.test.ts` for its key behaviour, a row to the README's
+   materials table, and its shortcut to the help panel in `index.html` if it uses a new key.
 
 The palette button, swatch, keyboard shortcut and renderer colours all come from the table entry.
 
@@ -64,6 +72,17 @@ Movement is density-based: a mover can swap with an empty, liquid or gas cell th
 - Explosions are bounded: `MAX_BLAST_RADIUS` and `MAX_EXPLOSIONS_PER_FRAME` in `materials.ts`. Chains
   must go through fuses (the `burn` timer), never recursion.
 - The main loop runs at most `MAX_STEPS_PER_FRAME` sim steps per animation frame.
+- The temperature pass touches every cell every frame (about 0.5 ms at 80,000 cells). Keep it
+  branch-light, and keep its fast path for idle cells at room temperature.
+- In hot loops, use module-local copies of imported constants (see the top of `world.ts`). Under
+  Vitest's module transform, every read of an imported binding is a property lookup, which once made
+  the temperature pass look six times slower in benchmarks than it really is in the browser build.
+
+## Scene format
+
+`src/sim/scene.ts` defines the save format used by browser saves, files and share links. People will
+have saved scenes and posted links, so keep old ones loading: if you change the format, bump
+`VERSION` and keep decoding the old version. Scenes store only material ids.
 
 ## Before committing
 
