@@ -52,7 +52,7 @@ Discovery progress is kept for when you switch back.
 |---|---|
 | Left-drag, or a finger | Draw the selected material (an outline shows the brush) |
 | Right-drag, or two fingers | Erase |
-| Number and letter keys | Pick a material (the key is shown on each palette button) |
+| Number and letter keys | Pick a material (the key is shown on its palette button; a few have none) |
 | `E` | Eraser |
 | `[` and `]` | Smaller / bigger brush (or the Brush slider) |
 | `Space` | Pause / play |
@@ -89,13 +89,20 @@ debris start fresh when a scene loads.
 | Q | Glass | Static; acid can't eat it | Melt sand with lava or a charcoal fire |
 | N | Obsidian | Black volcanic glass; indestructible | Lava meets ice |
 | I | Ice | Static and cold; melts near heat, slowly freezes neighbouring water | Steam reaching the top |
+| F | Snow | Light, cold powder; melts near warmth | A cloud near ice |
+| Z | Salt | Dissolves in water (salt water) and melts ice | Boiling water leaves some behind |
+| | Iron ore | Rusty-speckled rock | Lava meets water (rarely) |
+| | Iron | Metal; conducts heat fast; rusts in water, much faster in salt water | Burning charcoal against iron ore |
+| | Rust | Crumbly orange powder | Iron in water |
 | **Liquids & gases** | | | |
-| 2 | Water | Falls and spreads sideways; puts out fire, turning it to steam; boils when hot; freezes next to ice | Starter |
+| 2 | Water | Falls and spreads sideways; puts out fire, turning it to steam; boils when hot (now and then leaving salt); freezes next to ice | Starter |
+| W | Salt water | Sinks under fresh water and never freezes; boiling it gives salt back | Salt meets water |
 | 6 | Oil | Liquid, lighter than water (floats on it); burns fast | Bury wood under sand |
 | A | Acid | Liquid; dissolves what it touches (but not stone, water, glass, brick or obsidian), using itself up | Rain on smoke (or sulfur in water) |
 | L | Lava | Slow, glowing, very hot liquid; sets things alight, boils water and sets to stone where they meet | Reward for 10 discoveries |
 | 0 | Smoke | Rises and drifts, then fades | Let a fire burn out |
 | - | Steam | Rises; condenses back to water near the top or under a ceiling, sometimes freezing | Fire meets water |
+| V | Cloud | Hangs up high, drifts in the wind, rains (or snows near ice) | Steam crowding at the top |
 | **Fire & blasts** | | | |
 | 7 | Fire | Short-lived; rises and flickers; ignites flammable neighbours | Starter |
 | K | Charcoal | Burns slowly and very hot, glowing rather than flaming; hot enough to make glass | Smother a wood fire with sand |
@@ -105,10 +112,13 @@ debris start fresh when a scene loads.
 | G | Gunpowder | Powder; burns very fast with small blasts, so a line of it works as a fuse | Charcoal with sulfur and saltpetre |
 | 8 | Napalm | Sticky, slow-flowing liquid; burns for a long time, is hard to put out, spreads fire | Oil meets gunpowder |
 | 9 | Nitroglycerin | Liquid; explodes on fire, when hot, or when it falls hard onto something | Acid meets oil |
+| | Swamp gas | Bubbles up from rotting weeds; flashes into fire | Drowned grass |
 | **Life** | | | |
 | S | Seed | Falls; on loam, or on damp sand or earth, it grows into a tree (wood trunk, branches, leaves) | Starter |
 | 5 | Grass | Weeds and grass: spreads over damp ground and loam, and into water; burns | A sandy shore |
 | 4 | Wood | Static; burns slowly; buried under sand it slowly turns to oil | Grow a tree |
+| R | Moss | Creeps over damp stone and brick | Grass touching stone |
+| Y | Algae | Floats and spreads across water | Weeds reaching the surface |
 | | **Tools** | | |
 | E | Eraser | Clears cells | Always available |
 
@@ -153,7 +163,7 @@ blast flies in an arc under gravity, then lands and behaves normally.
 
 Ideas for contributors. Each one should fit in a small pull request; `CLAUDE.md` explains how to add a
 material. For new materials, [`docs/elements.md`](docs/elements.md) has a menu of ideas grouped into
-chains (salt, clouds and rain, moss, iron and rust, thermite, fireworks...), with recipes and effort
+chains (coal, tar, cement, lightning, mushrooms, soap, thermite, fireworks...), with recipes and effort
 estimates.
 
 - [ ] **More materials**: pick one from [`docs/elements.md`](docs/elements.md). Each is a table entry, usually a `Reaction`, and a line in `RECIPES`; the tests check every one can be discovered.

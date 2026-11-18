@@ -23,9 +23,30 @@ export function updateFire(w: World, x: number, y: number, i: number): boolean {
   return false;
 }
 
-/** Steam: condenses back into water (some freezing to ice) near the top of the grid, or under a solid ceiling. */
+/** How many of the 8 neighbours of (x, y) are material a or b. */
+function countAround(w: World, x: number, y: number, a: MaterialId, b: MaterialId): number {
+  let n = 0;
+  for (let dy = -1; dy <= 1; dy++) {
+    for (let dx = -1; dx <= 1; dx++) {
+      if (dx === 0 && dy === 0) continue;
+      const t = w.get(x + dx, y + dy);
+      if (t === a || t === b) n++;
+    }
+  }
+  return n;
+}
+
+/**
+ * Steam: near the top of the grid, crowded steam gathers into clouds, and the rest condenses back
+ * into water (some freezing to ice). It also condenses under a solid ceiling.
+ */
 export function updateSteam(w: World, x: number, y: number, i: number): boolean {
   const nearTop = y < w.height * 0.1;
+  // Plenty of steam crowded together up high gathers into a cloud.
+  if (nearTop && w.rng.chance(0.02) && countAround(w, x, y, M.Steam, M.Cloud) >= 4) {
+    w.setCell(i, M.Cloud);
+    return true;
+  }
   if (nearTop && w.rng.chance(0.01)) {
     // Up in the cold, some of it freezes straight to frost.
     w.setCell(i, w.rng.chance(0.08) ? M.Ice : M.Water);
@@ -48,7 +69,8 @@ export function growGrass(w: World, x: number, y: number, _i: number): boolean {
   const ny = y + w.rng.int(-1, 1);
   const t = w.get(nx, ny);
   if (t === M.Water) {
-    w.set(nx, ny, M.Grass);
+    // Weeds that reach the surface spread across it as algae.
+    w.set(nx, ny, w.get(nx, ny - 1) === M.Empty ? M.Algae : M.Grass);
   } else if ((t === M.Sand || t === M.Earth || t === M.Loam) && w.get(nx, ny - 1) === M.Empty) {
     // Creeps over open ground: loam always, sand and earth only where it's damp.
     if (t === M.Loam || w.near(nx, ny, DAMP_RANGE, M.Water)) w.set(nx, ny, M.Grass);
@@ -202,7 +224,7 @@ export function corrode(w: World, x: number, y: number, i: number): boolean {
 
 /**
  * Lava: sets neighbours alight. Where it meets water the water boils and the lava sets to stone
- * (or, now and then, sulfur); where it meets ice it sets to obsidian.
+ * (or, now and then, sulfur or iron ore); where it meets ice it sets to obsidian.
  */
 export function updateLava(w: World, x: number, y: number, i: number): boolean {
   w.igniteNeighbours(x, y);
@@ -213,8 +235,11 @@ export function updateLava(w: World, x: number, y: number, i: number): boolean {
     if (n === M.Water) {
       if (w.rng.chance(0.5)) w.transform(w.idx(nx, ny), M.Steam);
       if (w.rng.chance(0.2)) {
-        // Mostly stone; now and then a yellow sulfur deposit (cool, so it doesn't catch at once).
-        if (w.rng.chance(0.2)) w.setCell(i, M.Sulfur);
+        // Mostly stone; now and then a yellow sulfur deposit (cool, so it doesn't catch at once),
+        // and rarely a lump of iron ore.
+        const r = w.rng.next();
+        if (r < 0.15) w.setCell(i, M.Sulfur);
+        else if (r < 0.25) w.transform(i, M.IronOre);
         else w.transform(i, M.Stone);
         return true;
       }
@@ -237,4 +262,37 @@ export function freezeWater(w: World, x: number, y: number, i: number): boolean 
   const ny = y + w.rng.int(-1, 1);
   if (w.get(nx, ny) === M.Water) w.set(nx, ny, M.Ice);
   return true;
+}
+
+/** Cloud: now and then drops rain below it, or snow if there is ice nearby. */
+export function rainCloud(w: World, x: number, y: number, _i: number): boolean {
+  if (!w.rng.chance(0.006) || w.get(x, y + 1) !== M.Empty) return false;
+  w.set(x, y + 1, w.near(x, y, 6, M.Ice) ? M.Snow : M.Water);
+  return false;
+}
+
+function isMasonry(t: number): boolean {
+  return t === M.Stone || t === M.Brick;
+}
+
+/** Moss: now and then creeps into an open cell that sits against stone or brick, if it's damp. */
+export function growMoss(w: World, x: number, y: number, _i: number): boolean {
+  if (!w.rng.chance(0.01)) return true;
+  const nx = x + w.rng.int(-1, 1);
+  const ny = y + w.rng.int(-1, 1);
+  if (w.get(nx, ny) !== M.Empty) return true;
+  if (!(isMasonry(w.get(nx - 1, ny)) || isMasonry(w.get(nx + 1, ny)) || isMasonry(w.get(nx, ny - 1)) || isMasonry(w.get(nx, ny + 1)))) {
+    return true;
+  }
+  if (w.near(nx, ny, DAMP_RANGE, M.Water)) w.set(nx, ny, M.Moss);
+  return true;
+}
+
+/** Algae: floats; now and then spreads into a neighbouring water cell at the surface. */
+export function spreadAlgae(w: World, x: number, y: number, _i: number): boolean {
+  if (!w.rng.chance(0.01)) return false;
+  const nx = x + w.rng.sign();
+  const ny = y + w.rng.int(0, 1);
+  if (w.get(nx, ny) === M.Water && w.get(nx, ny - 1) === M.Empty) w.set(nx, ny, M.Algae);
+  return false;
 }

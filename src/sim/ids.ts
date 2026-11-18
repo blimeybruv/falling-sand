@@ -34,6 +34,16 @@ export const M = {
   Obsidian: 26,
   Sulfur: 27,
   Saltpetre: 28,
+  Salt: 29,
+  SaltWater: 30,
+  Cloud: 31,
+  Snow: 32,
+  Moss: 33,
+  Algae: 34,
+  SwampGas: 35,
+  IronOre: 36,
+  Iron: 37,
+  Rust: 38,
 } as const;
 
 export type MaterialId = (typeof M)[keyof typeof M];

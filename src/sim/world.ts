@@ -418,8 +418,10 @@ export class World {
 
     // Temperature-driven changes: melting and boiling, and catching fire from heat alone.
     const t = this.temp[i];
-    if (def.above && t > def.above.temp) {
-      this.transform(i, def.above.into);
+    const above = def.above;
+    if (above && t > above.temp) {
+      const other = above.sometimes;
+      this.transform(i, other && this.rng.chance(other.chance) ? other.into : above.into);
       return;
     }
     if (def.ignitesAt !== undefined && this.burn[i] === 0 && t >= def.ignitesAt && this.ignite(i)) return;

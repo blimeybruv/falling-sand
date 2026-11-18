@@ -44,8 +44,9 @@ src/main.ts  creates World + Renderer + UI and runs the requestAnimationFrame lo
 2. Add an entry to `defs` in `src/sim/materials.ts`: name, shortcut key, `kind`
    (`static` / `powder` / `liquid` / `gas`), density, colour, and whichever of flammability,
    burn time, residue, burnTemp, flames, lifetime, decay, dispersion, viscosity, rise, explosive,
-   acidProof, conductivity, heat, above (phase change), ignitesAt and wind apply, plus its palette
-   `category` (the tab it appears under). The comments on `MaterialDef` explain each field. The
+   acidProof, conductivity, heat, above (phase change, optionally `sometimes` leaving something
+   else), ignitesAt and wind apply, plus its palette
+   `category` (the tab it appears under). `key` may be '' for no shortcut. The comments on `MaterialDef` explain each field. The
    "has sane values" test checks the ranges.
 3. Add the id to `PALETTE` at the bottom of `materials.ts` so it can be drawn. For ideas, see
    `docs/elements.md`, and tick it off there once it's built.

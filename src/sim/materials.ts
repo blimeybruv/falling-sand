@@ -13,6 +13,9 @@ import { M, type MaterialId } from './ids';
 import {
   corrode,
   formGunpowder,
+  growMoss,
+  rainCloud,
+  spreadAlgae,
   formLoam,
   fossilise,
   freezeWater,
@@ -124,8 +127,11 @@ export interface MaterialDef {
   cooling: number;
   /** Heat source or sink: holds itself towards `temp` at `rate` (0..1) per frame. Replaces `cooling`. */
   heat?: { temp: number; rate: number };
-  /** Turns into `into` (keeping its temperature) once hotter than `temp`. */
-  above?: { temp: number; into: MaterialId };
+  /**
+   * Turns into `into` (keeping its temperature) once hotter than `temp`; with `sometimes`, now and
+   * then into something else instead (boiling water leaving a grain of salt).
+   */
+  above?: { temp: number; into: MaterialId; sometimes?: { into: MaterialId; chance: number } };
   /** Flammable materials catch fire once this hot, as well as from touching fire. */
   ignitesAt?: number;
 
@@ -195,7 +201,8 @@ const defs: Record<MaterialId, Def> = {
     name: 'Water',
     category: 'fluid',
     conductivity: 0.12,
-    above: { temp: 100, into: M.Steam },
+    above: { temp: 100, into: M.Steam, sometimes: { into: M.Salt, chance: 0.01 } },
+    acidProof: true,
     wind: 0.05,
     key: '2',
     kind: 'liquid',
@@ -252,6 +259,11 @@ const defs: Record<MaterialId, Def> = {
     burnTime: [25, 50],
     extinguishChance: 0.5,
     update: growGrass,
+    reactions: [
+      { with: M.Stone, chance: 0.003, into: M.Moss },
+      // Drowned grass rots, giving off a bubble of swamp gas.
+      { with: M.Water, side: 'above', chance: 0.0008, otherInto: M.SwampGas },
+    ],
     description: 'Weeds and grass: spreads over damp sand and into water; burns.',
   },
   [M.Oil]: {
@@ -510,6 +522,8 @@ const defs: Record<MaterialId, Def> = {
     extinguishChance: 0.4,
     burnsInto: M.Ash,
     update: formGunpowder,
+    // Smelting: burning charcoal against iron ore.
+    reactions: [{ with: M.IronOre, whileBurning: true, chance: 0.03, otherInto: M.Iron }],
     description: 'Burns slowly and very hot, glowing rather than flaming. Hot enough to melt sand into glass.',
   },
   [M.Ash]: {
@@ -603,6 +617,154 @@ const defs: Record<MaterialId, Def> = {
     colourJitter: 0.06,
     description: 'White crystals that grow where leaves rot into earth. Needed for gunpowder.',
   },
+  [M.Salt]: {
+    ...base,
+    name: 'Salt',
+    key: 'z',
+    kind: 'powder',
+    density: 21,
+    colour: [238, 214, 216],
+    colourJitter: 0.1,
+    reactions: [
+      { with: M.Water, chance: 0.05, into: M.Empty, otherInto: M.SaltWater },
+      { with: M.Ice, chance: 0.05, otherInto: M.Water },
+    ],
+    description: 'Dissolves in water, making salt water, and melts ice.',
+  },
+  [M.SaltWater]: {
+    ...base,
+    name: 'Salt water',
+    key: 'w',
+    category: 'fluid',
+    kind: 'liquid',
+    density: 11,
+    colour: [40, 122, 178],
+    colourJitter: 0.06,
+    dispersion: 5,
+    conductivity: 0.12,
+    acidProof: true,
+    above: { temp: 102, into: M.Steam, sometimes: { into: M.Salt, chance: 0.5 } },
+    wind: 0.05,
+    description: 'Heavier than fresh water (sinks under it) and never freezes. Boil it to get salt back.',
+  },
+  [M.Cloud]: {
+    ...base,
+    name: 'Cloud',
+    key: 'v',
+    category: 'fluid',
+    kind: 'gas',
+    density: 0.25,
+    colour: [214, 220, 232],
+    colourJitter: 0.05,
+    lifetime: [600, 1200],
+    decay: { into: M.Water, chance: 0.5 },
+    rise: 0.05,
+    wind: 0.6,
+    update: rainCloud,
+    description: 'Hangs up high and drifts in the wind, raining (or snowing, near ice).',
+  },
+  [M.Snow]: {
+    ...base,
+    name: 'Snow',
+    key: 'f',
+    kind: 'powder',
+    density: 4,
+    colour: [240, 244, 250],
+    colourJitter: 0.04,
+    conductivity: 0.05,
+    heat: { temp: -10, rate: 0.08 },
+    above: { temp: 2, into: M.Water },
+    wind: 0.5,
+    description: 'Light, cold powder. Melts into water near anything warm.',
+  },
+  [M.Moss]: {
+    ...base,
+    name: 'Moss',
+    key: 'r',
+    category: 'life',
+    kind: 'static',
+    density: 100,
+    colour: [64, 104, 54],
+    colourEnd: [96, 134, 64],
+    colourJitter: 0.12,
+    flammability: 0.05,
+    burnTime: [20, 40],
+    ignitesAt: 220,
+    extinguishChance: 0.6,
+    residue: { into: M.Ash, chance: 0.1 },
+    update: growMoss,
+    description: 'Creeps slowly over damp stone and brick.',
+  },
+  [M.Algae]: {
+    ...base,
+    name: 'Algae',
+    key: 'y',
+    category: 'life',
+    kind: 'powder',
+    density: 9,
+    colour: [74, 150, 64],
+    colourJitter: 0.15,
+    flammability: 0.05,
+    burnTime: [10, 20],
+    residue: { into: M.Ash, chance: 0.1 },
+    update: spreadAlgae,
+    description: 'Green scum that floats and spreads across the surface of water.',
+  },
+  [M.SwampGas]: {
+    ...base,
+    name: 'Swamp gas',
+    key: '',
+    category: 'fire',
+    kind: 'gas',
+    density: 0.4,
+    colour: [128, 146, 96],
+    colourJitter: 0.1,
+    lifetime: [200, 400],
+    rise: 0.5,
+    flammability: 1,
+    burnTime: [1, 3],
+    flames: 1,
+    ignitesAt: 300,
+    wind: 0.5,
+    description: 'Bubbles up from rotting weeds. Flashes into fire at the touch of a flame.',
+  },
+  [M.IronOre]: {
+    ...base,
+    name: 'Iron ore',
+    key: '',
+    kind: 'static',
+    density: 100,
+    colour: [108, 98, 96],
+    colourEnd: [158, 92, 70],
+    colourJitter: 0.2,
+    conductivity: 0.15,
+    description: 'Rusty-speckled rock from volcanoes. Smelt it with burning charcoal to get iron.',
+  },
+  [M.Iron]: {
+    ...base,
+    name: 'Iron',
+    key: '',
+    kind: 'static',
+    density: 100,
+    colour: [150, 156, 166],
+    colourJitter: 0.06,
+    conductivity: 0.25,
+    reactions: [
+      { with: M.Water, chance: 0.0002, into: M.Rust },
+      { with: M.SaltWater, chance: 0.004, into: M.Rust },
+    ],
+    description: 'Metal. Conducts heat fast. Rusts in water, much faster in salt water.',
+  },
+  [M.Rust]: {
+    ...base,
+    name: 'Rust',
+    key: '',
+    kind: 'powder',
+    density: 22,
+    colour: [168, 82, 40],
+    colourJitter: 0.2,
+    description: 'Crumbly orange powder: what iron becomes in the wet.',
+  },
 };
 
 /** Indexed by material id. */
@@ -611,13 +773,14 @@ export const MATERIALS: readonly MaterialDef[] = Object.values(M).map((id) => ({
 /** Palette order (also the order of the number-key shortcuts). */
 export const PALETTE: readonly MaterialDef[] = [
   // ground
-  M.Sand, M.Earth, M.Mud, M.Clay, M.Loam, M.Stone, M.Brick, M.Glass, M.Obsidian, M.Ice,
+  M.Sand, M.Earth, M.Mud, M.Clay, M.Loam, M.Stone, M.Brick, M.Glass, M.Obsidian, M.Ice, M.Snow,
+  M.Salt, M.IronOre, M.Iron, M.Rust,
   // liquids and gases
-  M.Water, M.Oil, M.Acid, M.Lava, M.Smoke, M.Steam,
+  M.Water, M.SaltWater, M.Oil, M.Acid, M.Lava, M.Smoke, M.Steam, M.Cloud,
   // fire and blasts
-  M.Fire, M.Charcoal, M.Ash, M.Sulfur, M.Saltpetre, M.Gunpowder, M.Napalm, M.Nitro,
+  M.Fire, M.Charcoal, M.Ash, M.Sulfur, M.Saltpetre, M.Gunpowder, M.Napalm, M.Nitro, M.SwampGas,
   // life
-  M.Seed, M.Grass, M.Wood,
+  M.Seed, M.Grass, M.Wood, M.Moss, M.Algae,
 ].map((id) => MATERIALS[id]);
 
 /** Room temperature. Cells drift back towards it when nothing heats or cools them. */

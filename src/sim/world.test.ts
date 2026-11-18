@@ -17,9 +17,9 @@ function columnCount(world: World, x: number, m: MaterialId): number {
 }
 
 describe('material table', () => {
-  it('is indexed by id and every palette entry has a unique shortcut', () => {
+  it('is indexed by id and no two palette entries share a shortcut', () => {
     MATERIALS.forEach((def, id) => expect(def.id).toBe(id));
-    const keys = PALETTE.map((d) => d.key);
+    const keys = PALETTE.map((d) => d.key).filter((k) => k !== ''); // some have no shortcut
     expect(new Set(keys).size).toBe(keys.length);
     expect(PALETTE.some((d) => d.id === M.Empty)).toBe(false);
   });

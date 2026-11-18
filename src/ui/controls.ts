@@ -223,7 +223,7 @@ export function setupControls(state: GameState, world: World, discovery: Discove
   });
 
   // --- keyboard
-  const keyToTool = new Map<string, MaterialId>(PALETTE.map((d) => [d.key, d.id]));
+  const keyToTool = new Map<string, MaterialId>(PALETTE.filter((d) => d.key).map((d) => [d.key, d.id]));
   keyToTool.set(ERASER_KEY, M.Empty);
 
   window.addEventListener('keydown', (e) => {

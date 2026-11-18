@@ -140,6 +140,44 @@ describe('every recipe works in the simulation', () => {
       fillRect(w, 0, 25, 40, 15, M.Water);
       fillRect(w, 10, 5, 20, 4, M.Lava);
     }],
+    ['salt: boiling water leaves some behind', M.Salt, 300, (w) => {
+      fillRect(w, 0, 30, 40, 10, M.Lava);
+      fillRect(w, 0, 20, 40, 10, M.Water);
+    }],
+    ['salt water: salt meets water', M.SaltWater, 100, (w) => {
+      fillRect(w, 0, 30, 40, 10, M.Water);
+      fillRect(w, 10, 20, 20, 3, M.Salt);
+    }],
+    ['cloud: steam crowding at the top', M.Cloud, 400, (w) => fillRect(w, 0, 0, 40, 3, M.Steam)],
+    ['snow: a cloud near ice', M.Snow, 800, (w) => {
+      fillRect(w, 0, 0, 40, 2, M.Cloud);
+      fillRect(w, 0, 6, 40, 1, M.Ice);
+    }],
+    ['moss: grass touching stone', M.Moss, 600, (w) => {
+      fillRect(w, 0, 35, 40, 5, M.Stone);
+      fillRect(w, 0, 34, 40, 1, M.Grass);
+    }],
+    ['algae: weeds reach the surface', M.Algae, 1500, (w) => {
+      fillRect(w, 0, 30, 40, 10, M.Water);
+      fillRect(w, 18, 33, 4, 1, M.Grass);
+    }],
+    ['swamp gas: drowned grass rots', M.SwampGas, 800, (w) => {
+      fillRect(w, 0, 39, 40, 1, M.Grass);
+      fillRect(w, 0, 25, 40, 14, M.Water);
+    }],
+    ['iron ore: lava meets water (rarely)', M.IronOre, 600, (w) => {
+      fillRect(w, 0, 25, 40, 15, M.Water);
+      fillRect(w, 0, 5, 40, 4, M.Lava);
+    }],
+    ['iron: smelting ore with burning charcoal', M.Iron, 200, (w) => {
+      fillRect(w, 0, 37, 40, 3, M.IronOre);
+      fillRect(w, 0, 34, 40, 3, M.Charcoal);
+      for (let x = 0; x < 40; x++) w.ignite(w.idx(x, 36));
+    }],
+    ['rust: iron in salt water', M.Rust, 400, (w) => {
+      fillRect(w, 0, 37, 40, 3, M.Iron);
+      fillRect(w, 0, 30, 40, 7, M.SaltWater);
+    }],
     ['saltpetre: leaves buried in earth', M.Saltpetre, 600, (w) => {
       fillRect(w, 10, 30, 20, 4, M.Leaf);
       fillRect(w, 0, 34, 40, 6, M.Earth);
@@ -268,6 +306,87 @@ describe('every recipe works in the simulation', () => {
     fire.ignite(fire.idx(5, 9));
     run(fire, 60);
     expect(fire.temp[fire.idx(5, 9)]).toBeGreaterThan(800);
+  });
+
+  it('salt water does not freeze next to ice, and salt melts ice', () => {
+    const w = new World(20, 20, 21);
+    fillRect(w, 0, 15, 20, 5, M.Ice);
+    fillRect(w, 0, 10, 20, 5, M.SaltWater);
+    run(w, 1500);
+    expect(w.count(M.Ice)).toBe(100);
+    expect(w.count(M.SaltWater)).toBe(100);
+
+    const melt = new World(20, 20, 22);
+    fillRect(melt, 0, 15, 20, 5, M.Ice);
+    fillRect(melt, 0, 13, 20, 2, M.Salt);
+    run(melt, 400);
+    expect(melt.count(M.Ice)).toBeLessThan(100);
+  });
+
+  it('salt water sinks under fresh water', () => {
+    const w = new World(10, 20, 23);
+    fillRect(w, 0, 15, 10, 5, M.Water);
+    fillRect(w, 0, 10, 10, 5, M.SaltWater);
+    run(w, 600);
+    for (let x = 0; x < 10; x++) expect(w.get(x, 19)).toBe(M.SaltWater);
+  });
+
+  it('clouds rain', () => {
+    const w = new World(30, 30, 24);
+    fillRect(w, 0, 0, 30, 2, M.Cloud);
+    run(w, 300);
+    expect(w.created[M.Water]).toBeGreaterThan(0);
+  });
+
+  it('snow stays frozen in the open but melts near heat', () => {
+    const w = new World(20, 20, 25);
+    fillRect(w, 5, 15, 10, 5, M.Snow);
+    run(w, 1000);
+    expect(w.count(M.Snow)).toBe(50);
+    const warm = new World(20, 20, 26);
+    fillRect(warm, 0, 15, 20, 5, M.Snow);
+    fillRect(warm, 0, 12, 20, 3, M.Lava);
+    run(warm, 300);
+    expect(warm.count(M.Snow)).toBeLessThan(100);
+  });
+
+  it('moss creeps over damp stone', () => {
+    const w = new World(30, 30, 27);
+    fillRect(w, 0, 25, 30, 5, M.Stone);
+    fillRect(w, 0, 20, 5, 5, M.Water);
+    fillRect(w, 5, 20, 1, 5, M.Stone);
+    w.set(8, 24, M.Moss);
+    run(w, 2000);
+    expect(w.count(M.Moss)).toBeGreaterThan(3);
+  });
+
+  it('algae floats on water and spreads across it', () => {
+    const w = new World(30, 20, 28);
+    fillRect(w, 0, 10, 30, 10, M.Water);
+    w.set(15, 5, M.Algae);
+    run(w, 2000);
+    expect(w.count(M.Algae)).toBeGreaterThan(3);
+    for (let i = 0; i < w.size; i++) if (w.mat[i] === M.Algae) expect(Math.floor(i / 30)).toBeLessThanOrEqual(10);
+  });
+
+  it('swamp gas flashes into fire', () => {
+    const w = new World(20, 20, 29);
+    fillRect(w, 5, 5, 10, 5, M.SwampGas);
+    w.paint(10, 10, 1, M.Fire);
+    run(w, 30);
+    expect(w.count(M.SwampGas)).toBeLessThan(20);
+  });
+
+  it('iron rusts much faster in salt water than in fresh water', () => {
+    const fresh = new World(20, 20, 30);
+    fillRect(fresh, 0, 17, 20, 3, M.Iron);
+    fillRect(fresh, 0, 10, 20, 7, M.Water);
+    const salty = new World(20, 20, 30);
+    fillRect(salty, 0, 17, 20, 3, M.Iron);
+    fillRect(salty, 0, 10, 20, 7, M.SaltWater);
+    run(fresh, 600);
+    run(salty, 600);
+    expect(salty.count(M.Rust)).toBeGreaterThan(fresh.count(M.Rust) * 2);
   });
 
   it('a seed on dry sand stays a seed', () => {
