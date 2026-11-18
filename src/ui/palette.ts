@@ -1,8 +1,9 @@
 /**
  * The material palette. Built from the material table, so new materials appear automatically.
- * In Discovery mode, materials not yet discovered show as locked "?" slots that give a hint.
+ * Tabs filter it by category (the eraser is always shown). In Discovery mode, materials not yet
+ * discovered show as locked "?" slots that give a hint.
  */
-import { M, PALETTE, type Discovery, type MaterialId } from '../sim';
+import { CATEGORIES, M, MATERIALS, PALETTE, type Category, type Discovery, type MaterialId } from '../sim';
 import { swatchColour } from '../render/renderer';
 import type { GameState } from './state';
 
@@ -11,16 +12,43 @@ const ERASER_SWATCH = 'repeating-conic-gradient(#444 0 25%, #222 0 50%) 0 0 / 8p
 
 export class Palette {
   private readonly buttons = new Map<MaterialId, HTMLButtonElement>();
+  private readonly tabs = new Map<Category | 'all', HTMLButtonElement>();
+  private readonly tools: HTMLElement;
 
   constructor(
-    private readonly el: HTMLElement,
+    el: HTMLElement,
     private readonly state: GameState,
     private readonly discovery: Discovery,
     private readonly toast: (message: string) => void,
   ) {
+    const tabRow = document.createElement('div');
+    tabRow.className = 'palette-tabs';
+    tabRow.setAttribute('role', 'tablist');
+    this.tools = document.createElement('div');
+    this.tools.className = 'palette-tools';
+    el.append(tabRow, this.tools);
+    for (const [id, label] of [['all', 'All'], ...CATEGORIES] as const) {
+      const t = document.createElement('button');
+      t.type = 'button';
+      t.className = 'tab';
+      t.setAttribute('role', 'tab');
+      t.textContent = label;
+      t.addEventListener('click', () => this.showTab(id));
+      tabRow.append(t);
+      this.tabs.set(id, t);
+    }
     for (const def of PALETTE) this.add(def.id);
     this.add(M.Empty);
+    this.showTab('all');
     this.refresh();
+  }
+
+  /** Show one category (or all). The eraser is always visible. */
+  showTab(tab: Category | 'all'): void {
+    for (const [id, t] of this.tabs) t.setAttribute('aria-selected', String(id === tab));
+    for (const [id, b] of this.buttons) {
+      b.hidden = !(tab === 'all' || id === M.Empty || MATERIALS[id].category === tab);
+    }
   }
 
   isAvailable(id: MaterialId): boolean {
@@ -34,6 +62,8 @@ export class Palette {
       return false;
     }
     this.state.tool = id;
+    // Picked by keyboard from another tab: show its tab.
+    if (this.buttons.get(id)?.hidden) this.showTab(MATERIALS[id].category);
     for (const [tid, b] of this.buttons) b.setAttribute('aria-pressed', String(tid === id));
     this.buttons.get(id)?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
     return true;
@@ -76,7 +106,7 @@ export class Palette {
     b.className = 'tool';
     b.innerHTML = `<span class="swatch"></span><span class="name"></span><kbd></kbd>`;
     b.addEventListener('click', () => this.select(id));
-    this.el.append(b);
+    this.tools.append(b);
     this.buttons.set(id, b);
   }
 }

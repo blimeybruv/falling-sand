@@ -5,7 +5,7 @@
  *
  * Only `import type` from world.ts here, so there is no runtime import cycle.
  */
-import { M } from './ids';
+import { M, type MaterialId } from './ids';
 import type { World } from './world';
 
 /** Fire: put out by water (becoming steam), and sets flammable neighbours alight. */
@@ -133,25 +133,36 @@ function growCrown(w: World, cx: number, cy: number, r: number): void {
 }
 
 /**
- * Earth: with both sand and clay close by (within 2 cells), it now and then turns into loam,
- * taking one of those sand cells and one of the clay cells with it.
+ * A three-way mix: when cell i has both `a` and `b` within 2 cells, now and then all three
+ * (cell i, one `a` and one `b`) turn into `into`. Used by loam and gunpowder.
  */
-export function formLoam(w: World, x: number, y: number, i: number): boolean {
+function mixThree(w: World, x: number, y: number, i: number, a: MaterialId, b: MaterialId, into: MaterialId): boolean {
   if (!w.rng.chance(0.05)) return false;
-  let sand = -1;
-  let clay = -1;
+  let foundA = -1;
+  let foundB = -1;
   for (let dy = -2; dy <= 2; dy++) {
     for (let dx = -2; dx <= 2; dx++) {
+      if (!w.inBounds(x + dx, y + dy)) continue;
       const t = w.get(x + dx, y + dy);
-      if (t === M.Sand && w.inBounds(x + dx, y + dy)) sand = w.idx(x + dx, y + dy);
-      else if (t === M.Clay) clay = w.idx(x + dx, y + dy);
+      if (t === a) foundA = w.idx(x + dx, y + dy);
+      else if (t === b) foundB = w.idx(x + dx, y + dy);
     }
   }
-  if (sand < 0 || clay < 0) return false;
-  w.transform(i, M.Loam);
-  w.transform(sand, M.Loam);
-  w.transform(clay, M.Loam);
+  if (foundA < 0 || foundB < 0) return false;
+  w.transform(i, into);
+  w.transform(foundA, into);
+  w.transform(foundB, into);
   return true;
+}
+
+/** Earth: with sand and clay close by, now and then the three turn into loam. */
+export function formLoam(w: World, x: number, y: number, i: number): boolean {
+  return mixThree(w, x, y, i, M.Sand, M.Clay, M.Loam);
+}
+
+/** Charcoal: with sulfur and saltpetre close by, now and then the three turn into gunpowder. */
+export function formGunpowder(w: World, x: number, y: number, i: number): boolean {
+  return mixThree(w, x, y, i, M.Sulfur, M.Saltpetre, M.Gunpowder);
 }
 
 /** Wood and leaves: buried under sand (nothing open around them), they very slowly turn into oil. */
@@ -173,6 +184,7 @@ export function corrode(w: World, x: number, y: number, i: number): boolean {
   const target = w.defAt(nx, ny);
   if (
     target.indestructible ||
+    target.acidProof ||
     target.kind === 'empty' ||
     target.kind === 'gas' ||
     target.id === M.Acid ||
@@ -188,7 +200,10 @@ export function corrode(w: World, x: number, y: number, i: number): boolean {
   return false;
 }
 
-/** Lava: sets neighbours alight, and where it meets water the water boils and the lava sets to stone. */
+/**
+ * Lava: sets neighbours alight. Where it meets water the water boils and the lava sets to stone
+ * (or, now and then, sulfur); where it meets ice it sets to obsidian.
+ */
 export function updateLava(w: World, x: number, y: number, i: number): boolean {
   w.igniteNeighbours(x, y);
   for (let k = 0; k < 4; k++) {
@@ -198,11 +213,18 @@ export function updateLava(w: World, x: number, y: number, i: number): boolean {
     if (n === M.Water) {
       if (w.rng.chance(0.5)) w.transform(w.idx(nx, ny), M.Steam);
       if (w.rng.chance(0.2)) {
-        w.transform(i, M.Stone);
+        // Mostly stone; now and then a yellow sulfur deposit (cool, so it doesn't catch at once).
+        if (w.rng.chance(0.2)) w.setCell(i, M.Sulfur);
+        else w.transform(i, M.Stone);
         return true;
       }
     } else if (n === M.Ice) {
+      // Ice chills it so fast it sets as glassy obsidian.
       w.transform(w.idx(nx, ny), M.Water);
+      if (w.rng.chance(0.3)) {
+        w.transform(i, M.Obsidian);
+        return true;
+      }
     }
   }
   return false;

@@ -30,7 +30,9 @@ export const RECIPES: Readonly<Partial<Record<MaterialId, Recipe>>> = {
     hint: 'Plant something where the ground is damp, or rich.',
     recipe: 'Drop a seed on loam, or on sand near water, and it grows into a tree.',
   },
-  [M.Clay]: { hint: "Ground that's been soaking for a while.", recipe: 'Earth left in water turns to clay.' },
+  [M.Mud]: { hint: 'Wet the earth.', recipe: 'Earth meets water.' },
+  [M.Clay]: { hint: "Mud that's been sitting in water.", recipe: 'Mud left in water settles into clay.' },
+  [M.Brick]: { hint: 'Bake something sticky.', recipe: 'Fire clay in a kiln: heat it next to a big fire (charcoal is best).' },
   [M.Loam]: {
     hint: 'Three kinds of ground, mixed together.',
     recipe: 'Earth with sand and clay around it. Seeds love it.',
@@ -39,7 +41,16 @@ export const RECIPES: Readonly<Partial<Record<MaterialId, Recipe>>> = {
   [M.Ice]: { hint: "It's cold at the very top.", recipe: 'Steam that rises to the top sometimes freezes.' },
   [M.Oil]: { hint: 'Bury something that grew, and wait.', recipe: 'Wood or leaves buried under sand turn into oil.' },
   [M.Acid]: { hint: 'What falls when smoke meets rain?', recipe: 'Pour water down onto smoke.' },
-  [M.Gunpowder]: { hint: 'Smother a wood fire.', recipe: 'Pour sand onto burning wood.' },
+  [M.Charcoal]: { hint: 'Smother a wood fire.', recipe: 'Pour sand onto burning wood.' },
+  [M.Ash]: { hint: "What's left when the fire is out?", recipe: 'Burnt wood, leaves and grass sometimes leave ash.' },
+  [M.Glass]: { hint: 'Sand, but much, much hotter.', recipe: 'Melt sand with lava or a charcoal fire.' },
+  [M.Obsidian]: { hint: 'Cool lava in a hurry.', recipe: 'Lava meets ice.' },
+  [M.Sulfur]: {
+    hint: 'Volcanoes leave yellow deposits where lava meets the sea.',
+    recipe: 'Lava meets water (now and then).',
+  },
+  [M.Saltpetre]: { hint: 'Bury fallen leaves in the earth.', recipe: 'Leaves buried in earth.' },
+  [M.Gunpowder]: { hint: 'Three powders, one bang.', recipe: 'Charcoal with sulfur and saltpetre around it.' },
   [M.Nitro]: { hint: 'Something that eats meets something that burns.', recipe: 'Acid meets oil.' },
   [M.Napalm]: { hint: 'Thicken a fuel with something explosive.', recipe: 'Oil meets gunpowder.' },
 };
@@ -47,8 +58,8 @@ export const RECIPES: Readonly<Partial<Record<MaterialId, Recipe>>> = {
 /** Not made by any reaction: awarded once enough other materials have been discovered. */
 export const REWARD: { material: MaterialId; after: number; recipe: string } = {
   material: M.Lava,
-  after: 8,
-  recipe: 'A reward for discovering 8 materials.',
+  after: 10,
+  recipe: 'A reward for discovering 10 materials.',
 };
 
 export class Discovery {

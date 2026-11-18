@@ -43,12 +43,15 @@ src/main.ts  creates World + Renderer + UI and runs the requestAnimationFrame lo
    store them.
 2. Add an entry to `defs` in `src/sim/materials.ts`: name, shortcut key, `kind`
    (`static` / `powder` / `liquid` / `gas`), density, colour, and whichever of flammability,
-   burn time, lifetime, decay, dispersion, viscosity, rise, explosive, conductivity, heat, above
-   (phase change), ignitesAt and wind apply. The comments on `MaterialDef` explain each field. The
+   burn time, residue, burnTemp, flames, lifetime, decay, dispersion, viscosity, rise, explosive,
+   acidProof, conductivity, heat, above (phase change), ignitesAt and wind apply, plus its palette
+   `category` (the tab it appears under). The comments on `MaterialDef` explain each field. The
    "has sane values" test checks the ranges.
-3. Add the id to `PALETTE` at the bottom of `materials.ts` so it can be drawn.
+3. Add the id to `PALETTE` at the bottom of `materials.ts` so it can be drawn. For ideas, see
+   `docs/elements.md`, and tick it off there once it's built.
 4. For "A touches B, something turns into something", add a `Reaction` to the entry's `reactions`
-   (optionally only while burning, or only from one side). That's data, no code.
+   (optionally only while burning, or only from one side). That's data, no code. For three-way
+   mixes (earth + sand + clay → loam), see `mixThree` in `behaviours.ts`.
 5. If the generic rules aren't enough (growth, condensing and so on), write one small
    function in `src/sim/behaviours.ts` with the `UpdateFn` signature and set it as `update`. Return
    `true` if it handled the cell (so generic movement is skipped). Use `World` methods (`get`,
@@ -72,6 +75,14 @@ Movement is density-based: a mover can swap with an empty, liquid or gas cell th
 - Recipes should follow from the physics where possible, and hints should nudge rather than give the
   answer. Avoid reactions that fire constantly in ordinary sandbox play.
 - Internal-only materials (like Leaf) stay out of `PALETTE` and need no recipe.
+
+## Calibrating temperatures
+
+Heat thresholds (`above`, `ignitesAt`) must be reachable by the heat sources you expect. Measure, don't
+guess: sand under a lava pool levels off near 680°, clay beside a burning wood fire peaks near 275°,
+burning wood holds 500°, burning charcoal 950°, fire cells 700°. Add a test that the recipe works and,
+where it matters, one that an ordinary situation does *not* trigger it (see "an ordinary wood fire
+does not melt sand into glass").
 
 ## Performance budget
 

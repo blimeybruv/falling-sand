@@ -26,6 +26,14 @@ export const M = {
   Earth: 18,
   Loam: 19,
   Clay: 20,
+  Charcoal: 21,
+  Ash: 22,
+  Mud: 23,
+  Brick: 24,
+  Glass: 25,
+  Obsidian: 26,
+  Sulfur: 27,
+  Saltpetre: 28,
 } as const;
 
 export type MaterialId = (typeof M)[keyof typeof M];

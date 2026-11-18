@@ -57,7 +57,7 @@ export function setupControls(state: GameState, world: World, discovery: Discove
   const journal = new Journal(byId('journal'), byId('journal-list'), byId('journal-progress'), discovery);
   const syncDiscovery = (): void => {
     journalBtn.hidden = state.mode !== 'discovery';
-    journalBtn.textContent = `Journal ${journal.summary()}`;
+    journalBtn.innerHTML = `<span class="label">Journal </span>${journal.summary()}`;
     modeSel.value = state.mode;
     palette.refresh();
     if (journal.open) journal.refresh();

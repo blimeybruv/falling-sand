@@ -74,7 +74,7 @@ describe('every recipe works in the simulation', () => {
       fillRect(w, 0, 30, 10, 5, M.Water);
       w.set(12, 10, M.Seed);
     }],
-    ['clay: earth soaks in water', M.Clay, 600, (w) => {
+    ['clay: mud settles in water', M.Clay, 1000, (w) => {
       fillRect(w, 0, 35, 40, 5, M.Earth);
       fillRect(w, 0, 28, 40, 7, M.Water);
     }],
@@ -96,11 +96,54 @@ describe('every recipe works in the simulation', () => {
       fillRect(w, 0, 30, 40, 10, M.Smoke);
       fillRect(w, 0, 10, 40, 5, M.Water);
     }],
-    ['gunpowder: smothering a wood fire with sand', M.Gunpowder, 300, (w) => {
+    ['charcoal: smothering a wood fire with sand', M.Charcoal, 300, (w) => {
       fillRect(w, 0, 39, 40, 1, M.Stone);
       fillRect(w, 5, 36, 30, 3, M.Wood);
       for (let x = 5; x < 35; x++) w.ignite(w.idx(x, 36));
       fillRect(w, 5, 33, 30, 3, M.Sand);
+    }],
+    ['ash: wood burns out', M.Ash, 1500, (w) => {
+      fillRect(w, 10, 30, 20, 10, M.Wood);
+      for (let x = 10; x < 30; x++) w.ignite(w.idx(x, 30));
+    }],
+    ['gunpowder: charcoal, sulfur and saltpetre', M.Gunpowder, 300, (w) => {
+      fillRect(w, 0, 38, 40, 2, M.Charcoal);
+      fillRect(w, 0, 37, 40, 1, M.Sulfur);
+      fillRect(w, 0, 36, 40, 1, M.Saltpetre);
+    }],
+    ['mud: earth meets water', M.Mud, 200, (w) => {
+      fillRect(w, 0, 35, 40, 5, M.Earth);
+      fillRect(w, 0, 30, 40, 5, M.Water);
+    }],
+    ['brick: clay fired next to a wood fire', M.Brick, 900, (w) => {
+      fillRect(w, 0, 37, 40, 3, M.Stone);
+      fillRect(w, 15, 32, 10, 5, M.Clay);
+      fillRect(w, 10, 34, 5, 3, M.Wood);
+      fillRect(w, 25, 34, 5, 3, M.Wood);
+      for (let y = 34; y < 37; y++) for (const x of [10, 11, 12, 13, 14, 25, 26, 27, 28, 29]) w.ignite(w.idx(x, y));
+    }],
+    ['glass: sand melted by lava', M.Glass, 600, (w) => {
+      fillRect(w, 0, 30, 40, 10, M.Sand);
+      fillRect(w, 0, 25, 40, 5, M.Lava);
+    }],
+    ['glass: sand melted in a charcoal fire', M.Glass, 900, (w) => {
+      fillRect(w, 0, 39, 40, 1, M.Stone);
+      fillRect(w, 5, 30, 30, 9, M.Charcoal);
+      fillRect(w, 18, 33, 4, 3, M.Sand);
+      for (let y = 30; y < 39; y++) for (let x = 5; x < 35; x++) w.ignite(w.idx(x, y));
+    }],
+    ['obsidian: lava meets ice', M.Obsidian, 300, (w) => {
+      fillRect(w, 0, 35, 40, 5, M.Ice);
+      fillRect(w, 10, 25, 20, 4, M.Lava);
+    }],
+    ['sulfur: lava meets water', M.Sulfur, 400, (w) => {
+      fillRect(w, 0, 25, 40, 15, M.Water);
+      fillRect(w, 10, 5, 20, 4, M.Lava);
+    }],
+    ['saltpetre: leaves buried in earth', M.Saltpetre, 600, (w) => {
+      fillRect(w, 10, 30, 20, 4, M.Leaf);
+      fillRect(w, 0, 34, 40, 6, M.Earth);
+      fillRect(w, 0, 20, 40, 10, M.Earth);
     }],
     ['nitroglycerin: acid meets oil', M.Nitro, 300, (w) => {
       fillRect(w, 0, 30, 40, 10, M.Oil);
@@ -158,7 +201,7 @@ describe('every recipe works in the simulation', () => {
     expect(three.count(M.Loam)).toBeLessThan(three.count(M.Sand)); // a seam, not the whole pile
   });
 
-  it('clay is sticky and fires into stone', () => {
+  it('clay is sticky and fires into brick', () => {
     const w = new World(40, 40, 13);
     for (let f = 0; f < 150; f++) {
       w.set(20, 0, M.Clay);
@@ -173,7 +216,7 @@ describe('every recipe works in the simulation', () => {
     kiln.set(5, 9, M.Clay);
     kiln.temp[kiln.idx(5, 9)] = 700;
     kiln.step();
-    expect(kiln.get(5, 9)).toBe(M.Stone);
+    expect(kiln.get(5, 9)).toBe(M.Brick);
   });
 
   it('smoke rising away from a pond makes no acid; it takes rain from above', () => {
@@ -182,6 +225,49 @@ describe('every recipe works in the simulation', () => {
     fillRect(w, 0, 27, 40, 3, M.Smoke); // sitting on the surface
     run(w, 300);
     expect(w.created[M.Acid]).toBe(0);
+  });
+
+  it('an ordinary wood fire does not melt sand into glass', () => {
+    const w = new World(40, 40, 20);
+    fillRect(w, 0, 30, 40, 10, M.Sand);
+    fillRect(w, 5, 25, 30, 5, M.Wood);
+    for (let x = 5; x < 35; x++) for (let y = 25; y < 30; y++) w.ignite(w.idx(x, y));
+    run(w, 1200);
+    expect(w.created[M.Glass]).toBe(0);
+  });
+
+  it('acid cannot eat glass, brick or obsidian', () => {
+    const w = new World(30, 30, 16);
+    fillRect(w, 0, 27, 10, 3, M.Glass);
+    fillRect(w, 10, 27, 10, 3, M.Brick);
+    fillRect(w, 20, 27, 10, 3, M.Obsidian);
+    fillRect(w, 0, 20, 30, 7, M.Acid);
+    run(w, 1000);
+    expect(w.count(M.Glass) + w.count(M.Brick) + w.count(M.Obsidian)).toBe(90);
+  });
+
+  it('mud dries back to earth when heated', () => {
+    const w = new World(10, 10, 17);
+    w.set(5, 9, M.Mud);
+    w.temp[w.idx(5, 9)] = 150;
+    w.step();
+    expect(w.get(5, 9)).toBe(M.Earth);
+  });
+
+  it('ash floats on water and charcoal burns hot', () => {
+    const w = new World(20, 30, 18);
+    fillRect(w, 0, 20, 20, 10, M.Water);
+    fillRect(w, 5, 10, 10, 2, M.Ash);
+    run(w, 200);
+    let lowestAsh = 0;
+    for (let i = 0; i < w.size; i++) if (w.mat[i] === M.Ash) lowestAsh = Math.max(lowestAsh, Math.floor(i / 20));
+    expect(lowestAsh).toBeLessThanOrEqual(20);
+
+    const fire = new World(10, 10, 19);
+    fire.set(5, 9, M.Charcoal);
+    fire.ignite(fire.idx(5, 9));
+    run(fire, 60);
+    expect(fire.temp[fire.idx(5, 9)]).toBeGreaterThan(800);
   });
 
   it('a seed on dry sand stays a seed', () => {

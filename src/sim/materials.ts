@@ -12,6 +12,7 @@
 import { M, type MaterialId } from './ids';
 import {
   corrode,
+  formGunpowder,
   formLoam,
   fossilise,
   freezeWater,
@@ -33,6 +34,15 @@ import type { World } from './world';
  * - gas:    rises and drifts; usually has a lifetime.
  */
 export type Kind = 'empty' | 'static' | 'powder' | 'liquid' | 'gas';
+
+/** Palette tab a material appears under. */
+export type Category = 'ground' | 'fluid' | 'fire' | 'life';
+export const CATEGORIES: readonly (readonly [Category, string])[] = [
+  ['ground', 'Ground'],
+  ['fluid', 'Liquids & gases'],
+  ['fire', 'Fire & blasts'],
+  ['life', 'Life'],
+];
 
 /**
  * A simple two-material reaction: while a cell of this material touches `with` (4-neighbourhood),
@@ -59,6 +69,8 @@ export interface MaterialDef {
   /** Keyboard shortcut shown in the palette ('' for none). */
   key: string;
   kind: Kind;
+  /** Palette tab. */
+  category: Category;
   /**
    * Relative density. A moving particle may swap with a liquid, gas or empty cell that is
    * lighter (moving down) or heavier (moving up). Air (Empty) is 1.
@@ -78,6 +90,12 @@ export interface MaterialDef {
   extinguishChance: number;
   /** What a burning cell becomes once its burn time runs out. */
   burnsInto: MaterialId;
+  /** Sometimes leaves this instead of `burnsInto` when it burns out (e.g. ash). */
+  residue?: { into: MaterialId; chance: number };
+  /** How hot it burns (default BURNING_TEMP). */
+  burnTemp?: number;
+  /** Chance per frame a burning cell throws off a flame above it (default 0.25). */
+  flames: number;
   /** Lifetime in frames [min, max] for short-lived materials (gas, fire). Omit for permanent ones. */
   lifetime?: readonly [number, number];
   /** What a short-lived cell becomes when its lifetime ends (Empty unless set), and how often. */
@@ -90,6 +108,8 @@ export interface MaterialDef {
   rise: number;
   /** Cannot be destroyed by explosions, fire or acid. (The eraser still clears it.) */
   indestructible: boolean;
+  /** Acid can't dissolve it (but explosions can still destroy it). */
+  acidProof: boolean;
   /**
    * Explodes when it finishes burning (or, with no burnTime, after a short fuse once lit).
    * `impactSpeed`: frames of falling before a hard landing sets it off (omit: not impact-sensitive).
@@ -135,7 +155,10 @@ const base: Omit<Def, 'name' | 'key' | 'kind' | 'density' | 'colour' | 'descript
   viscosity: 0,
   rise: 0,
   indestructible: false,
+  acidProof: false,
+  flames: 0.25,
   conductivity: 0.05,
+  category: 'ground',
   cooling: 0.003,
   wind: 0,
 };
@@ -163,12 +186,14 @@ const defs: Record<MaterialId, Def> = {
     density: 20,
     colour: [219, 189, 120],
     colourJitter: 0.14,
+    above: { temp: 640, into: M.Glass },
     update: sproutGrass,
-    description: 'Falls, piles up, sinks through water.',
+    description: 'Falls, piles up, sinks through water; melts into glass when very hot.',
   },
   [M.Water]: {
     ...base,
     name: 'Water',
+    category: 'fluid',
     conductivity: 0.12,
     above: { temp: 100, into: M.Steam },
     wind: 0.05,
@@ -195,6 +220,8 @@ const defs: Record<MaterialId, Def> = {
   [M.Wood]: {
     ...base,
     name: 'Wood',
+    residue: { into: M.Ash, chance: 0.35 },
+    category: 'life',
     conductivity: 0.03,
     ignitesAt: 260,
     key: '4',
@@ -206,12 +233,15 @@ const defs: Record<MaterialId, Def> = {
     burnTime: [90, 180],
     extinguishChance: 0.5,
     update: fossilise,
-    reactions: [{ with: M.Sand, whileBurning: true, chance: 0.02, otherInto: M.Gunpowder }],
+    // Smothered with sand while burning: it chars instead of burning away.
+    reactions: [{ with: M.Sand, whileBurning: true, chance: 0.03, into: M.Charcoal }],
     description: 'Static; burns slowly. Trees grow it.',
   },
   [M.Grass]: {
     ...base,
     name: 'Grass',
+    residue: { into: M.Ash, chance: 0.2 },
+    category: 'life',
     ignitesAt: 220,
     key: '5',
     kind: 'static',
@@ -227,6 +257,7 @@ const defs: Record<MaterialId, Def> = {
   [M.Oil]: {
     ...base,
     name: 'Oil',
+    category: 'fluid',
     conductivity: 0.06,
     ignitesAt: 200,
     wind: 0.05,
@@ -245,6 +276,7 @@ const defs: Record<MaterialId, Def> = {
   [M.Fire]: {
     ...base,
     name: 'Fire',
+    category: 'fire',
     heat: { temp: 700, rate: 1 },
     wind: 0.5,
     key: '7',
@@ -262,6 +294,7 @@ const defs: Record<MaterialId, Def> = {
   [M.Napalm]: {
     ...base,
     name: 'Napalm',
+    category: 'fire',
     ignitesAt: 180,
     key: '8',
     kind: 'liquid',
@@ -279,6 +312,7 @@ const defs: Record<MaterialId, Def> = {
   [M.Nitro]: {
     ...base,
     name: 'Nitroglycerin',
+    category: 'fire',
     ignitesAt: 140,
     key: '9',
     kind: 'liquid',
@@ -293,6 +327,7 @@ const defs: Record<MaterialId, Def> = {
   [M.Smoke]: {
     ...base,
     name: 'Smoke',
+    category: 'fluid',
     wind: 0.7,
     key: '0',
     kind: 'gas',
@@ -308,6 +343,7 @@ const defs: Record<MaterialId, Def> = {
   [M.Steam]: {
     ...base,
     name: 'Steam',
+    category: 'fluid',
     wind: 0.6,
     key: '-',
     kind: 'gas',
@@ -323,6 +359,7 @@ const defs: Record<MaterialId, Def> = {
   [M.Acid]: {
     ...base,
     name: 'Acid',
+    category: 'fluid',
     key: 'a',
     kind: 'liquid',
     density: 11,
@@ -338,6 +375,7 @@ const defs: Record<MaterialId, Def> = {
   [M.Lava]: {
     ...base,
     name: 'Lava',
+    category: 'fluid',
     key: 'l',
     kind: 'liquid',
     density: 15,
@@ -369,6 +407,7 @@ const defs: Record<MaterialId, Def> = {
   [M.Gunpowder]: {
     ...base,
     name: 'Gunpowder',
+    category: 'fire',
     key: 'g',
     kind: 'powder',
     density: 18,
@@ -385,6 +424,7 @@ const defs: Record<MaterialId, Def> = {
   [M.Seed]: {
     ...base,
     name: 'Seed',
+    category: 'life',
     key: 's',
     kind: 'powder',
     density: 16,
@@ -400,6 +440,9 @@ const defs: Record<MaterialId, Def> = {
   [M.Leaf]: {
     ...base,
     name: 'Leaf',
+    reactions: [{ with: M.Earth, chance: 0.004, into: M.Saltpetre }],
+    residue: { into: M.Ash, chance: 0.2 },
+    category: 'life',
     key: '',
     kind: 'static',
     density: 100,
@@ -423,9 +466,9 @@ const defs: Record<MaterialId, Def> = {
     colour: [146, 98, 60],
     colourJitter: 0.16,
     conductivity: 0.05,
-    reactions: [{ with: M.Water, chance: 0.003, into: M.Clay }],
+    reactions: [{ with: M.Water, chance: 0.01, into: M.Mud }],
     update: formLoam,
-    description: 'Brown earth. Soaked in water it turns to clay; with sand and clay around it, loam.',
+    description: 'Brown earth. Wet, it turns to mud; with sand and clay around it, loam.',
   },
   [M.Loam]: {
     ...base,
@@ -448,8 +491,117 @@ const defs: Record<MaterialId, Def> = {
     colourJitter: 0.1,
     viscosity: 0.9,
     conductivity: 0.08,
-    above: { temp: 600, into: M.Stone },
-    description: 'Sticky: stands in steep piles. Fired by heat, it hardens into stone.',
+    above: { temp: 250, into: M.Brick },
+    description: 'Sticky: stands in steep piles. Fired in a kiln, it becomes brick.',
+  },
+  [M.Charcoal]: {
+    ...base,
+    name: 'Charcoal',
+    key: 'k',
+    category: 'fire',
+    kind: 'powder',
+    density: 14,
+    colour: [44, 40, 40],
+    colourJitter: 0.25,
+    flammability: 0.04,
+    burnTime: [300, 600],
+    burnTemp: 950,
+    flames: 0.03,
+    extinguishChance: 0.4,
+    burnsInto: M.Ash,
+    update: formGunpowder,
+    description: 'Burns slowly and very hot, glowing rather than flaming. Hot enough to melt sand into glass.',
+  },
+  [M.Ash]: {
+    ...base,
+    name: 'Ash',
+    key: 'x',
+    category: 'fire',
+    kind: 'powder',
+    density: 6,
+    colour: [176, 172, 166],
+    colourJitter: 0.12,
+    wind: 0.4,
+    description: 'Light grey powder left by fires. Floats on water and blows in the wind.',
+  },
+  [M.Mud]: {
+    ...base,
+    name: 'Mud',
+    key: 'm',
+    kind: 'liquid',
+    density: 18,
+    colour: [104, 76, 52],
+    colourJitter: 0.12,
+    dispersion: 1,
+    viscosity: 0.9,
+    above: { temp: 100, into: M.Earth },
+    reactions: [{ with: M.Water, chance: 0.003, into: M.Clay }],
+    description: 'Thick and slow. Dries back to earth when heated; left in water, it settles into clay.',
+  },
+  [M.Brick]: {
+    ...base,
+    name: 'Brick',
+    key: 'b',
+    kind: 'static',
+    density: 100,
+    colour: [168, 74, 52],
+    colourJitter: 0.14,
+    conductivity: 0.02,
+    acidProof: true,
+    description: 'Fired clay. Insulates heat, never burns, and acid cannot eat it.',
+  },
+  [M.Glass]: {
+    ...base,
+    name: 'Glass',
+    key: 'q',
+    kind: 'static',
+    density: 100,
+    colour: [196, 228, 234],
+    colourJitter: 0.04,
+    acidProof: true,
+    description: 'Melted sand. Acid cannot eat it, so it makes good containers.',
+  },
+  [M.Obsidian]: {
+    ...base,
+    name: 'Obsidian',
+    key: 'n',
+    kind: 'static',
+    density: 100,
+    colour: [34, 24, 46],
+    colourEnd: [70, 50, 96],
+    colourJitter: 0.1,
+    conductivity: 0.1,
+    indestructible: true,
+    acidProof: true,
+    description: 'Black volcanic glass from lava cooled fast by ice. Indestructible.',
+  },
+  [M.Sulfur]: {
+    ...base,
+    name: 'Sulfur',
+    key: 'u',
+    category: 'fire',
+    kind: 'powder',
+    density: 19,
+    colour: [232, 210, 62],
+    colourJitter: 0.12,
+    flammability: 0.08,
+    burnTime: [20, 40],
+    ignitesAt: 250,
+    extinguishChance: 0.9,
+    burnsInto: M.Smoke,
+    reactions: [{ with: M.Water, chance: 0.002, into: M.Acid }],
+    description: 'Yellow powder from volcanoes. Burns with choking smoke; slowly turns water acidic.',
+  },
+  [M.Saltpetre]: {
+    ...base,
+    name: 'Saltpetre',
+    key: 'p',
+    category: 'fire',
+    kind: 'powder',
+    density: 17,
+    colour: [236, 236, 228],
+    colourJitter: 0.06,
+    description: 'White crystals that grow where leaves rot into earth. Needed for gunpowder.',
   },
 };
 
@@ -458,8 +610,14 @@ export const MATERIALS: readonly MaterialDef[] = Object.values(M).map((id) => ({
 
 /** Palette order (also the order of the number-key shortcuts). */
 export const PALETTE: readonly MaterialDef[] = [
-  M.Sand, M.Earth, M.Clay, M.Loam, M.Water, M.Stone, M.Wood, M.Grass, M.Seed, M.Oil, M.Fire, M.Napalm,
-  M.Nitro, M.Smoke, M.Steam, M.Acid, M.Lava, M.Ice, M.Gunpowder,
+  // ground
+  M.Sand, M.Earth, M.Mud, M.Clay, M.Loam, M.Stone, M.Brick, M.Glass, M.Obsidian, M.Ice,
+  // liquids and gases
+  M.Water, M.Oil, M.Acid, M.Lava, M.Smoke, M.Steam,
+  // fire and blasts
+  M.Fire, M.Charcoal, M.Ash, M.Sulfur, M.Saltpetre, M.Gunpowder, M.Napalm, M.Nitro,
+  // life
+  M.Seed, M.Grass, M.Wood,
 ].map((id) => MATERIALS[id]);
 
 /** Room temperature. Cells drift back towards it when nothing heats or cools them. */

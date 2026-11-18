@@ -41,7 +41,7 @@ Every other material is a locked "?" button with a hint. You unlock a material b
 the simulation: pour fire onto water and you discover steam; plant a seed near water and the tree
 that grows gives you wood. Drawing a material with the brush, or loading a scene, never unlocks
 anything. The journal (`J`) lists what you've found and how, and lava is the reward for discovering
-eight materials. Progress is saved in your browser.
+ten materials. Progress is saved in your browser.
 
 Switch to Sandbox mode (the Mode menu, under `⋯` on a phone) to have everything at once. Your
 Discovery progress is kept for when you switch back.
@@ -66,8 +66,9 @@ Discovery progress is kept for when you switch back.
 | Clear button | Empty the whole grid |
 | `?` or `H` | Show or hide the controls panel |
 
-On a phone, the palette is a single row you can scroll sideways, and the less-used controls fold away
-behind the `⋯` button.
+The palette has tabs (All, Ground, Liquids & gases, Fire & blasts, Life). Picking a material by its
+key jumps to its tab. On a phone, the palette is a single row you can scroll sideways, and the
+less-used controls fold away behind the `⋯` button.
 
 A share link holds the whole scene in the part of the URL after `#`, so it works wherever the game is
 hosted and nothing is uploaded anywhere. Scenes keep their materials; fires, temperatures and moving
@@ -77,26 +78,39 @@ debris start fresh when a scene loads.
 
 | Key | Material | Behaviour | In Discovery mode |
 |---|---|---|---|
-| 1 | Sand | Falls, piles up, sinks through water; sprouts grass at the water's edge | Starter |
-| D | Earth | Brown powder; turns to clay in water, and to loam beside sand and clay | Starter |
-| C | Clay | Sticky powder that stands in steep piles; heat fires it into stone | Earth left in water |
+| **Ground** | | | |
+| 1 | Sand | Falls, piles up, sinks through water; sprouts grass at the water's edge; melts into glass when very hot | Starter |
+| D | Earth | Brown powder; turns to mud when wet, and to loam beside sand and clay | Starter |
+| M | Mud | Thick, slow liquid; dries back to earth when heated; settles into clay in water | Earth meets water |
+| C | Clay | Sticky powder that stands in steep piles; fired in a kiln it becomes brick | Mud left in water |
 | O | Loam | Rich soil: seeds grow tall trees on it without water, and grass spreads over it | Earth with sand and clay around it |
-| 2 | Water | Falls and spreads sideways; puts out fire, turning it to steam; boils when hot; freezes next to ice | Starter |
 | 3 | Stone | Static, indestructible; conducts heat well | Starter |
-| 4 | Wood | Static; burns slowly; buried under sand it slowly turns to oil | Grow a tree |
-| 5 | Grass | Weeds and grass: spreads over damp ground and loam, and into water; burns | A sandy shore |
-| S | Seed | Falls; on loam, or on damp sand or earth, it grows into a tree (wood trunk, branches, leaves) | Starter |
+| B | Brick | Static; insulates, never burns, and acid can't eat it | Fire clay in a kiln |
+| Q | Glass | Static; acid can't eat it | Melt sand with lava or a charcoal fire |
+| N | Obsidian | Black volcanic glass; indestructible | Lava meets ice |
+| I | Ice | Static and cold; melts near heat, slowly freezes neighbouring water | Steam reaching the top |
+| **Liquids & gases** | | | |
+| 2 | Water | Falls and spreads sideways; puts out fire, turning it to steam; boils when hot; freezes next to ice | Starter |
 | 6 | Oil | Liquid, lighter than water (floats on it); burns fast | Bury wood under sand |
-| 7 | Fire | Short-lived; rises and flickers; ignites flammable neighbours | Starter |
-| 8 | Napalm | Sticky, slow-flowing liquid; burns for a long time, is hard to put out, spreads fire | Oil meets gunpowder |
-| 9 | Nitroglycerin | Liquid; explodes on fire, when hot, or when it falls hard onto something. The blast clears a radius, throws nearby particles and leaves fire | Acid meets oil |
+| A | Acid | Liquid; dissolves what it touches (but not stone, water, glass, brick or obsidian), using itself up | Rain on smoke (or sulfur in water) |
+| L | Lava | Slow, glowing, very hot liquid; sets things alight, boils water and sets to stone where they meet | Reward for 10 discoveries |
 | 0 | Smoke | Rises and drifts, then fades | Let a fire burn out |
 | - | Steam | Rises; condenses back to water near the top or under a ceiling, sometimes freezing | Fire meets water |
-| A | Acid | Liquid; dissolves what it touches (but not stone or water), using itself up | Rain on smoke |
-| L | Lava | Slow, glowing, very hot liquid; sets things alight, boils water and sets to stone where they meet, melts ice | Reward for 8 discoveries |
-| I | Ice | Static and cold; melts near heat, slowly freezes neighbouring water | Steam reaching the top |
-| G | Gunpowder | Powder; burns very fast with small blasts, so a line of it works as a fuse | Smother a wood fire with sand |
-| E | Eraser | A tool rather than a material: clears cells | Always available |
+| **Fire & blasts** | | | |
+| 7 | Fire | Short-lived; rises and flickers; ignites flammable neighbours | Starter |
+| K | Charcoal | Burns slowly and very hot, glowing rather than flaming; hot enough to make glass | Smother a wood fire with sand |
+| X | Ash | Light powder left by fires; floats on water and blows in the wind | Wood, leaves or grass burning out |
+| U | Sulfur | Yellow powder; burns with choking smoke; slowly turns water acidic | Lava meets water (now and then) |
+| P | Saltpetre | White crystals | Leaves buried in earth |
+| G | Gunpowder | Powder; burns very fast with small blasts, so a line of it works as a fuse | Charcoal with sulfur and saltpetre |
+| 8 | Napalm | Sticky, slow-flowing liquid; burns for a long time, is hard to put out, spreads fire | Oil meets gunpowder |
+| 9 | Nitroglycerin | Liquid; explodes on fire, when hot, or when it falls hard onto something | Acid meets oil |
+| **Life** | | | |
+| S | Seed | Falls; on loam, or on damp sand or earth, it grows into a tree (wood trunk, branches, leaves) | Starter |
+| 5 | Grass | Weeds and grass: spreads over damp ground and loam, and into water; burns | A sandy shore |
+| 4 | Wood | Static; burns slowly; buried under sand it slowly turns to oil | Grow a tree |
+| | **Tools** | | |
+| E | Eraser | Clears cells | Always available |
 
 The Discovery column gives the answers away, so skip it if you'd rather find them yourself.
 
@@ -116,7 +130,7 @@ src/
   sim/       the simulation: grid, rules, material table. No DOM. Unit-tested.
     ids.ts         material ids
     materials.ts   the material table (density, flammability, heat, colours, ...)
-    behaviours.ts  small per-material functions (fire, steam, grass, trees, acid, lava, ice, loam)
+    behaviours.ts  small per-material functions (fire, steam, grass, trees, acid, lava, ice, mixing)
     discovery.ts   Discovery mode: starters, recipes and hints, the reward, progress
     world.ts       grid storage, the update loop, temperature, explosions
     scene.ts       compact scene format for saving and sharing
@@ -138,10 +152,11 @@ blast flies in an arc under gravity, then lands and behaves normally.
 ## Next steps
 
 Ideas for contributors. Each one should fit in a small pull request; `CLAUDE.md` explains how to add a
-material.
+material. For new materials, [`docs/elements.md`](docs/elements.md) has a menu of ideas grouped into
+chains (salt, clouds and rain, moss, iron and rust, thermite, fireworks...), with recipes and effort
+estimates.
 
-- [ ] **Glass**: sand that gets hot enough (next to lava) turns into glass, a static solid that acid can't dissolve. The temperature system already does the work: it's a table entry with `above`, plus a Discovery recipe.
-- [ ] **More recipes**: mud (earth + water, before it becomes clay), ash from burnt wood, salt water, brick. Each is a table entry, a `Reaction` and a line in `RECIPES`; the tests check every one can be discovered.
+- [ ] **More materials**: pick one from [`docs/elements.md`](docs/elements.md). Each is a table entry, usually a `Reaction`, and a line in `RECIPES`; the tests check every one can be discovered.
 - [ ] **Discovery goals**: small challenges once everything is unlocked ("grow a forest of 5 trees", "boil a whole pond").
 - [ ] **Metal and electricity**: a conductive solid, plus a spark that travels through connected metal and ignites or explodes what it reaches.
 - [ ] **Undo**: keep the last few scenes in memory (the scene format is small) and restore one with `Ctrl+Z`.

@@ -38,13 +38,13 @@ const CONDUCTIVITY = Float32Array.from(MATERIALS, (d) => d.conductivity);
 /** The temperature each material drifts towards, and how fast (its heat source, or ambient cooling). */
 const HOLD_TEMP = Float32Array.from(MATERIALS, (d) => (d.heat ? d.heat.temp : AMBIENT_TEMP));
 const HOLD_RATE = Float32Array.from(MATERIALS, (d) => (d.heat ? d.heat.rate : d.cooling));
+const BURN_TEMP = Float32Array.from(MATERIALS, (d) => d.burnTemp ?? BURNING_TEMP);
 const WIND = Float32Array.from(MATERIALS, (d) => d.wind);
 
 // Module-local copies of imported constants used in hot loops. (Under Vitest's module transform,
 // every read of an imported binding is a property lookup, which made benchmarks misleading.)
 const EMPTY: number = M.Empty;
 const AMBIENT = AMBIENT_TEMP;
-const BURNING = BURNING_TEMP;
 const MATS = MATERIALS;
 
 /** Flight velocities are stored in 1/SUB cells per frame, so they fit an Int8Array. */
@@ -400,7 +400,7 @@ export class World {
         }
         let v = c + (sum * 0.25 - c) * CONDUCTIVITY[m];
         if (burn[i] > 0) {
-          v += (BURNING - v) * 0.3;
+          v += (BURN_TEMP[m] - v) * 0.3;
         } else {
           v += (hold - v) * HOLD_RATE[m];
           // Snap when close, so cooling settles exactly and the fast path can take over.
@@ -496,7 +496,8 @@ export class World {
       if (ex && (ex.chance === undefined || this.rng.chance(ex.chance))) {
         this.detonate(x, y, i, def);
       } else {
-        this.setCell(i, def.burnsInto);
+        const residue = def.residue;
+        this.setCell(i, residue && this.rng.chance(residue.chance) ? residue.into : def.burnsInto);
       }
       return true;
     }
@@ -504,7 +505,7 @@ export class World {
     this.igniteNeighbours(x, y);
 
     // Flames and a little smoke above the burning cell.
-    if (this.rng.chance(0.25)) {
+    if (this.rng.chance(def.flames)) {
       const fx = x + this.rng.int(-1, 1);
       if (this.get(fx, y - 1) === M.Empty) this.set(fx, y - 1, M.Fire);
     } else if (this.rng.chance(0.02) && this.get(x, y - 1) === M.Empty) {

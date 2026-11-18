@@ -29,6 +29,7 @@ button,
 select,
 input {
   touch-action: manipulation; /* no double-tap zoom on phones */
+  -webkit-tap-highlight-color: transparent;
 }
 
 #app {
@@ -210,20 +211,54 @@ input:focus-visible {
 /* ---- palette */
 #palette {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 6px;
-  padding: 8px 12px;
+  padding: 6px 12px 8px;
   padding-bottom: max(8px, env(safe-area-inset-bottom));
   background: var(--panel);
   border-top: 1px solid var(--border);
 }
 
+.palette-tabs {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.tab {
+  flex: none;
+  min-height: 26px;
+  padding: 2px 10px;
+  font-size: 12px;
+  color: var(--muted);
+  background: transparent;
+  border-color: transparent;
+  border-radius: 999px;
+}
+
+.tab[aria-selected='true'] {
+  color: var(--text);
+  background: var(--panel-2);
+  border-color: var(--border);
+}
+
+.palette-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tool[hidden] {
+  display: none;
+}
+
 .tool {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 5px 8px;
-  min-height: 36px;
+  gap: 5px;
+  padding: 3px 7px;
+  min-height: 32px;
 }
 
 .tool[aria-pressed='true'] {
@@ -402,7 +437,9 @@ button.quiet {
     gap: 6px 10px;
     padding: 6px 8px;
   }
-  .toolbar h1 {
+  .toolbar h1,
+  .brush > span,
+  #journal-button .label {
     display: none;
   }
   .help-button {
@@ -435,10 +472,12 @@ button.quiet {
     width: 80px;
   }
   #palette {
+    padding: 4px 8px;
+    padding-bottom: max(6px, env(safe-area-inset-bottom));
+  }
+  .palette-tools {
     flex-wrap: nowrap;
     overflow-x: auto;
-    padding: 6px 8px;
-    padding-bottom: max(6px, env(safe-area-inset-bottom));
     scrollbar-width: none;
   }
   .tool {

@@ -6,6 +6,8 @@ export {
   MAX_BLAST_RADIUS,
   MAX_EXPLOSIONS_PER_FRAME,
   AMBIENT_TEMP,
+  CATEGORIES,
+  type Category,
   type MaterialDef,
   type Kind,
 } from './materials';
