@@ -171,7 +171,7 @@ estimates.
 - [ ] **Metal and electricity**: a conductive solid, plus a spark that travels through connected metal and ignites or explodes what it reaches.
 - [ ] **Undo**: keep the last few scenes in memory (the scene format is small) and restore one with `Ctrl+Z`.
 - [ ] **Example scenes**: a handful of built-in scenes (a volcano, a fuse and charges, a pond with plants) in a menu, stored as share-link text.
-- [ ] **Brush shapes and tools**: a line tool, a filled rectangle, and a "replace" brush that swaps one material for another.
+- [ ] **Line and shape tools**: drag to draw a straight line, a rectangle or a circle (outline or filled) in the selected material, with a preview outline while dragging, plus a "replace" brush that swaps one material for another. Tool buttons beside the brush slider, with keyboard shortcuts. Ideal for building containers and kilns. The sim already has `paintLine`; shapes are a few more `World` helpers plus input handling in `src/ui/input.ts`.
 - [ ] **Pan and zoom on touch**: pinch to zoom into part of the grid, and drag with two fingers to pan (two fingers erase today).
 - [ ] **Run the simulation in a Web Worker**: move `World.step()` off the main thread and pass the arrays across, so bigger grids stay smooth.
 - [ ] **Sound**: quiet, procedurally generated crackles, hisses and booms with the Web Audio API (no audio files, no external requests).
