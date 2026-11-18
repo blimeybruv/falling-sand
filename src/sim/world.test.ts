@@ -23,6 +23,31 @@ describe('material table', () => {
     expect(new Set(keys).size).toBe(keys.length);
     expect(PALETTE.some((d) => d.id === M.Empty)).toBe(false);
   });
+
+  it('has sane values for every material', () => {
+    const inRange = (p: number): boolean => p >= 0 && p <= 1;
+    for (const def of MATERIALS) {
+      const where = def.name;
+      expect(inRange(def.flammability), where).toBe(true);
+      expect(inRange(def.extinguishChance), where).toBe(true);
+      expect(inRange(def.viscosity), where).toBe(true);
+      expect(inRange(def.rise), where).toBe(true);
+      expect(def.burnTime[0], where).toBeLessThanOrEqual(def.burnTime[1]);
+      // A flammable material with no burn time would "catch" with burn = 0 and never burn.
+      if (def.flammability > 0 && !def.explosive) expect(def.burnTime[0], where).toBeGreaterThan(0);
+      if (def.lifetime) {
+        expect(def.lifetime[0], where).toBeGreaterThan(0);
+        expect(def.lifetime[0], where).toBeLessThanOrEqual(def.lifetime[1]);
+      }
+      if (def.decay) expect(inRange(def.decay.chance), where).toBe(true);
+      if (def.explosive) {
+        expect(def.explosive.radius, where).toBeGreaterThan(0);
+        expect(def.explosive.impactSpeed, where).toBeGreaterThan(0);
+        expect(def.flammability, where).toBeGreaterThan(0);
+      }
+      if (def.kind === 'liquid') expect(def.dispersion, where).toBeGreaterThan(0);
+    }
+  });
 });
 
 describe('movement', () => {
@@ -115,6 +140,21 @@ describe('fire', () => {
     w.ignite(w.idx(20, 30));
     run(w, 4000);
     expect(w.count(M.Wood)).toBe(0);
+  });
+
+  it('a cell that just caught fire does not spread it until the next frame', () => {
+    // A box packed with oil (very flammable, and nowhere to flow). Fire must spread at most one
+    // ring per frame; without the stamp, cells above the source would ignite their own neighbours
+    // in the same frame because the scan reaches them later.
+    for (let seed = 1; seed <= 20; seed++) {
+      const w = new World(21, 21, seed);
+      fillRect(w, 0, 0, 21, 21, M.Oil);
+      w.ignite(w.idx(10, 10));
+      w.step();
+      for (let y = 0; y < 21; y++)
+        for (let x = 0; x < 21; x++)
+          if (w.burn[w.idx(x, y)] > 0) expect(Math.max(Math.abs(x - 10), Math.abs(y - 10))).toBeLessThanOrEqual(1);
+    }
   });
 
   it('water puts fire out, turning it to steam', () => {

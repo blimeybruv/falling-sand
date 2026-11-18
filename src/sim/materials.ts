@@ -61,7 +61,7 @@ export interface MaterialDef {
   viscosity: number;
   /** Gases: chance per frame of trying to rise straight up (otherwise it drifts). */
   rise: number;
-  /** Cannot be destroyed by explosions or the brush's material swap. */
+  /** Cannot be destroyed by explosions or fire. (The eraser still clears it.) */
   indestructible: boolean;
   /** Explodes instead of burning. `impactSpeed`: falling frames before a hard landing detonates it. */
   explosive?: { radius: number; impactSpeed: number };

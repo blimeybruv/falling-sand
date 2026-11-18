@@ -126,10 +126,12 @@ export class World {
   }
 
   clear(): void {
-    this.mat.fill(0);
+    this.mat.fill(M.Empty);
+    this.shade.fill(0);
     this.life.fill(0);
     this.burn.fill(0);
     this.vel.fill(0);
+    this.stamp.fill(0);
   }
 
   /** Number of cells holding material m. */
@@ -183,12 +185,18 @@ export class World {
 
   // ---------------------------------------------------------------- fire
 
-  /** Set cell i alight if it is flammable and not already burning. Returns true if it caught. */
+  /**
+   * Set cell i alight if it is flammable and not already burning. Returns true if it caught.
+   * The cell doesn't act again until next frame.
+   */
   ignite(i: number): boolean {
     const def = MATERIALS[this.mat[i]];
     if (def.flammability <= 0 || this.burn[i] > 0) return false;
     // Explosives get a short fuse instead of a burn time.
     this.burn[i] = def.explosive ? this.rng.int(1, 4) : this.rng.int(def.burnTime[0], def.burnTime[1]);
+    // Like a new particle, a cell that has just caught fire waits until next frame to act,
+    // so fire spreads the same way whichever direction the scan runs.
+    this.stamp[i] = this.frame;
     return true;
   }
 
@@ -248,7 +256,10 @@ export class World {
       const i = y * this.width + x;
       const def = MATERIALS[this.mat[i]];
       if (def.explosive) {
-        if (this.burn[i] === 0) this.burn[i] = this.rng.int(2, 6);
+        if (this.burn[i] === 0) {
+          this.burn[i] = this.rng.int(2, 6);
+          this.stamp[i] = this.frame;
+        }
         continue;
       }
       if (def.flammability > 0 && this.rng.chance(0.5)) this.ignite(i);
@@ -480,8 +491,8 @@ export class World {
       if (this.tryRise(i, x + dir, y - 1, def)) return;
       if (this.tryRise(i, x - dir, y - 1, def)) return;
     }
-    // Drift sideways into open air.
-    const nx = x + dir;
-    if (this.get(nx, y) === M.Empty) this.swap(i, this.idx(nx, y));
+    // Drift sideways into open air, trying the other side if the first is blocked.
+    if (this.get(x + dir, y) === M.Empty) this.swap(i, this.idx(x + dir, y));
+    else if (this.get(x - dir, y) === M.Empty) this.swap(i, this.idx(x - dir, y));
   }
 }
