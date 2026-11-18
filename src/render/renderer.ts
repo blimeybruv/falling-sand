@@ -3,7 +3,14 @@
  * The canvas is exactly one pixel per cell; CSS scales it up with `image-rendering: pixelated`.
  * Reads from the sim, never writes to it.
  */
-import { M, MATERIALS, SHADES, type World } from '../sim';
+import { AMBIENT_TEMP, M, MATERIALS, SHADES, type World } from '../sim';
+
+export interface RenderOptions {
+  /** Colour cells by temperature instead of material. */
+  heatView: boolean;
+  /** Brush outline to draw, in grid cells, or null for none. */
+  cursor: { x: number; y: number; radius: number } | null;
+}
 
 /** Gases fade out over their last FADE_FRAMES frames of life. */
 const FADE_FRAMES = 40;
@@ -29,6 +36,12 @@ export class Renderer {
   private readonly lutG: Uint8Array;
   private readonly lutB: Uint8Array;
   private readonly isGas: Uint8Array;
+  private readonly isGlow: Uint8Array;
+  /** Material colours at 30% brightness, the backdrop for the heat view. */
+  private readonly dimLut: Uint32Array;
+  /** 256 colours from cold (blue) through ambient (dark) to hot (red, yellow, white). */
+  private readonly heatLut: Uint32Array;
+  private frame = 0;
   private readonly background: readonly [number, number, number];
   private seed = 0x9e3779b9;
 
@@ -63,12 +76,35 @@ export class Renderer {
       }
     }
     this.isGas = Uint8Array.from(MATERIALS, (d) => (d.kind === 'gas' ? 1 : 0));
+    this.isGlow = Uint8Array.from(MATERIALS, (d) => (d.glow ? 1 : 0));
+    this.dimLut = this.lut.map((_, j) => pack(this.lutR[j] * 0.3, this.lutG[j] * 0.3, this.lutB[j] * 0.3));
+    this.heatLut = new Uint32Array(256);
+    for (let k = 0; k < 256; k++) {
+      if (k < 64) {
+        // cold: bright blue at k = 0 fading to dark at k = 63 (ambient)
+        const a = 1 - k / 63;
+        this.heatLut[k] = pack(20 + 60 * a, 40 + 120 * a, 60 + 195 * a);
+      } else {
+        // hot: dark red -> red -> orange -> yellow -> white
+        const a = (k - 64) / 191;
+        this.heatLut[k] = pack(60 + 195 * Math.min(1, a * 2), 20 + 235 * Math.max(0, Math.min(1, a * 2 - 0.5)), 20 + 235 * Math.max(0, a * 2 - 1.2));
+      }
+    }
     this.background = MATERIALS[M.Empty].colour;
   }
 
-  render(world: World): void {
+  render(world: World, options: RenderOptions = { heatView: false, cursor: null }): void {
+    this.frame++;
+    if (options.heatView) this.renderHeat(world);
+    else this.renderMaterials(world);
+    if (options.cursor) this.drawCursor(world, options.cursor);
+    this.ctx.putImageData(this.image, 0, 0);
+  }
+
+  private renderMaterials(world: World): void {
     const { mat, shade, life, burn, size } = world;
-    const { pixels, lut, lutR, lutG, lutB, isGas } = this;
+    const { pixels, lut, lutR, lutG, lutB, isGas, isGlow } = this;
+    const glowShift = this.frame >> 3;
     const [bgR, bgG, bgB] = this.background;
     const bg = pack(bgR, bgG, bgB);
     const fireBase = M.Fire * SHADES;
@@ -89,6 +125,8 @@ export class Renderer {
         pixels[i] = lut[fireBase + ((seed >>> 4) & (SHADES - 1))];
       } else if (m === M.Fire) {
         pixels[i] = lut[fireBase + ((seed >>> 4) & (SHADES - 1))];
+      } else if (isGlow[m]) {
+        pixels[i] = lut[m * SHADES + ((shade[i] + glowShift) & (SHADES - 1))];
       } else if (isGas[m] && life[i] < FADE_FRAMES) {
         const a = life[i] / FADE_FRAMES;
         const j = m * SHADES + shade[i];
@@ -102,7 +140,43 @@ export class Renderer {
       }
     }
     this.seed = seed;
-    this.ctx.putImageData(this.image, 0, 0);
+  }
+
+  private renderHeat(world: World): void {
+    const { mat, shade, temp, size } = world;
+    const { pixels, dimLut, heatLut } = this;
+    for (let i = 0; i < size; i++) {
+      const t = temp[i];
+      const d = t - AMBIENT_TEMP;
+      if (d > -1 && d < 1) {
+        pixels[i] = dimLut[mat[i] * SHADES + shade[i]];
+      } else if (d < 0) {
+        pixels[i] = heatLut[Math.max(0, Math.round(63 + d * (63 / 50)))];
+      } else {
+        pixels[i] = heatLut[Math.min(255, 64 + Math.round(Math.sqrt(d / 1200) * 191))];
+      }
+    }
+  }
+
+  /** Lighten the cells on the brush's edge, so you can see where you're about to draw. */
+  private drawCursor(world: World, c: { x: number; y: number; radius: number }): void {
+    const data = this.image.data;
+    const r = Math.max(0, Math.floor(c.radius));
+    const inner = r * r - r;
+    const outer = r * r + r;
+    for (let dy = -r; dy <= r; dy++) {
+      const y = c.y + dy;
+      if (y < 0 || y >= world.height) continue;
+      for (let dx = -r; dx <= r; dx++) {
+        const x = c.x + dx;
+        const d2 = dx * dx + dy * dy;
+        if (x < 0 || x >= world.width || d2 > outer || (r > 0 && d2 <= inner)) continue;
+        const p = (y * world.width + x) * 4;
+        data[p] = data[p] * 0.45 + 140;
+        data[p + 1] = data[p + 1] * 0.45 + 140;
+        data[p + 2] = data[p + 2] * 0.45 + 140;
+      }
+    }
   }
 }
 

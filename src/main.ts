@@ -2,7 +2,8 @@
 import { World } from './sim';
 import { Renderer } from './render/renderer';
 import { PointerInput } from './ui/input';
-import { setupControls } from './ui/controls';
+import { setupControls, toast } from './ui/controls';
+import { loadFromHash } from './ui/scenes';
 import { createState } from './ui/state';
 
 /** The grid is sized to the window at load, up to roughly this many cells (the performance budget). */
@@ -31,6 +32,10 @@ const renderer = new Renderer(canvas, world);
 const state = createState();
 const input = new PointerInput(canvas, world, state);
 setupControls(state, world);
+loadFromHash(world).then(
+  (loaded) => loaded && toast('Loaded shared scene'),
+  (err: unknown) => toast(`Couldn't load the shared scene: ${err instanceof Error ? err.message : err}`),
+);
 
 /** Scale the canvas to fit the stage, keeping cells square. */
 function fit(): void {
@@ -38,7 +43,8 @@ function fit(): void {
   canvas.style.width = `${Math.floor(cols * scale)}px`;
   canvas.style.height = `${Math.floor(rows * scale)}px`;
 }
-window.addEventListener('resize', fit);
+// The stage changes size with the window and when the mobile toolbar folds open.
+new ResizeObserver(fit).observe(stage);
 fit();
 
 let last = performance.now();
@@ -66,7 +72,8 @@ function frame(now: number): void {
     for (; state.pendingSteps > 0; state.pendingSteps--) world.step();
   }
 
-  renderer.render(world);
+  const c = input.cursor();
+  renderer.render(world, { heatView: state.heatView, cursor: c && { x: c.x, y: c.y, radius: state.brush } });
 
   frames++;
   if (now - fpsTime >= 500) {

@@ -12,28 +12,46 @@
   </head>
   <body>
     <div id="app">
-      <header class="toolbar">
+      <header id="toolbar" class="toolbar">
         <h1>Falling Sand</h1>
-        <div class="group">
-          <button id="play" type="button" title="Pause / play (Space)">❚❚ Pause</button>
-          <button id="step" type="button" title="Step one frame while paused (.)" disabled>Step</button>
-          <button id="clear" type="button" title="Clear everything">Clear</button>
-        </div>
-        <label class="group" title="Simulation speed">
-          <span>Speed</span>
-          <select id="speed" aria-label="Simulation speed"></select>
-        </label>
+        <button id="play" type="button" title="Pause / play (Space)">❚❚ Pause</button>
         <label class="group brush" title="Brush size ([ and ])">
           <span>Brush</span>
           <input id="brush" type="range" step="1" aria-label="Brush size" />
           <output id="brush-value"></output>
         </label>
+        <div class="secondary">
+          <button id="step" type="button" title="Step one frame while paused (.)" disabled>Step</button>
+          <button id="clear" type="button" title="Clear everything">Clear</button>
+          <label class="group" title="Simulation speed">
+            <span>Speed</span>
+            <select id="speed" aria-label="Simulation speed"></select>
+          </label>
+          <label class="group" title="Wind pushes smoke, fire, steam and falling particles">
+            <span>Wind</span>
+            <select id="wind" aria-label="Wind"></select>
+          </label>
+          <button id="heat" type="button" aria-pressed="false" title="Show temperatures (T)">Heat view</button>
+          <div class="menu-wrap">
+            <button id="scene-button" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="scene-menu">Scene ▾</button>
+            <div id="scene-menu" class="menu" hidden>
+              <button type="button" data-action="save">Save in this browser</button>
+              <button type="button" data-action="load">Load saved scene</button>
+              <button type="button" data-action="download">Download file</button>
+              <button type="button" data-action="open">Open file…</button>
+              <button type="button" data-action="share">Copy share link</button>
+            </div>
+            <input id="scene-file" type="file" accept=".txt,text/plain" hidden />
+          </div>
+        </div>
+        <button id="more" class="more" type="button" aria-expanded="false" title="More controls">⋯</button>
         <button id="help-button" class="help-button" type="button" aria-expanded="false" aria-controls="help" title="Controls (?)">?</button>
       </header>
 
       <main id="stage">
         <canvas id="canvas" aria-label="Sandbox: draw materials here"></canvas>
         <div id="fps" aria-hidden="true"></div>
+        <div id="toast" class="toast" role="status" hidden></div>
       </main>
 
       <nav id="palette" aria-label="Materials"></nav>
@@ -45,16 +63,18 @@
         <table>
           <tbody>
             <tr><th>Left-drag / finger</th><td>Draw the selected material</td></tr>
-            <tr><th>Right-drag</th><td>Erase</td></tr>
-            <tr><th>1–9, 0, -</th><td>Pick a material (shown on each button)</td></tr>
+            <tr><th>Right-drag / two fingers</th><td>Erase</td></tr>
+            <tr><th>1–9, 0, -, A, L, I, G</th><td>Pick a material (shown on each button)</td></tr>
             <tr><th>E</th><td>Eraser</td></tr>
             <tr><th>[ and ]</th><td>Smaller / bigger brush</td></tr>
             <tr><th>Space</th><td>Pause / play</td></tr>
             <tr><th>.</th><td>Step one frame while paused</td></tr>
+            <tr><th>T</th><td>Heat view: show temperatures</td></tr>
+            <tr><th>Scene menu</th><td>Save, load, download, open, or copy a link to your scene</td></tr>
             <tr><th>? or H</th><td>Show / hide this panel</td></tr>
           </tbody>
         </table>
-        <p>Tips: pour oil onto water and set it alight. Drop nitroglycerin from a height. Put a plant in a pond and wait.</p>
+        <p>Tips: pour oil onto water and set it alight. Drop nitroglycerin from a height. Lay a gunpowder fuse. Pour lava into a pond. Heat a stone pot of water from below, and watch it in heat view.</p>
         <button id="help-close" type="button">Close</button>
       </div>
     </div>
