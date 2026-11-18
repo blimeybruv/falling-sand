@@ -1,0 +1,259 @@
+:root {
+  --bg: #0e0f14;
+  --panel: #171922;
+  --panel-2: #20232f;
+  --border: #2c3040;
+  --text: #e6e8ef;
+  --muted: #9aa0b4;
+  --accent: #e8b75a;
+  color-scheme: dark;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: 14px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  overflow: hidden;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  height: 100dvh;
+}
+
+/* ---- toolbar */
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  padding: 8px 12px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+}
+
+.toolbar h1 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+}
+
+.group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+}
+
+button,
+select {
+  font: inherit;
+  color: var(--text);
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 10px;
+  min-height: 32px;
+  cursor: pointer;
+}
+
+button:hover:not(:disabled),
+select:hover {
+  border-color: var(--muted);
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+button:focus-visible,
+select:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.brush input {
+  width: 110px;
+  accent-color: var(--accent);
+}
+
+.brush output {
+  min-width: 2ch;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.help-button {
+  margin-left: auto;
+  width: 32px;
+  padding: 0;
+  border-radius: 50%;
+  font-weight: 700;
+}
+
+/* ---- canvas */
+#stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+#canvas {
+  display: block;
+  image-rendering: pixelated;
+  touch-action: none;
+  cursor: crosshair;
+  background: var(--bg);
+}
+
+#fps {
+  position: absolute;
+  right: 8px;
+  bottom: 6px;
+  font-size: 11px;
+  color: var(--muted);
+  opacity: 0.7;
+  pointer-events: none;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- palette */
+#palette {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 12px;
+  padding-bottom: max(8px, env(safe-area-inset-bottom));
+  background: var(--panel);
+  border-top: 1px solid var(--border);
+}
+
+.tool {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  min-height: 36px;
+}
+
+.tool[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: #2b2a24;
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.swatch {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.15);
+  flex: none;
+}
+
+.tool kbd {
+  font: inherit;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* ---- help */
+.help {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgb(0 0 0 / 0.55);
+  padding: 16px;
+  z-index: 10;
+}
+
+.help[hidden] {
+  display: none;
+}
+
+.help-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px 20px;
+  max-width: 440px;
+  width: 100%;
+  max-height: 100%;
+  overflow: auto;
+}
+
+.help-card h2 {
+  margin: 0 0 10px;
+  font-size: 16px;
+}
+
+.help-card table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.help-card th {
+  text-align: left;
+  font-weight: 600;
+  padding: 4px 12px 4px 0;
+  white-space: nowrap;
+  vertical-align: top;
+}
+
+.help-card td {
+  color: var(--muted);
+  padding: 4px 0;
+}
+
+.help-card p {
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+/* ---- phones: compact toolbar, palette scrolls sideways in one row */
+@media (max-width: 640px) {
+  .toolbar {
+    gap: 6px 10px;
+    padding: 6px 8px;
+  }
+  .toolbar h1 {
+    display: none;
+  }
+  .help-button {
+    margin-left: 0;
+  }
+  .brush input {
+    width: 80px;
+  }
+  #palette {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding: 6px 8px;
+    padding-bottom: max(6px, env(safe-area-inset-bottom));
+    scrollbar-width: none;
+  }
+  .tool {
+    flex: none;
+    min-height: 40px;
+  }
+  .tool kbd {
+    display: none;
+  }
+}

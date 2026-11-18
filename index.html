@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="description" content="A small falling-sand game in the browser: sand, water, fire, oil, napalm, nitroglycerin and more." />
+    <meta name="theme-color" content="#0e0f14" />
+    <title>Falling Sand</title>
+    <!-- Inline icon so the browser doesn't request /favicon.ico (which would 404 in a sub-folder). -->
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%230e0f14'/%3E%3Cpath d='M2 16 8 9l6 7z' fill='%23dbbd78'/%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="./src/style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <header class="toolbar">
+        <h1>Falling Sand</h1>
+        <div class="group">
+          <button id="play" type="button" title="Pause / play (Space)">❚❚ Pause</button>
+          <button id="step" type="button" title="Step one frame while paused (.)" disabled>Step</button>
+          <button id="clear" type="button" title="Clear everything">Clear</button>
+        </div>
+        <label class="group" title="Simulation speed">
+          <span>Speed</span>
+          <select id="speed" aria-label="Simulation speed"></select>
+        </label>
+        <label class="group brush" title="Brush size ([ and ])">
+          <span>Brush</span>
+          <input id="brush" type="range" step="1" aria-label="Brush size" />
+          <output id="brush-value"></output>
+        </label>
+        <button id="help-button" class="help-button" type="button" aria-expanded="false" aria-controls="help" title="Controls (?)">?</button>
+      </header>
+
+      <main id="stage">
+        <canvas id="canvas" aria-label="Sandbox: draw materials here"></canvas>
+        <div id="fps" aria-hidden="true"></div>
+      </main>
+
+      <nav id="palette" aria-label="Materials"></nav>
+    </div>
+
+    <div id="help" class="help" hidden role="dialog" aria-modal="true" aria-labelledby="help-title">
+      <div class="help-card">
+        <h2 id="help-title">Controls</h2>
+        <table>
+          <tbody>
+            <tr><th>Left-drag / finger</th><td>Draw the selected material</td></tr>
+            <tr><th>Right-drag</th><td>Erase</td></tr>
+            <tr><th>1–9, 0, -</th><td>Pick a material (shown on each button)</td></tr>
+            <tr><th>E</th><td>Eraser</td></tr>
+            <tr><th>[ and ]</th><td>Smaller / bigger brush</td></tr>
+            <tr><th>Space</th><td>Pause / play</td></tr>
+            <tr><th>.</th><td>Step one frame while paused</td></tr>
+            <tr><th>? or H</th><td>Show / hide this panel</td></tr>
+          </tbody>
+        </table>
+        <p>Tips: pour oil onto water and set it alight. Drop nitroglycerin from a height. Put a plant in a pond and wait.</p>
+        <button id="help-close" type="button">Close</button>
+      </div>
+    </div>
+
+    <script type="module" src="./src/main.ts"></script>
+  </body>
+</html>
