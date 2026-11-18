@@ -16,6 +16,10 @@ export const M = {
   Steam: 9,
   Napalm: 10,
   Nitro: 11,
+  Acid: 12,
+  Lava: 13,
+  Ice: 14,
+  Gunpowder: 15,
 } as const;
 
 export type MaterialId = (typeof M)[keyof typeof M];

@@ -42,9 +42,16 @@ describe('material table', () => {
       if (def.decay) expect(inRange(def.decay.chance), where).toBe(true);
       if (def.explosive) {
         expect(def.explosive.radius, where).toBeGreaterThan(0);
-        expect(def.explosive.impactSpeed, where).toBeGreaterThan(0);
+        if (def.explosive.impactSpeed !== undefined) expect(def.explosive.impactSpeed, where).toBeGreaterThan(0);
+        if (def.explosive.chance !== undefined) expect(inRange(def.explosive.chance), where).toBe(true);
         expect(def.flammability, where).toBeGreaterThan(0);
       }
+      expect(def.conductivity, where).toBeGreaterThanOrEqual(0);
+      expect(def.conductivity, where).toBeLessThanOrEqual(0.25); // higher makes diffusion unstable
+      expect(inRange(def.cooling), where).toBe(true);
+      expect(inRange(def.wind), where).toBe(true);
+      if (def.heat) expect(inRange(def.heat.rate), where).toBe(true);
+      if (def.ignitesAt !== undefined) expect(def.flammability, where).toBeGreaterThan(0);
       if (def.kind === 'liquid') expect(def.dispersion, where).toBeGreaterThan(0);
     }
   });
@@ -194,17 +201,44 @@ describe('explosions', () => {
     }
   });
 
-  it('throws nearby loose particles outwards', () => {
-    const w = new World(80, 80, 12);
-    fillRect(w, 30, 30, 21, 21, M.Sand);
+  it('throws nearby loose particles, which fly and then land', () => {
+    const w = new World(120, 80, 12);
+    fillRect(w, 50, 50, 21, 21, M.Sand);
     const before = w.count(M.Sand);
-    w.explode(40, 40, 6);
+    w.explode(60, 60, 6);
     expect(w.count(M.Sand)).toBeLessThan(before); // the middle was destroyed
+    let flying = 0;
+    for (let i = 0; i < w.size; i++) if (w.vx[i] !== 0 || w.vy[i] !== 0) flying++;
+    expect(flying).toBeGreaterThan(0);
+
+    run(w, 10);
     let thrown = 0;
     for (let y = 0; y < 80; y++)
-      for (let x = 0; x < 80; x++)
-        if (w.get(x, y) === M.Sand && (x < 30 || x > 50 || y < 30 || y > 50)) thrown++;
-    expect(thrown).toBeGreaterThan(0); // and some of the ring landed outside the original square
+      for (let x = 0; x < 120; x++)
+        if (w.get(x, y) === M.Sand && (x < 50 || x > 70 || y < 50)) thrown++;
+    expect(thrown).toBeGreaterThan(0); // some debris flew out of the original square
+
+    run(w, 300);
+    for (let i = 0; i < w.size; i++) expect(w.vx[i] === 0 && w.vy[i] === 0).toBe(true); // everything landed
+  });
+
+  it('a launched particle follows an arc', () => {
+    const w = new World(60, 60, 19);
+    w.set(5, 50, M.Sand);
+    w.launch(w.idx(5, 50), 2, -3);
+    let minY = 50;
+    let x = 5;
+    for (let f = 0; f < 60; f++) {
+      w.step();
+      for (let i = 0; i < w.size; i++)
+        if (w.mat[i] === M.Sand) {
+          minY = Math.min(minY, Math.floor(i / w.width));
+          x = i % w.width;
+        }
+    }
+    expect(minY).toBeLessThan(40); // went up
+    expect(x).toBeGreaterThan(20); // and across
+    expect(w.get(x, 59)).toBe(M.Sand); // and came down
   });
 
   it('limits explosions per frame', () => {
@@ -261,5 +295,129 @@ describe('plant', () => {
     w.set(10, 15, M.Plant);
     run(w, 600);
     expect(w.count(M.Plant)).toBeGreaterThan(1);
+  });
+});
+
+describe('temperature', () => {
+  it('relaxes back to room temperature', () => {
+    const w = new World(10, 10, 20);
+    fillRect(w, 0, 9, 10, 1, M.Stone);
+    w.temp[w.idx(5, 9)] = 800;
+    run(w, 3000);
+    for (let i = 0; i < w.size; i++) expect(Math.abs(w.temp[i] - 20)).toBeLessThan(5);
+  });
+
+  it('conducts heat through stone and boils the water above it', () => {
+    const w = new World(20, 20, 21);
+    fillRect(w, 0, 17, 20, 3, M.Lava);
+    fillRect(w, 0, 15, 20, 2, M.Stone);
+    fillRect(w, 0, 5, 20, 10, M.Water);
+    run(w, 1500);
+    expect(w.count(M.Water)).toBeLessThan(200 * 0.8);
+  });
+
+  it('wood catches fire from heat alone', () => {
+    const w = new World(10, 10, 22);
+    w.set(5, 5, M.Wood);
+    w.temp[w.idx(5, 5)] = 400;
+    w.step();
+    expect(w.burn[w.idx(5, 5)]).toBeGreaterThan(0);
+  });
+});
+
+describe('lava', () => {
+  it('sets wood alight', () => {
+    const w = new World(30, 30, 23);
+    fillRect(w, 0, 25, 30, 5, M.Wood);
+    fillRect(w, 10, 22, 10, 3, M.Lava);
+    run(w, 1500);
+    expect(w.count(M.Wood)).toBeLessThan(150);
+  });
+
+  it('meets water: the water boils and the lava sets to stone', () => {
+    const w = new World(20, 30, 24);
+    fillRect(w, 0, 20, 20, 10, M.Water);
+    fillRect(w, 5, 5, 10, 3, M.Lava);
+    run(w, 400);
+    expect(w.count(M.Lava)).toBeLessThan(30);
+    expect(w.count(M.Stone)).toBeGreaterThan(0);
+    expect(w.count(M.Water)).toBeLessThan(200);
+  });
+});
+
+describe('ice', () => {
+  it('stays frozen at room temperature', () => {
+    const w = new World(20, 20, 25);
+    fillRect(w, 5, 15, 10, 5, M.Ice);
+    run(w, 2000);
+    expect(w.count(M.Ice)).toBe(50);
+  });
+
+  it('melts near heat', () => {
+    // Full width, so the lava can't flow out from under the ice.
+    const w = new World(10, 20, 26);
+    fillRect(w, 0, 10, 10, 5, M.Ice);
+    fillRect(w, 0, 15, 10, 5, M.Lava);
+    run(w, 1500);
+    expect(w.count(M.Ice)).toBeLessThan(25);
+  });
+
+  it('slowly freezes neighbouring water', () => {
+    const w = new World(20, 20, 27);
+    fillRect(w, 0, 10, 20, 10, M.Water);
+    w.set(10, 15, M.Ice);
+    run(w, 1500);
+    expect(w.count(M.Ice)).toBeGreaterThan(3);
+  });
+});
+
+describe('acid', () => {
+  it('dissolves what it touches, using itself up, but not stone or water', () => {
+    const w = new World(20, 30, 28);
+    fillRect(w, 0, 27, 20, 3, M.Stone);
+    fillRect(w, 0, 20, 20, 7, M.Wood);
+    fillRect(w, 0, 10, 20, 3, M.Acid);
+    run(w, 2000);
+    expect(w.count(M.Wood)).toBeLessThan(140);
+    expect(w.count(M.Acid)).toBeLessThan(60);
+    expect(w.count(M.Stone)).toBe(60);
+
+    const pond = new World(20, 20, 29);
+    fillRect(pond, 0, 10, 20, 10, M.Water);
+    fillRect(pond, 0, 5, 20, 2, M.Acid);
+    run(pond, 500);
+    expect(pond.count(M.Water)).toBe(200);
+  });
+});
+
+describe('gunpowder', () => {
+  it('burns along a line like a fuse, popping as it goes', () => {
+    const w = new World(80, 20, 30);
+    fillRect(w, 0, 19, 80, 1, M.Stone);
+    fillRect(w, 5, 18, 70, 1, M.Gunpowder);
+    w.paint(5, 18, 0, M.Fire);
+    run(w, 400);
+    expect(w.count(M.Gunpowder)).toBe(0);
+  });
+});
+
+describe('wind', () => {
+  it('pushes smoke and falling sand downwind', () => {
+    const w = new World(100, 60, 31);
+    w.wind = 1;
+    fillRect(w, 45, 50, 10, 5, M.Smoke);
+    for (let x = 45; x < 55; x++) w.set(x, 0, M.Sand);
+    run(w, 60);
+    let smokeX = 0;
+    let smokeN = 0;
+    let sandX = 0;
+    let sandN = 0;
+    for (let y = 0; y < 60; y++)
+      for (let x = 0; x < 100; x++) {
+        if (w.get(x, y) === M.Smoke) { smokeX += x; smokeN++; }
+        if (w.get(x, y) === M.Sand) { sandX += x; sandN++; }
+      }
+    expect(smokeX / smokeN).toBeGreaterThan(55);
+    expect(sandX / sandN).toBeGreaterThan(51);
   });
 });

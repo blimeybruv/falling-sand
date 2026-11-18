@@ -7,12 +7,21 @@
  *   life  remaining lifetime in frames, for short-lived materials (fire, smoke, steam)
  *   burn  > 0 while the cell is burning: frames left before it burns out (or, for explosives, the fuse)
  *   vel   consecutive frames spent falling; drives acceleration and nitroglycerin's impact trigger
+ *   temp  temperature (AMBIENT_TEMP is room temperature); spreads between neighbours every frame
+ *   vx,vy velocity of a particle in flight (thrown by an explosion), in 1/SUB cells per frame
  *
  * The grid is updated bottom-up, alternating left-to-right and right-to-left each frame, and every
  * cell moves at most once per frame (tracked with `stamp`).
  */
 import { M, type MaterialId } from './ids';
-import { MATERIALS, MAX_BLAST_RADIUS, MAX_EXPLOSIONS_PER_FRAME, type MaterialDef } from './materials';
+import {
+  AMBIENT_TEMP,
+  BURNING_TEMP,
+  MATERIALS,
+  MAX_BLAST_RADIUS,
+  MAX_EXPLOSIONS_PER_FRAME,
+  type MaterialDef,
+} from './materials';
 import { Rng } from './rng';
 
 /** Number of colour variations per material. */
@@ -24,6 +33,23 @@ const MAX_FALL_STEPS = 4;
 const DENSITY = Float32Array.from(MATERIALS, (d) => d.density);
 const FLUID = Uint8Array.from(MATERIALS, (d) => (d.kind === 'empty' || d.kind === 'liquid' || d.kind === 'gas' ? 1 : 0));
 const FLAMMABLE = Uint8Array.from(MATERIALS, (d) => (d.flammability > 0 ? 1 : 0));
+const CONDUCTIVITY = Float32Array.from(MATERIALS, (d) => d.conductivity);
+/** The temperature each material drifts towards, and how fast (its heat source, or ambient cooling). */
+const HOLD_TEMP = Float32Array.from(MATERIALS, (d) => (d.heat ? d.heat.temp : AMBIENT_TEMP));
+const HOLD_RATE = Float32Array.from(MATERIALS, (d) => (d.heat ? d.heat.rate : d.cooling));
+const WIND = Float32Array.from(MATERIALS, (d) => d.wind);
+
+// Module-local copies of imported constants used in hot loops. (Under Vitest's module transform,
+// every read of an imported binding is a property lookup, which made benchmarks misleading.)
+const EMPTY: number = M.Empty;
+const AMBIENT = AMBIENT_TEMP;
+const BURNING = BURNING_TEMP;
+const MATS = MATERIALS;
+
+/** Flight velocities are stored in 1/SUB cells per frame, so they fit an Int8Array. */
+export const SUB = 8;
+/** Downward acceleration of particles in flight, in 1/SUB cells per frame per frame. */
+const GRAVITY = 2;
 
 const N4: readonly (readonly [number, number])[] = [
   [0, -1],
@@ -51,9 +77,16 @@ export class World {
   readonly life: Int16Array;
   readonly burn: Int16Array;
   readonly vel: Uint8Array;
+  readonly vx: Int8Array;
+  readonly vy: Int8Array;
+  /** Current temperatures. Double-buffered, so this array is replaced every frame: don't hold on to it. */
+  temp: Float32Array;
+  private tempBack: Float32Array;
   readonly rng: Rng;
   /** Frames simulated so far. */
   frame = 0;
+  /** Sideways wind, -1 (full left) to 1 (full right). Pushes gases and falling particles. */
+  wind = 0;
   /** Frame number in which each cell last moved or was created; such cells are skipped. */
   private readonly stamp: Uint32Array;
   private explosionsThisFrame = 0;
@@ -67,6 +100,10 @@ export class World {
     this.life = new Int16Array(this.size);
     this.burn = new Int16Array(this.size);
     this.vel = new Uint8Array(this.size);
+    this.vx = new Int8Array(this.size);
+    this.vy = new Int8Array(this.size);
+    this.temp = new Float32Array(this.size).fill(AMBIENT_TEMP);
+    this.tempBack = new Float32Array(this.size).fill(AMBIENT_TEMP);
     this.stamp = new Uint32Array(this.size);
     this.rng = new Rng(seed);
   }
@@ -86,10 +123,15 @@ export class World {
     return this.inBounds(x, y) ? (this.mat[y * this.width + x] as MaterialId) : M.Stone;
   }
 
+  /** Material definition at (x, y); outside the grid counts as Stone. */
+  defAt(x: number, y: number): MaterialDef {
+    return MATS[this.get(x, y)];
+  }
+
   /** True for walls, static materials and powders (things fluids can't pass through). */
   isSolid(x: number, y: number): boolean {
     if (!this.inBounds(x, y)) return true;
-    const kind = MATERIALS[this.mat[y * this.width + x]].kind;
+    const kind = MATS[this.mat[y * this.width + x]].kind;
     return kind === 'static' || kind === 'powder';
   }
 
@@ -99,28 +141,48 @@ export class World {
   }
 
   /**
-   * Replace cell i with a fresh particle of material m (new colour shade and lifetime, not burning).
+   * Replace cell i with a fresh particle of material m (new colour shade and lifetime, not burning,
+   * not moving, at room temperature or its own heat source's temperature).
    * The new particle does not act until the next frame.
    */
   setCell(i: number, m: MaterialId): void {
-    const def = MATERIALS[m];
+    const def = MATS[m];
     this.mat[i] = m;
     this.shade[i] = (this.rng.next() * SHADES) | 0;
     this.life[i] = def.lifetime ? this.rng.int(def.lifetime[0], def.lifetime[1]) : 0;
     this.burn[i] = 0;
     this.vel[i] = 0;
+    this.vx[i] = 0;
+    this.vy[i] = 0;
+    this.temp[i] = def.heat ? def.heat.temp : AMBIENT_TEMP;
     this.stamp[i] = this.frame;
+  }
+
+  /** Like setCell, but keeps the cell's temperature (for melting, boiling, cooling to stone...). */
+  transform(i: number, m: MaterialId): void {
+    const t = this.temp[i];
+    this.setCell(i, m);
+    this.temp[i] = t;
+  }
+
+  /** Throw particle i with a velocity in cells per frame (positive y is down). */
+  launch(i: number, vxCells: number, vyCells: number): void {
+    this.vx[i] = Math.max(-127, Math.min(127, Math.round(vxCells * SUB)));
+    this.vy[i] = Math.max(-127, Math.min(127, Math.round(vyCells * SUB)));
   }
 
   /** Swap two cells (all their state) and mark both as moved this frame. */
   swap(a: number, b: number): void {
-    const { mat, shade, life, burn, vel } = this;
+    const { mat, shade, life, burn, vel, vx, vy, temp } = this;
     let t: number;
     t = mat[a]; mat[a] = mat[b]; mat[b] = t;
     t = shade[a]; shade[a] = shade[b]; shade[b] = t;
     t = life[a]; life[a] = life[b]; life[b] = t;
     t = burn[a]; burn[a] = burn[b]; burn[b] = t;
     t = vel[a]; vel[a] = vel[b]; vel[b] = t;
+    t = vx[a]; vx[a] = vx[b]; vx[b] = t;
+    t = vy[a]; vy[a] = vy[b]; vy[b] = t;
+    t = temp[a]; temp[a] = temp[b]; temp[b] = t;
     this.stamp[a] = this.frame;
     this.stamp[b] = this.frame;
   }
@@ -131,6 +193,10 @@ export class World {
     this.life.fill(0);
     this.burn.fill(0);
     this.vel.fill(0);
+    this.vx.fill(0);
+    this.vy.fill(0);
+    this.temp.fill(AMBIENT_TEMP);
+    this.tempBack.fill(AMBIENT_TEMP);
     this.stamp.fill(0);
   }
 
@@ -151,7 +217,7 @@ export class World {
   paint(cx: number, cy: number, radius: number, m: MaterialId): void {
     const r = Math.max(0, Math.floor(radius));
     const r2 = r * r + r;
-    const kind = MATERIALS[m].kind;
+    const kind = MATS[m].kind;
     const scatter = r === 0 || kind === 'static' ? 1 : 0.5;
     for (let dy = -r; dy <= r; dy++) {
       const y = cy + dy;
@@ -190,10 +256,10 @@ export class World {
    * The cell doesn't act again until next frame.
    */
   ignite(i: number): boolean {
-    const def = MATERIALS[this.mat[i]];
+    const def = MATS[this.mat[i]];
     if (def.flammability <= 0 || this.burn[i] > 0) return false;
-    // Explosives get a short fuse instead of a burn time.
-    this.burn[i] = def.explosive ? this.rng.int(1, 4) : this.rng.int(def.burnTime[0], def.burnTime[1]);
+    // Materials with no burn time (nitroglycerin) get a short fuse instead.
+    this.burn[i] = def.burnTime[1] > 0 ? this.rng.int(def.burnTime[0], def.burnTime[1]) : this.rng.int(1, 4);
     // Like a new particle, a cell that has just caught fire waits until next frame to act,
     // so fire spreads the same way whichever direction the scan runs.
     this.stamp[i] = this.frame;
@@ -208,7 +274,7 @@ export class World {
       if (!this.inBounds(nx, ny)) continue;
       const n = ny * this.width + nx;
       const t = this.mat[n];
-      if (FLAMMABLE[t] && this.burn[n] === 0 && this.rng.chance(MATERIALS[t].flammability)) this.ignite(n);
+      if (FLAMMABLE[t] && this.burn[n] === 0 && this.rng.chance(MATS[t].flammability)) this.ignite(n);
     }
   }
 
@@ -216,10 +282,10 @@ export class World {
 
   /**
    * Blast at (cx, cy). Everything destructible within `radius` (capped at MAX_BLAST_RADIUS) is
-   * cleared, some of it to fire. In a ring beyond that, loose particles are thrown outwards,
-   * flammable ones may catch, and other explosives get a short fuse (so chains spread over several
-   * frames instead of recursing). Returns false, doing nothing, if this frame's explosion budget is
-   * spent; the caller should try again next frame.
+   * cleared, some of it to fire. In a ring beyond that, loose particles are thrown outwards (they fly
+   * on later frames), flammable ones may catch, and other explosives get a short fuse, so chains
+   * spread over several frames instead of recursing. Returns false, doing nothing, if this frame's
+   * explosion budget (MAX_EXPLOSIONS_PER_FRAME, reset by step()) is spent; try again next frame.
    */
   explode(cx: number, cy: number, radius: number): boolean {
     if (this.explosionsThisFrame >= MAX_EXPLOSIONS_PER_FRAME) return false;
@@ -229,7 +295,6 @@ export class World {
     const outer = r + Math.ceil(r * 0.75);
     const r2 = r * r;
     const o2 = outer * outer;
-    const ring: [number, number, number][] = [];
 
     for (let dy = -outer; dy <= outer; dy++) {
       const y = cy + dy;
@@ -239,54 +304,29 @@ export class World {
         const d2 = dx * dx + dy * dy;
         if (x < 0 || x >= this.width || d2 > o2) continue;
         const i = y * this.width + x;
-        const t = this.mat[i];
+        const def = MATS[this.mat[i]];
         if (d2 <= r2) {
-          if (!MATERIALS[t].indestructible) this.setCell(i, this.rng.chance(0.25) ? M.Fire : M.Empty);
-        } else if (t !== M.Empty) {
-          ring.push([d2, dx, dy]);
+          if (!def.indestructible) this.setCell(i, this.rng.chance(0.25) ? M.Fire : M.Empty);
+          continue;
         }
-      }
-    }
-
-    // Outermost first, so particles further out make room for the ones behind them.
-    ring.sort((a, b) => b[0] - a[0]);
-    for (const [d2, dx, dy] of ring) {
-      const x = cx + dx;
-      const y = cy + dy;
-      const i = y * this.width + x;
-      const def = MATERIALS[this.mat[i]];
-      if (def.explosive) {
-        if (this.burn[i] === 0) {
-          this.burn[i] = this.rng.int(2, 6);
-          this.stamp[i] = this.frame;
+        if (def.kind === 'empty') continue;
+        if (def.explosive) {
+          if (this.burn[i] === 0) {
+            this.burn[i] = this.rng.int(2, 6);
+            this.stamp[i] = this.frame;
+          }
+          continue;
         }
-        continue;
-      }
-      if (def.flammability > 0 && this.rng.chance(0.5)) this.ignite(i);
-      if (def.kind === 'powder' || def.kind === 'liquid') {
-        const dist = Math.sqrt(d2);
-        this.throwParticle(i, x, y, dx / dist, dy / dist, 2 + this.rng.int(0, Math.ceil((outer - dist) * 2) + 4));
+        if (def.flammability > 0 && this.rng.chance(0.5)) this.ignite(i);
+        if (def.kind === 'powder' || def.kind === 'liquid') {
+          // Faster nearer the blast, with a kick upwards.
+          const dist = Math.sqrt(d2);
+          const speed = 1.5 + (outer - dist) * 0.6 + this.rng.next() * 1.5;
+          this.launch(i, (dx / dist) * speed, (dy / dist) * speed - 1.5);
+        }
       }
     }
     return true;
-  }
-
-  /** Move particle i along direction (ux, uy) to the furthest empty cell within `maxDist`. */
-  private throwParticle(i: number, x: number, y: number, ux: number, uy: number, maxDist: number): void {
-    let target = -1;
-    for (let s = 1; s <= maxDist; s++) {
-      const nx = Math.round(x + ux * s);
-      const ny = Math.round(y + uy * s);
-      if (!this.inBounds(nx, ny)) break;
-      const n = ny * this.width + nx;
-      if (n === i) continue;
-      if (this.mat[n] !== M.Empty) break;
-      target = n;
-    }
-    if (target >= 0) {
-      this.swap(i, target);
-      this.vel[target] = 0;
-    }
   }
 
   // ---------------------------------------------------------------- update loop
@@ -295,6 +335,7 @@ export class World {
   step(): void {
     this.frame++;
     this.explosionsThisFrame = 0;
+    this.updateTemperature();
     const { width: w, height: h, mat, stamp } = this;
     const f = this.frame;
     const leftToRight = (f & 1) === 0;
@@ -304,14 +345,61 @@ export class World {
         const x = leftToRight ? k : w - 1 - k;
         const i = row + x;
         const m = mat[i];
-        if (m === M.Empty || stamp[i] === f) continue;
-        this.updateCell(x, y, i, MATERIALS[m]);
+        if (m === EMPTY || stamp[i] === f) continue;
+        this.updateCell(x, y, i, MATS[m]);
       }
     }
   }
 
+  /**
+   * Spread heat: each cell moves towards the average of its four neighbours (by its conductivity),
+   * then towards its own heat source's temperature, or back towards ambient. Burning cells are hot.
+   * Grid edges reuse the cell's own temperature for the missing neighbour.
+   */
+  private updateTemperature(): void {
+    const { width: w, height: h, mat, burn } = this;
+    const t = this.temp;
+    const out = this.tempBack;
+    for (let y = 0; y < h; y++) {
+      const row = y * w;
+      const upOff = y > 0 ? -w : 0;
+      const downOff = y < h - 1 ? w : 0;
+      for (let x = 0; x < w; x++) {
+        const i = row + x;
+        const c = t[i];
+        const sum = t[i + upOff] + t[i + downOff] + t[x > 0 ? i - 1 : i] + t[x < w - 1 ? i + 1 : i];
+        const m = mat[i];
+        const hold = HOLD_TEMP[m];
+        // Fast path: idle cells at room temperature, among neighbours at room temperature.
+        if (c === AMBIENT && sum === 4 * AMBIENT && hold === AMBIENT && burn[i] === 0) {
+          out[i] = AMBIENT;
+          continue;
+        }
+        let v = c + (sum * 0.25 - c) * CONDUCTIVITY[m];
+        if (burn[i] > 0) {
+          v += (BURNING - v) * 0.3;
+        } else {
+          v += (hold - v) * HOLD_RATE[m];
+          // Snap when close, so cooling settles exactly and the fast path can take over.
+          if (v - hold < 0.05 && hold - v < 0.05) v = hold;
+        }
+        out[i] = v;
+      }
+    }
+    this.tempBack = t;
+    this.temp = out;
+  }
+
   private updateCell(x: number, y: number, i: number, def: MaterialDef): void {
     if (this.burn[i] > 0 && this.updateBurning(x, y, i, def)) return;
+
+    // Temperature-driven changes: melting and boiling, and catching fire from heat alone.
+    const t = this.temp[i];
+    if (def.above && t > def.above.temp) {
+      this.transform(i, def.above.into);
+      return;
+    }
+    if (def.ignitesAt !== undefined && this.burn[i] === 0 && t >= def.ignitesAt && this.ignite(i)) return;
 
     if (def.lifetime && --this.life[i] <= 0) {
       const decay = def.decay;
@@ -320,6 +408,10 @@ export class World {
     }
 
     if (def.update && def.update(this, x, y, i)) return;
+
+    if ((this.vx[i] | this.vy[i]) !== 0 && (def.kind === 'powder' || def.kind === 'liquid') && this.fly(x, y, i)) {
+      return;
+    }
 
     switch (def.kind) {
       case 'powder':
@@ -352,7 +444,8 @@ export class World {
     }
 
     if (--this.burn[i] <= 0) {
-      if (def.explosive) {
+      const ex = def.explosive;
+      if (ex && (ex.chance === undefined || this.rng.chance(ex.chance))) {
         this.detonate(x, y, i, def);
       } else {
         this.setCell(i, def.burnsInto);
@@ -407,11 +500,15 @@ export class World {
 
     if (ci !== i) {
       if (this.vel[ci] < 255) this.vel[ci]++;
+      // Wind blows falling particles sideways.
+      const wind = this.wind * WIND[def.id];
+      if (wind !== 0 && this.rng.chance(Math.abs(wind))) this.tryDisplace(ci, x + Math.sign(wind), cy, def);
       return true;
     }
 
-    // Landed. A hard landing on something solid sets off explosives.
-    if (def.explosive && this.vel[i] >= def.explosive.impactSpeed && this.isSolid(x, y + 1)) {
+    // Landed. A hard landing on something solid sets off impact-sensitive explosives.
+    const impact = def.explosive?.impactSpeed;
+    if (impact !== undefined && this.vel[i] >= impact && this.isSolid(x, y + 1)) {
       this.vel[i] = 0;
       this.detonate(x, y, i, def);
       return true;
@@ -482,7 +579,68 @@ export class World {
     return true;
   }
 
+  /**
+   * Move a particle in flight along its velocity, under gravity. It stops when it hits something,
+   * unless that is another particle still in flight, in which case it waits and tries again.
+   * Returns true if the particle used its move (moved, or is waiting).
+   */
+  private fly(x: number, y: number, i: number): boolean {
+    const vx = this.vx[i];
+    const vy = Math.min(127, this.vy[i] + GRAVITY);
+    const mx = this.stochasticRound(vx / SUB);
+    const my = this.stochasticRound(vy / SUB);
+    const steps = Math.max(Math.abs(mx), Math.abs(my));
+    let ci = i;
+    let blocked = false;
+    let waiting = false;
+    for (let s = 1; s <= steps; s++) {
+      const nx = x + Math.round((mx * s) / steps);
+      const ny = y + Math.round((my * s) / steps);
+      if (!this.inBounds(nx, ny)) {
+        blocked = true;
+        break;
+      }
+      const n = ny * this.width + nx;
+      if (n === ci) continue;
+      const t = this.mat[n];
+      if (t === M.Empty || MATS[t].kind === 'gas') {
+        this.swap(ci, n);
+        ci = n;
+        continue;
+      }
+      blocked = true;
+      waiting = (this.vx[n] | this.vy[n]) !== 0;
+      break;
+    }
+    if (blocked && !waiting) {
+      this.vx[ci] = 0;
+      this.vy[ci] = 0;
+      this.vel[ci] = 0;
+      return ci !== i;
+    }
+    this.vx[ci] = vx;
+    this.vy[ci] = vy;
+    this.stamp[ci] = this.frame;
+    return true;
+  }
+
+  /** Round to an integer, up or down at random in proportion, so slow speeds still average out. */
+  private stochasticRound(v: number): number {
+    const f = Math.floor(v);
+    return f + (this.rng.next() < v - f ? 1 : 0);
+  }
+
   private moveGas(x: number, y: number, i: number, def: MaterialDef): void {
+    // Wind first: gases are pushed sideways (and up) in its direction.
+    const wind = this.wind * WIND[def.id];
+    if (wind !== 0 && this.rng.chance(Math.abs(wind))) {
+      const d = Math.sign(wind);
+      if (this.tryRise(i, x + d, y - 1, def)) return;
+      if (this.get(x + d, y) === M.Empty) {
+        this.swap(i, this.idx(x + d, y));
+        return;
+      }
+    }
     // `rise` is how often it heads straight up; otherwise it climbs diagonally or just drifts.
     const r = this.rng.next();
     if (r < def.rise && this.tryRise(i, x, y - 1, def)) return;

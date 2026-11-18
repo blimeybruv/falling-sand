@@ -10,7 +10,7 @@
  * buttons and the keyboard shortcut all come from the table entry.
  */
 import { M, type MaterialId } from './ids';
-import { growPlant, updateFire, updateSteam } from './behaviours';
+import { corrode, freezeWater, growPlant, updateFire, updateLava, updateSteam } from './behaviours';
 import type { World } from './world';
 
 /**
@@ -61,10 +61,32 @@ export interface MaterialDef {
   viscosity: number;
   /** Gases: chance per frame of trying to rise straight up (otherwise it drifts). */
   rise: number;
-  /** Cannot be destroyed by explosions or fire. (The eraser still clears it.) */
+  /** Cannot be destroyed by explosions, fire or acid. (The eraser still clears it.) */
   indestructible: boolean;
-  /** Explodes instead of burning. `impactSpeed`: falling frames before a hard landing detonates it. */
-  explosive?: { radius: number; impactSpeed: number };
+  /**
+   * Explodes when it finishes burning (or, with no burnTime, after a short fuse once lit).
+   * `impactSpeed`: frames of falling before a hard landing sets it off (omit: not impact-sensitive).
+   * `chance`: probability of exploding when it burns out (omit: always); otherwise it becomes `burnsInto`.
+   */
+  explosive?: { radius: number; impactSpeed?: number; chance?: number };
+
+  // ---- temperature (see World.updateTemperature). Ambient is AMBIENT_TEMP (20).
+  /** 0..0.25: how quickly a cell takes on its neighbours' average temperature. */
+  conductivity: number;
+  /** 0..1: how quickly it drifts back to ambient temperature when nothing heats it. */
+  cooling: number;
+  /** Heat source or sink: holds itself towards `temp` at `rate` (0..1) per frame. Replaces `cooling`. */
+  heat?: { temp: number; rate: number };
+  /** Turns into `into` (keeping its temperature) once hotter than `temp`. */
+  above?: { temp: number; into: MaterialId };
+  /** Flammable materials catch fire once this hot, as well as from touching fire. */
+  ignitesAt?: number;
+
+  // ---- other
+  /** 0..1: how strongly wind pushes it sideways. */
+  wind: number;
+  /** Renderer: the colour shimmers over time (lava). */
+  glow?: boolean;
   /** Optional extra behaviour; runs before the generic movement for its kind. */
   update?: UpdateFn;
   /** One line for the palette tooltip and the README. */
@@ -84,12 +106,17 @@ const base: Omit<Def, 'name' | 'key' | 'kind' | 'density' | 'colour' | 'descript
   viscosity: 0,
   rise: 0,
   indestructible: false,
+  conductivity: 0.05,
+  cooling: 0.003,
+  wind: 0,
 };
 
 const defs: Record<MaterialId, Def> = {
   [M.Empty]: {
     ...base,
     name: 'Empty',
+    conductivity: 0.04,
+    cooling: 0.02,
     key: '',
     kind: 'empty',
     density: 1,
@@ -100,6 +127,8 @@ const defs: Record<MaterialId, Def> = {
   [M.Sand]: {
     ...base,
     name: 'Sand',
+    conductivity: 0.06,
+    wind: 0.1,
     key: '1',
     kind: 'powder',
     density: 20,
@@ -110,6 +139,9 @@ const defs: Record<MaterialId, Def> = {
   [M.Water]: {
     ...base,
     name: 'Water',
+    conductivity: 0.12,
+    above: { temp: 100, into: M.Steam },
+    wind: 0.05,
     key: '2',
     kind: 'liquid',
     density: 10,
@@ -121,6 +153,7 @@ const defs: Record<MaterialId, Def> = {
   [M.Stone]: {
     ...base,
     name: 'Stone',
+    conductivity: 0.25,
     key: '3',
     kind: 'static',
     density: 100,
@@ -132,6 +165,8 @@ const defs: Record<MaterialId, Def> = {
   [M.Wood]: {
     ...base,
     name: 'Wood',
+    conductivity: 0.03,
+    ignitesAt: 260,
     key: '4',
     kind: 'static',
     density: 100,
@@ -145,6 +180,7 @@ const defs: Record<MaterialId, Def> = {
   [M.Plant]: {
     ...base,
     name: 'Plant',
+    ignitesAt: 220,
     key: '5',
     kind: 'static',
     density: 100,
@@ -159,6 +195,9 @@ const defs: Record<MaterialId, Def> = {
   [M.Oil]: {
     ...base,
     name: 'Oil',
+    conductivity: 0.06,
+    ignitesAt: 200,
+    wind: 0.05,
     key: '6',
     kind: 'liquid',
     density: 8,
@@ -173,6 +212,8 @@ const defs: Record<MaterialId, Def> = {
   [M.Fire]: {
     ...base,
     name: 'Fire',
+    heat: { temp: 700, rate: 1 },
+    wind: 0.5,
     key: '7',
     kind: 'gas',
     density: 0.1,
@@ -188,6 +229,7 @@ const defs: Record<MaterialId, Def> = {
   [M.Napalm]: {
     ...base,
     name: 'Napalm',
+    ignitesAt: 180,
     key: '8',
     kind: 'liquid',
     density: 9,
@@ -204,6 +246,7 @@ const defs: Record<MaterialId, Def> = {
   [M.Nitro]: {
     ...base,
     name: 'Nitroglycerin',
+    ignitesAt: 140,
     key: '9',
     kind: 'liquid',
     density: 13,
@@ -217,6 +260,7 @@ const defs: Record<MaterialId, Def> = {
   [M.Smoke]: {
     ...base,
     name: 'Smoke',
+    wind: 0.7,
     key: '0',
     kind: 'gas',
     density: 0.3,
@@ -229,6 +273,7 @@ const defs: Record<MaterialId, Def> = {
   [M.Steam]: {
     ...base,
     name: 'Steam',
+    wind: 0.6,
     key: '-',
     kind: 'gas',
     density: 0.2,
@@ -240,6 +285,67 @@ const defs: Record<MaterialId, Def> = {
     update: updateSteam,
     description: 'Rises; may condense back to water near the top.',
   },
+  [M.Acid]: {
+    ...base,
+    name: 'Acid',
+    key: 'a',
+    kind: 'liquid',
+    density: 11,
+    colour: [140, 235, 60],
+    colourJitter: 0.1,
+    dispersion: 3,
+    conductivity: 0.1,
+    wind: 0.05,
+    update: corrode,
+    description: 'Liquid; dissolves what it touches (not stone or water), using itself up.',
+  },
+  [M.Lava]: {
+    ...base,
+    name: 'Lava',
+    key: 'l',
+    kind: 'liquid',
+    density: 15,
+    colour: [255, 170, 50],
+    colourEnd: [200, 45, 15],
+    colourJitter: 0.06,
+    dispersion: 1,
+    viscosity: 0.8,
+    conductivity: 0.1,
+    heat: { temp: 1100, rate: 0.15 },
+    glow: true,
+    update: updateLava,
+    description: 'Slow, glowing liquid; sets things alight, boils water and cools to stone where they meet.',
+  },
+  [M.Ice]: {
+    ...base,
+    name: 'Ice',
+    key: 'i',
+    kind: 'static',
+    density: 100,
+    colour: [170, 215, 245],
+    colourJitter: 0.08,
+    conductivity: 0.1,
+    heat: { temp: -20, rate: 0.1 },
+    above: { temp: 2, into: M.Water },
+    update: freezeWater,
+    description: 'Static; melts near heat and slowly freezes neighbouring water.',
+  },
+  [M.Gunpowder]: {
+    ...base,
+    name: 'Gunpowder',
+    key: 'g',
+    kind: 'powder',
+    density: 18,
+    colour: [62, 62, 68],
+    colourJitter: 0.3,
+    flammability: 0.9,
+    burnTime: [2, 5],
+    extinguishChance: 0.8,
+    ignitesAt: 150,
+    explosive: { radius: 3, chance: 0.2 },
+    wind: 0.12,
+    description: 'Powder; burns very fast with small blasts, so it can be laid as a fuse.',
+  },
 };
 
 /** Indexed by material id. */
@@ -248,7 +354,13 @@ export const MATERIALS: readonly MaterialDef[] = Object.values(M).map((id) => ({
 /** Palette order (also the order of the number-key shortcuts). */
 export const PALETTE: readonly MaterialDef[] = [
   M.Sand, M.Water, M.Stone, M.Wood, M.Plant, M.Oil, M.Fire, M.Napalm, M.Nitro, M.Smoke, M.Steam,
+  M.Acid, M.Lava, M.Ice, M.Gunpowder,
 ].map((id) => MATERIALS[id]);
+
+/** Room temperature. Cells drift back towards it when nothing heats or cools them. */
+export const AMBIENT_TEMP = 20;
+/** Burning cells hold themselves towards this temperature. */
+export const BURNING_TEMP = 500;
 
 /** Explosions never exceed this radius, so a chain of nitroglycerin can't freeze the page. */
 export const MAX_BLAST_RADIUS = 12;
