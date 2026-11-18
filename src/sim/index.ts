@@ -12,3 +12,4 @@ export {
 export { World, SHADES, SUB } from './world';
 export { captureScene, encodeScene, decodeScene, applyScene, type Scene } from './scene';
 export { Rng } from './rng';
+export { Discovery, RECIPES, REWARD, STARTERS, type Recipe } from './discovery';

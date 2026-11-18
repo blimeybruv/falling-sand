@@ -20,7 +20,15 @@
           <input id="brush" type="range" step="1" aria-label="Brush size" />
           <output id="brush-value"></output>
         </label>
+        <button id="journal-button" type="button" title="Discovery journal (J)">Journal</button>
         <div class="secondary">
+          <label class="group" title="Discovery: start with a few materials and unlock the rest by making them. Sandbox: everything.">
+            <span>Mode</span>
+            <select id="mode" aria-label="Game mode">
+              <option value="discovery">Discovery</option>
+              <option value="sandbox">Sandbox</option>
+            </select>
+          </label>
           <button id="step" type="button" title="Step one frame while paused (.)" disabled>Step</button>
           <button id="clear" type="button" title="Clear everything">Clear</button>
           <label class="group" title="Simulation speed">
@@ -64,18 +72,32 @@
           <tbody>
             <tr><th>Left-drag / finger</th><td>Draw the selected material</td></tr>
             <tr><th>Right-drag / two fingers</th><td>Erase</td></tr>
-            <tr><th>1–9, 0, -, A, L, I, G</th><td>Pick a material (shown on each button)</td></tr>
+            <tr><th>Number and letter keys</th><td>Pick a material (the key is shown on each button)</td></tr>
             <tr><th>E</th><td>Eraser</td></tr>
             <tr><th>[ and ]</th><td>Smaller / bigger brush</td></tr>
             <tr><th>Space</th><td>Pause / play</td></tr>
             <tr><th>.</th><td>Step one frame while paused</td></tr>
             <tr><th>T</th><td>Heat view: show temperatures</td></tr>
             <tr><th>Scene menu</th><td>Save, load, download, open, or copy a link to your scene</td></tr>
+            <tr><th>J</th><td>Discovery journal</td></tr>
             <tr><th>? or H</th><td>Show / hide this panel</td></tr>
           </tbody>
         </table>
-        <p>Tips: pour oil onto water and set it alight. Drop nitroglycerin from a height. Lay a gunpowder fuse. Pour lava into a pond. Heat a stone pot of water from below, and watch it in heat view.</p>
+        <p><strong>Discovery mode:</strong> you start with a few materials. Make new ones happen in the sandbox (fire meets water…) to unlock them. Locked "?" buttons give a hint, and the journal keeps track. Switch to Sandbox mode (under ⋯ on a phone) to have everything.</p>
+        <p>Tips: plant seeds near water. Pour oil onto water and set it alight. Drop nitroglycerin from a height. Lay a gunpowder fuse. Pour lava into a pond. Heat a stone pot of water from below, and watch it in heat view.</p>
         <button id="help-close" type="button">Close</button>
+      </div>
+    </div>
+
+    <div id="journal" class="help" hidden role="dialog" aria-modal="true" aria-labelledby="journal-title">
+      <div class="help-card journal-card">
+        <h2 id="journal-title">Discovery journal</h2>
+        <p id="journal-progress"></p>
+        <ul id="journal-list" class="journal-list"></ul>
+        <div class="journal-actions">
+          <button id="journal-close" type="button">Close</button>
+          <button id="journal-reset" type="button" class="quiet">Reset progress</button>
+        </div>
       </div>
     </div>
 

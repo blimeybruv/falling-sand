@@ -246,6 +246,89 @@ input:focus-visible {
   color: var(--muted);
 }
 
+.tool.locked {
+  opacity: 0.6;
+  border-style: dashed;
+}
+
+.tool.locked .swatch {
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  background: var(--panel);
+}
+
+.tool.new {
+  animation: discovered 1.6s ease-out;
+}
+
+@keyframes discovered {
+  0%,
+  30% {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgb(232 183 90 / 0.6);
+    transform: scale(1.08);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgb(232 183 90 / 0);
+    transform: scale(1);
+  }
+}
+
+#journal-button[hidden] {
+  display: none;
+}
+
+/* ---- journal */
+.journal-card {
+  max-width: 560px;
+}
+
+.journal-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.journal-list li {
+  display: grid;
+  grid-template-columns: 16px 8.5em 1fr;
+  gap: 4px 10px;
+  align-items: start;
+  line-height: 1.35;
+}
+
+.journal-list .swatch {
+  margin-top: 1px;
+}
+
+.journal-list li.unknown {
+  color: var(--muted);
+}
+
+.journal-list li.unknown .swatch {
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--panel-2);
+}
+
+.journal-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 14px;
+}
+
+button.quiet {
+  color: var(--muted);
+  background: transparent;
+}
+
 /* ---- help */
 .help {
   position: fixed;
@@ -298,6 +381,19 @@ input:focus-visible {
 .help-card p {
   color: var(--muted);
   line-height: 1.45;
+}
+
+/* ---- medium screens: drop the title so the toolbar stays on one row */
+@media (max-width: 1400px) {
+  .toolbar {
+    gap: 8px 10px;
+  }
+  .toolbar h1 {
+    display: none;
+  }
+  .brush input {
+    width: 90px;
+  }
 }
 
 /* ---- phones: compact toolbar, palette scrolls sideways in one row */

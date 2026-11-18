@@ -1,4 +1,5 @@
 import { M, type MaterialId } from '../sim';
+import type { Mode } from './progress';
 
 /** Speeds offered in the speed menu, in simulation steps per 60 Hz tick. */
 export const SPEEDS = [0.25, 0.5, 1, 2, 3] as const;
@@ -24,8 +25,10 @@ export interface GameState {
   pendingSteps: number;
   /** Show temperatures instead of materials. */
   heatView: boolean;
+  /** Discovery: unlock materials by making them. Sandbox: everything available. */
+  mode: Mode;
 }
 
-export function createState(): GameState {
-  return { tool: M.Sand, brush: 4, paused: false, speed: 1, pendingSteps: 0, heatView: false };
+export function createState(mode: Mode): GameState {
+  return { tool: M.Sand, brush: 4, paused: false, speed: 1, pendingSteps: 0, heatView: false, mode };
 }

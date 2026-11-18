@@ -5,6 +5,7 @@ import { PointerInput } from './ui/input';
 import { setupControls, toast } from './ui/controls';
 import { loadFromHash } from './ui/scenes';
 import { createState } from './ui/state';
+import { loadDiscovery, loadMode } from './ui/progress';
 
 /** The grid is sized to the window at load, up to roughly this many cells (the performance budget). */
 const TARGET_CELLS = 80_000;
@@ -29,9 +30,10 @@ function gridSize(): [number, number] {
 const [cols, rows] = gridSize();
 const world = new World(cols, rows, (Math.random() * 2 ** 32) >>> 0);
 const renderer = new Renderer(canvas, world);
-const state = createState();
+const state = createState(loadMode());
+const discovery = loadDiscovery();
 const input = new PointerInput(canvas, world, state);
-setupControls(state, world);
+const controls = setupControls(state, world, discovery);
 loadFromHash(world).then(
   (loaded) => loaded && toast('Loaded shared scene'),
   (err: unknown) => toast(`Couldn't load the shared scene: ${err instanceof Error ? err.message : err}`),
@@ -73,6 +75,8 @@ function frame(now: number): void {
   }
 
   const c = input.cursor();
+  controls.checkDiscoveries();
+
   renderer.render(world, { heatView: state.heatView, cursor: c && { x: c.x, y: c.y, radius: state.brush } });
 
   frames++;

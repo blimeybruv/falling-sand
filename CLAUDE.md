@@ -47,18 +47,31 @@ src/main.ts  creates World + Renderer + UI and runs the requestAnimationFrame lo
    (phase change), ignitesAt and wind apply. The comments on `MaterialDef` explain each field. The
    "has sane values" test checks the ranges.
 3. Add the id to `PALETTE` at the bottom of `materials.ts` so it can be drawn.
-4. If the generic rules aren't enough (reactions, growth, condensing and so on), write one small
+4. For "A touches B, something turns into something", add a `Reaction` to the entry's `reactions`
+   (optionally only while burning, or only from one side). That's data, no code.
+5. If the generic rules aren't enough (growth, condensing and so on), write one small
    function in `src/sim/behaviours.ts` with the `UpdateFn` signature and set it as `update`. Return
    `true` if it handled the cell (so generic movement is skipped). Use `World` methods (`get`,
    `defAt`, `set`, `setCell`, `transform`, `isSolid`, `ignite`, `igniteNeighbours`, `explode`,
    `launch`, `temp`, `rng`) and only `import type` from `world.ts`, which keeps imports free of cycles.
-5. Add a Vitest test in `src/sim/world.test.ts` for its key behaviour, a row to the README's
-   materials table, and its shortcut to the help panel in `index.html` if it uses a new key.
+6. Make it discoverable: add it to `RECIPES` in `src/sim/discovery.ts` with a hint and a recipe
+   (or to `STARTERS`), and a case in `discovery.test.ts` showing the recipe really makes it. The
+   "every palette material can be discovered" test fails until you do.
+7. Add a Vitest test for its key behaviour, and a row to the README's materials table.
 
 The palette button, swatch, keyboard shortcut and renderer colours all come from the table entry.
 
 Movement is density-based: a mover can swap with an empty, liquid or gas cell that is lighter
 (moving down or sideways) or heavier (gases moving up). Air is density 1.
+
+## Discovery mode
+
+- `World.created[id]` counts cells the simulation itself created (only inside `step()`; brush and
+  scene loading don't count). `Discovery.update(world.created)` unlocks recipes whose material has
+  been created, plus the reward once enough are found. The UI saves progress in localStorage.
+- Recipes should follow from the physics where possible, and hints should nudge rather than give the
+  answer. Avoid reactions that fire constantly in ordinary sandbox play.
+- Internal-only materials (like Leaf) stay out of `PALETTE` and need no recipe.
 
 ## Performance budget
 

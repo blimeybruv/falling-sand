@@ -1,13 +1,13 @@
 /**
- * Toolbar, material palette, scene menu, help panel and keyboard shortcuts.
- * Builds the palette from the material table, so new materials appear automatically.
+ * Toolbar, scene menu, Discovery mode (journal, mode switch, unlock messages), help panel and
+ * keyboard shortcuts. The palette itself is in palette.ts.
  */
-import { M, PALETTE, type MaterialId, type World } from '../sim';
-import { swatchColour } from '../render/renderer';
+import { M, PALETTE, type Discovery, type MaterialId, type World } from '../sim';
+import { Journal } from './journal';
+import { ERASER_KEY, Palette } from './palette';
+import { saveDiscovery, saveMode, type Mode } from './progress';
 import { downloadScene, loadFromBrowser, loadFromFile, saveToBrowser, shareLink } from './scenes';
 import { MAX_BRUSH, MIN_BRUSH, SPEEDS, WINDS, type GameState } from './state';
-
-const ERASER_KEY = 'e';
 
 function byId<T extends HTMLElement>(id: string): T {
   const el = document.getElementById(id);
@@ -25,9 +25,13 @@ export function toast(message: string): void {
   toastTimer = window.setTimeout(() => (el.hidden = true), 2600);
 }
 
-export function setupControls(state: GameState, world: World): void {
+export interface Controls {
+  /** Call after World.step() in Discovery mode: unlocks and announces anything newly made. */
+  checkDiscoveries(): void;
+}
+
+export function setupControls(state: GameState, world: World, discovery: Discovery): Controls {
   const toolbar = byId<HTMLElement>('toolbar');
-  const palette = byId<HTMLElement>('palette');
   const playBtn = byId<HTMLButtonElement>('play');
   const stepBtn = byId<HTMLButtonElement>('step');
   const clearBtn = byId<HTMLButtonElement>('clear');
@@ -44,31 +48,53 @@ export function setupControls(state: GameState, world: World): void {
   const help = byId<HTMLElement>('help');
   const helpClose = byId<HTMLButtonElement>('help-close');
 
-  // --- palette
-  const buttons = new Map<MaterialId, HTMLButtonElement>();
-  const addTool = (id: MaterialId, name: string, key: string, colour: string, title: string): void => {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = 'tool';
-    b.title = key ? `${title} (${key.toUpperCase()})` : title;
-    b.setAttribute('aria-pressed', 'false');
-    b.innerHTML = `<span class="swatch"></span><span class="name"></span><kbd></kbd>`;
-    (b.querySelector('.swatch') as HTMLElement).style.background = colour;
-    (b.querySelector('.name') as HTMLElement).textContent = name;
-    (b.querySelector('kbd') as HTMLElement).textContent = key.toUpperCase();
-    b.addEventListener('click', () => selectTool(id));
-    palette.append(b);
-    buttons.set(id, b);
-  };
-  for (const def of PALETTE) addTool(def.id, def.name, def.key, swatchColour(def.id), def.description);
-  addTool(M.Empty, 'Eraser', ERASER_KEY, 'repeating-conic-gradient(#444 0 25%, #222 0 50%) 0 0 / 8px 8px', 'Clears cells.');
+  const palette = new Palette(byId<HTMLElement>('palette'), state, discovery, toast);
+  const selectTool = (id: MaterialId): void => void palette.select(id);
 
-  function selectTool(id: MaterialId): void {
-    state.tool = id;
-    for (const [tid, b] of buttons) b.setAttribute('aria-pressed', String(tid === id));
-    buttons.get(id)?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-  }
-  selectTool(state.tool);
+  // --- discovery
+  const modeSel = byId<HTMLSelectElement>('mode');
+  const journalBtn = byId<HTMLButtonElement>('journal-button');
+  const journal = new Journal(byId('journal'), byId('journal-list'), byId('journal-progress'), discovery);
+  const syncDiscovery = (): void => {
+    journalBtn.hidden = state.mode !== 'discovery';
+    journalBtn.textContent = `Journal ${journal.summary()}`;
+    modeSel.value = state.mode;
+    palette.refresh();
+    if (journal.open) journal.refresh();
+  };
+  const setMode = (mode: Mode): void => {
+    state.mode = mode;
+    saveMode(mode);
+    // Only what happens from now on counts towards discoveries, not earlier sandbox play.
+    if (mode === 'discovery') world.created.fill(0);
+    syncDiscovery();
+  };
+  modeSel.addEventListener('change', () => setMode(modeSel.value === 'sandbox' ? 'sandbox' : 'discovery'));
+  journalBtn.addEventListener('click', () => journal.setOpen(!journal.open));
+  byId<HTMLButtonElement>('journal-close').addEventListener('click', () => journal.setOpen(false));
+  byId<HTMLElement>('journal').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) journal.setOpen(false);
+  });
+  byId<HTMLButtonElement>('journal-reset').addEventListener('click', () => {
+    if (!confirm('Forget all your discoveries and start again?')) return;
+    discovery.reset();
+    saveDiscovery(discovery);
+    world.created.fill(0);
+    syncDiscovery();
+  });
+  syncDiscovery();
+
+  const checkDiscoveries = (): void => {
+    if (state.mode !== 'discovery') return;
+    const fresh = discovery.update(world.created);
+    if (fresh.length === 0) return;
+    saveDiscovery(discovery);
+    syncDiscovery();
+    for (const id of fresh) palette.flash(id);
+    const names = fresh.map((id) => PALETTE.find((d) => d.id === id)?.name ?? '?');
+    const reward = fresh.includes(discovery.rewardMaterial) ? ' Reward unlocked!' : '';
+    toast(`Discovered ${names.join(', ')}! (${journal.summary()})${reward}`);
+  };
 
   // --- toolbar
   const syncPlay = (): void => {
@@ -219,14 +245,19 @@ export function setupControls(state: GameState, world: World): void {
       setBrush(state.brush + 1);
     } else if (key === 't') {
       toggleHeat();
+    } else if (key === 'j' && state.mode === 'discovery') {
+      journal.setOpen(!journal.open);
     } else if (key === '?' || key === 'h') {
       setHelp(!helpOpen());
     } else if (key === 'escape') {
       setHelp(false);
       setMenu(false);
+      journal.setOpen(false);
     } else {
       return;
     }
     e.preventDefault();
   });
+
+  return { checkDiscoveries };
 }

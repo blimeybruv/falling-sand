@@ -9,7 +9,8 @@ export const M = {
   Water: 2,
   Stone: 3,
   Wood: 4,
-  Plant: 5,
+  /** Was called Plant before 0.2; same id, so old scenes still load. */
+  Grass: 5,
   Oil: 6,
   Fire: 7,
   Smoke: 8,
@@ -20,6 +21,11 @@ export const M = {
   Lava: 13,
   Ice: 14,
   Gunpowder: 15,
+  Seed: 16,
+  Leaf: 17,
+  Earth: 18,
+  Loam: 19,
+  Clay: 20,
 } as const;
 
 export type MaterialId = (typeof M)[keyof typeof M];

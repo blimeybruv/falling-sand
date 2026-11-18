@@ -292,9 +292,9 @@ describe('plant', () => {
   it('grows into neighbouring water', () => {
     const w = new World(20, 20, 18);
     fillRect(w, 0, 10, 20, 10, M.Water);
-    w.set(10, 15, M.Plant);
+    w.set(10, 15, M.Grass);
     run(w, 600);
-    expect(w.count(M.Plant)).toBeGreaterThan(1);
+    expect(w.count(M.Grass)).toBeGreaterThan(1);
   });
 });
 

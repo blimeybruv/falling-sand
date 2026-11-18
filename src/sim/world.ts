@@ -21,6 +21,7 @@ import {
   MAX_BLAST_RADIUS,
   MAX_EXPLOSIONS_PER_FRAME,
   type MaterialDef,
+  type Reaction,
 } from './materials';
 import { Rng } from './rng';
 
@@ -90,6 +91,12 @@ export class World {
   /** Frame number in which each cell last moved or was created; such cells are skipped. */
   private readonly stamp: Uint32Array;
   private explosionsThisFrame = 0;
+  /**
+   * How many cells of each material the simulation itself has created (in step(), not by the brush
+   * or by loading a scene). Discovery mode watches this to unlock materials.
+   */
+  readonly created: Uint32Array = new Uint32Array(MATERIALS.length);
+  private stepping = false;
 
   constructor(width: number, height: number, seed?: number) {
     this.width = width;
@@ -128,6 +135,19 @@ export class World {
     return MATS[this.get(x, y)];
   }
 
+  /** True if any cell within `r` (a square) of (x, y) holds material m. */
+  near(x: number, y: number, r: number, m: MaterialId): boolean {
+    for (let dy = -r; dy <= r; dy++) {
+      const ny = y + dy;
+      if (ny < 0 || ny >= this.height) continue;
+      for (let dx = -r; dx <= r; dx++) {
+        const nx = x + dx;
+        if (nx >= 0 && nx < this.width && this.mat[ny * this.width + nx] === m) return true;
+      }
+    }
+    return false;
+  }
+
   /** True for walls, static materials and powders (things fluids can't pass through). */
   isSolid(x: number, y: number): boolean {
     if (!this.inBounds(x, y)) return true;
@@ -156,6 +176,7 @@ export class World {
     this.vy[i] = 0;
     this.temp[i] = def.heat ? def.heat.temp : AMBIENT_TEMP;
     this.stamp[i] = this.frame;
+    if (this.stepping) this.created[m]++;
   }
 
   /** Like setCell, but keeps the cell's temperature (for melting, boiling, cooling to stone...). */
@@ -335,6 +356,7 @@ export class World {
   step(): void {
     this.frame++;
     this.explosionsThisFrame = 0;
+    this.stepping = true;
     this.updateTemperature();
     const { width: w, height: h, mat, stamp } = this;
     const f = this.frame;
@@ -349,6 +371,7 @@ export class World {
         this.updateCell(x, y, i, MATS[m]);
       }
     }
+    this.stepping = false;
   }
 
   /**
@@ -401,6 +424,8 @@ export class World {
     }
     if (def.ignitesAt !== undefined && this.burn[i] === 0 && t >= def.ignitesAt && this.ignite(i)) return;
 
+    if (def.reactions && this.react(x, y, i, def.reactions)) return;
+
     if (def.lifetime && --this.life[i] <= 0) {
       const decay = def.decay;
       this.setCell(i, decay && this.rng.chance(decay.chance) ? decay.into : M.Empty);
@@ -426,6 +451,29 @@ export class World {
       default:
         break;
     }
+  }
+
+  /** Try this cell's reactions against one random neighbour. Returns true if the cell changed. */
+  private react(x: number, y: number, i: number, reactions: readonly Reaction[]): boolean {
+    const k = this.rng.int(0, 3);
+    const nx = k === 0 ? x - 1 : k === 1 ? x + 1 : x;
+    const ny = k === 2 ? y - 1 : k === 3 ? y + 1 : y;
+    if (!this.inBounds(nx, ny)) return false;
+    const n = ny * this.width + nx;
+    const other = this.mat[n];
+    for (let r = 0; r < reactions.length; r++) {
+      const re = reactions[r];
+      if (re.with !== other || (re.whileBurning && this.burn[i] === 0)) continue;
+      if (re.side && re.side !== (k === 2 ? 'above' : k === 3 ? 'below' : 'beside')) continue;
+      if (!this.rng.chance(re.chance)) continue;
+      if (re.otherInto !== undefined) this.transform(n, re.otherInto);
+      if (re.into !== undefined) {
+        this.transform(i, re.into);
+        return true;
+      }
+      return false;
+    }
+    return false;
   }
 
   /** One frame of a burning cell. Returns true if the cell burned out (or exploded). */
@@ -539,6 +587,10 @@ export class World {
 
   private movePowder(x: number, y: number, i: number, def: MaterialDef): void {
     if (this.fall(x, y, i, def)) return;
+    // Sticky powders (clay) hold on to their own kind at either side, and otherwise rarely slide.
+    if (def.viscosity > 0) {
+      if (this.get(x - 1, y) === def.id || this.get(x + 1, y) === def.id || this.rng.chance(def.viscosity)) return;
+    }
     const dir = this.rng.sign();
     if (this.tryDisplace(i, x + dir, y + 1, def)) return;
     this.tryDisplace(i, x - dir, y + 1, def);

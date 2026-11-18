@@ -10,7 +10,18 @@
  * buttons and the keyboard shortcut all come from the table entry.
  */
 import { M, type MaterialId } from './ids';
-import { corrode, freezeWater, growPlant, updateFire, updateLava, updateSteam } from './behaviours';
+import {
+  corrode,
+  formLoam,
+  fossilise,
+  freezeWater,
+  growGrass,
+  sproutGrass,
+  updateFire,
+  updateLava,
+  updateSeed,
+  updateSteam,
+} from './behaviours';
 import type { World } from './world';
 
 /**
@@ -22,6 +33,22 @@ import type { World } from './world';
  * - gas:    rises and drifts; usually has a lifetime.
  */
 export type Kind = 'empty' | 'static' | 'powder' | 'liquid' | 'gas';
+
+/**
+ * A simple two-material reaction: while a cell of this material touches `with` (4-neighbourhood),
+ * each frame there is a `chance` that this cell becomes `into` and/or the other becomes `otherInto`.
+ * Recipes for Discovery mode are mostly reactions like these.
+ */
+export interface Reaction {
+  with: MaterialId;
+  chance: number;
+  into?: MaterialId;
+  otherInto?: MaterialId;
+  /** Only while this cell is burning. */
+  whileBurning?: boolean;
+  /** Only when the other cell is on this side of this one (e.g. 'above': it's on top). */
+  side?: 'above' | 'below' | 'beside';
+}
 
 /** Per-material hook. Return true if the cell was fully handled (moved, transformed or removed). */
 export type UpdateFn = (world: World, x: number, y: number, i: number) => boolean;
@@ -57,7 +84,7 @@ export interface MaterialDef {
   decay?: { into: MaterialId; chance: number };
   /** Liquids: how many cells sideways it can flow per frame. */
   dispersion: number;
-  /** Liquids: chance per frame of skipping sideways/diagonal flow (stickiness). 0 = runny. */
+  /** Liquids and powders: chance per frame of skipping sideways/diagonal movement (stickiness). */
   viscosity: number;
   /** Gases: chance per frame of trying to rise straight up (otherwise it drifts). */
   rise: number;
@@ -87,6 +114,8 @@ export interface MaterialDef {
   wind: number;
   /** Renderer: the colour shimmers over time (lava). */
   glow?: boolean;
+  /** Two-material reactions; see Reaction. */
+  reactions?: readonly Reaction[];
   /** Optional extra behaviour; runs before the generic movement for its kind. */
   update?: UpdateFn;
   /** One line for the palette tooltip and the README. */
@@ -134,6 +163,7 @@ const defs: Record<MaterialId, Def> = {
     density: 20,
     colour: [219, 189, 120],
     colourJitter: 0.14,
+    update: sproutGrass,
     description: 'Falls, piles up, sinks through water.',
   },
   [M.Water]: {
@@ -175,11 +205,13 @@ const defs: Record<MaterialId, Def> = {
     flammability: 0.03,
     burnTime: [90, 180],
     extinguishChance: 0.5,
-    description: 'Static; burns slowly.',
+    update: fossilise,
+    reactions: [{ with: M.Sand, whileBurning: true, chance: 0.02, otherInto: M.Gunpowder }],
+    description: 'Static; burns slowly. Trees grow it.',
   },
-  [M.Plant]: {
+  [M.Grass]: {
     ...base,
-    name: 'Plant',
+    name: 'Grass',
     ignitesAt: 220,
     key: '5',
     kind: 'static',
@@ -189,8 +221,8 @@ const defs: Record<MaterialId, Def> = {
     flammability: 0.06,
     burnTime: [25, 50],
     extinguishChance: 0.5,
-    update: growPlant,
-    description: 'Static; slowly grows into neighbouring water; burns.',
+    update: growGrass,
+    description: 'Weeds and grass: spreads over damp sand and into water; burns.',
   },
   [M.Oil]: {
     ...base,
@@ -206,6 +238,7 @@ const defs: Record<MaterialId, Def> = {
     dispersion: 4,
     flammability: 0.35,
     burnTime: [12, 30],
+    reactions: [{ with: M.Gunpowder, chance: 0.03, into: M.Napalm, otherInto: M.Napalm }],
     extinguishChance: 0.1,
     description: 'Liquid, floats on water; burns fast.',
   },
@@ -268,6 +301,8 @@ const defs: Record<MaterialId, Def> = {
     colourJitter: 0.12,
     lifetime: [80, 200],
     rise: 0.35,
+    // Rain on smoke: water falling onto it from above (not just touching the surface).
+    reactions: [{ with: M.Water, side: 'above', chance: 0.3, into: M.Acid }],
     description: 'Rises and drifts, then fades.',
   },
   [M.Steam]: {
@@ -297,6 +332,7 @@ const defs: Record<MaterialId, Def> = {
     conductivity: 0.1,
     wind: 0.05,
     update: corrode,
+    reactions: [{ with: M.Oil, chance: 0.05, into: M.Nitro, otherInto: M.Empty }],
     description: 'Liquid; dissolves what it touches (not stone or water), using itself up.',
   },
   [M.Lava]: {
@@ -346,6 +382,75 @@ const defs: Record<MaterialId, Def> = {
     wind: 0.12,
     description: 'Powder; burns very fast with small blasts, so it can be laid as a fuse.',
   },
+  [M.Seed]: {
+    ...base,
+    name: 'Seed',
+    key: 's',
+    kind: 'powder',
+    density: 16,
+    colour: [168, 124, 70],
+    colourJitter: 0.2,
+    flammability: 0.2,
+    burnTime: [4, 10],
+    ignitesAt: 220,
+    wind: 0.2,
+    update: updateSeed,
+    description: 'Falls; on damp sand it sprouts and grows into a tree.',
+  },
+  [M.Leaf]: {
+    ...base,
+    name: 'Leaf',
+    key: '',
+    kind: 'static',
+    density: 100,
+    colour: [44, 132, 58],
+    colourEnd: [84, 168, 64],
+    colourJitter: 0.12,
+    flammability: 0.15,
+    burnTime: [8, 20],
+    extinguishChance: 0.5,
+    ignitesAt: 200,
+    burnsInto: M.Smoke,
+    update: fossilise,
+    description: 'Part of a tree. Burns quickly.',
+  },
+  [M.Earth]: {
+    ...base,
+    name: 'Earth',
+    key: 'd',
+    kind: 'powder',
+    density: 22,
+    colour: [146, 98, 60],
+    colourJitter: 0.16,
+    conductivity: 0.05,
+    reactions: [{ with: M.Water, chance: 0.003, into: M.Clay }],
+    update: formLoam,
+    description: 'Brown earth. Soaked in water it turns to clay; with sand and clay around it, loam.',
+  },
+  [M.Loam]: {
+    ...base,
+    name: 'Loam',
+    key: 'o',
+    kind: 'powder',
+    density: 21,
+    colour: [84, 58, 38],
+    colourJitter: 0.18,
+    conductivity: 0.05,
+    description: 'Rich soil: seeds grow into tall trees on it even without water, and grass spreads over it.',
+  },
+  [M.Clay]: {
+    ...base,
+    name: 'Clay',
+    key: 'c',
+    kind: 'powder',
+    density: 24,
+    colour: [188, 112, 84],
+    colourJitter: 0.1,
+    viscosity: 0.9,
+    conductivity: 0.08,
+    above: { temp: 600, into: M.Stone },
+    description: 'Sticky: stands in steep piles. Fired by heat, it hardens into stone.',
+  },
 };
 
 /** Indexed by material id. */
@@ -353,8 +458,8 @@ export const MATERIALS: readonly MaterialDef[] = Object.values(M).map((id) => ({
 
 /** Palette order (also the order of the number-key shortcuts). */
 export const PALETTE: readonly MaterialDef[] = [
-  M.Sand, M.Water, M.Stone, M.Wood, M.Plant, M.Oil, M.Fire, M.Napalm, M.Nitro, M.Smoke, M.Steam,
-  M.Acid, M.Lava, M.Ice, M.Gunpowder,
+  M.Sand, M.Earth, M.Clay, M.Loam, M.Water, M.Stone, M.Wood, M.Grass, M.Seed, M.Oil, M.Fire, M.Napalm,
+  M.Nitro, M.Smoke, M.Steam, M.Acid, M.Lava, M.Ice, M.Gunpowder,
 ].map((id) => MATERIALS[id]);
 
 /** Room temperature. Cells drift back towards it when nothing heats or cools them. */
