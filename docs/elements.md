@@ -37,7 +37,7 @@ Discovery mode. See `CLAUDE.md` for how to add a material and make it discoverab
 | ✅ | Salt water | Salt plus water | Heavier than fresh water and doesn't freeze; boiling it leaves salt behind | Salt | T |
 | ✅ | Cloud | Lots of steam gathered at the top | Drifts in the wind and rains water drops | Rain, snow, lightning | F |
 | ✅ | Snow | A cloud near ice snows instead of raining | Light, cold powder that melts into water near anything warm | | T |
-| | Lightning | A big enough cloud | A spark that strikes down and sets things alight | Electricity | S |
+| ✅ | Lightning | Deep, thick clouds now and then strike; also drawable | A short-lived, very hot bolt that sparks conductors and sets things alight | Electricity | S |
 
 ## Life
 
@@ -79,11 +79,29 @@ New chains that grow out of what already exists. Same effort key.
 | ✅ | Seaweed | Grass meets salt water | Grows upward through salt water, swaying | Salt marshes | F |
 | ✅ | Cactus | A seed on dry sand, far from any water | Grows in columns with arms; burning releases water | Deserts | F |
 | ✅ | Vine | Grass meets wood (trees on grass grow them too) | Climbs up wood, stone and brick walls | Overgrown ruins | F |
-| | Stained glass | Glass touching rust or salt while hot | Coloured static glass, acid-proof | Decoration | T |
-| | Soot | Smoke touching cold stone, ice or metal | Black powder that builds up on surfaces; burns | Ink | T |
-| | Mercury | Sulfur heated with iron ore | Silvery liquid heavier than everything (sinks through all liquids) | Thermometers | T |
-| | Electricity | A per-cell charge that travels through conductors (iron, salt water) | The missing system: sparks ignite, current heats wires | Lightning, hydrogen | S |
-| | Hydrogen | Electricity through water | The lightest gas; explodes with a flame, leaving water | Rockets | S |
+| ✅ | Stained glass | Glass meets rust | Coloured static glass, acid-proof | Decoration | T |
+| ✅ | Soot | Smoke meeting cold stone, iron or ice | Light black powder that builds up on surfaces; burns | Ink | T |
+| ✅ | Mercury | Burning sulfur against iron ore | Liquid metal heavier than everything: sinks through all liquids, sand floats on it; conducts | Thermometers | T |
+| ✅ | Electricity | A per-cell charge that pulses along conductors (iron, salt water, mercury) | Pulses heat the wire, set flammable neighbours alight and split water; Battery (iron and charcoal in salt water) pulses on its own | Lightning, hydrogen | S |
+| ✅ | Hydrogen | Electricity through fresh water | The lightest gas; burns with a bang, leaving water | Rockets | S |
+
+## Fresh ideas, round 2 (brainstormed 19 Nov, once electricity was in)
+
+| | Material | How it's made | What it does | Leads to | Effort |
+|---|---|---|---|---|---|
+| | Sap | Wood warmed gently (100–150°, not alight) oozes it | Slow, sticky amber liquid | Sugar | T |
+| | Sugar | Sap boiled dry | Sweet white powder; dissolves in water | Caramel, alcohol | T |
+| | Caramel | Sugar heated past 160° | Sticky brown liquid that sets hard when cool; burns | | T |
+| | Alcohol | Sugar water with mushroom (yeast) in it, over time | Runny liquid that mixes with water and burns with a cool blue flame | Vinegar | F |
+| | Vinegar | Alcohol left touching air for a long time | A weak acid: fizzes with ash, slowly eats rust | Pickling, fizz | T |
+| | Chlorine | Electrified salt water gives it off | Heavy yellow-green gas that sinks; wilts plants it touches | Bleach | T |
+| | Bleach | Chlorine meets lye | Liquid that kills algae, moss and mushrooms, and fades stained glass back to glass | Cleaning | T |
+| | Plasma | Lightning through hydrogen, or any gas past 2000° | Glowing, extremely hot, short-lived gas | | F |
+| | Copper ore | Lava meets salt water (rarely) | Greenish speckled rock | Copper | T |
+| | Copper | Burning charcoal against copper ore | Metal that conducts electricity better (pulses travel two cells a frame) | Verdigris, wiring | F |
+| | Verdigris | Copper meets salt water or vinegar | Green crust that doesn't conduct | Patina | T |
+| | Fog | Steam meeting snow or ice low down | A thin mist that lingers and drifts, then fades | Atmosphere | T |
+| | Stalactite | Salt water dripping from a stone ceiling | Slowly grows downward in icicle-like points | Caves | F |
 
 ## Notes
 

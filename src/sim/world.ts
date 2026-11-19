@@ -9,6 +9,7 @@
  *   vel   consecutive frames spent falling; drives acceleration and nitroglycerin's impact trigger
  *   temp  temperature (AMBIENT_TEMP is room temperature); spreads between neighbours every frame
  *   vx,vy velocity of a particle in flight (thrown by an explosion), in 1/SUB cells per frame
+ *   charge electricity in a conductor: CHARGE_ACTIVE for one frame, then counting down (cooldown)
  *
  * The grid is updated bottom-up, alternating left-to-right and right-to-left each frame, and every
  * cell moves at most once per frame (tracked with `stamp`).
@@ -35,6 +36,18 @@ const DENSITY = Float32Array.from(MATERIALS, (d) => d.density);
 const FLUID = Uint8Array.from(MATERIALS, (d) => (d.kind === 'empty' || d.kind === 'liquid' || d.kind === 'gas' ? 1 : 0));
 const FLAMMABLE = Uint8Array.from(MATERIALS, (d) => (d.flammability > 0 ? 1 : 0));
 const EXTINGUISHES = Uint8Array.from(MATERIALS, (d) => (d.extinguishes ? 1 : 0));
+const CONDUCTS = Uint8Array.from(MATERIALS, (d) => (d.conducts ? 1 : 0));
+
+/**
+ * Electricity. A conductor cell's charge is CHARGE_ACTIVE for one frame (when it passes the charge
+ * on to idle conducting neighbours), then counts down through a cooldown to 0, so a pulse travels
+ * along a wire one cell per frame and can't flow back the way it came.
+ */
+export const CHARGE_ACTIVE = 4;
+/** Marks a cell that will become active at the end of this frame's electricity pass. */
+const CHARGE_PENDING = 255;
+/** How much an active conductor warms up per pulse. */
+const CHARGE_HEAT = 20;
 const CONDUCTIVITY = Float32Array.from(MATERIALS, (d) => d.conductivity);
 /** The temperature each material drifts towards, and how fast (its heat source, or ambient cooling). */
 const HOLD_TEMP = Float32Array.from(MATERIALS, (d) => (d.heat ? d.heat.temp : AMBIENT_TEMP));
@@ -81,6 +94,7 @@ export class World {
   readonly vel: Uint8Array;
   readonly vx: Int8Array;
   readonly vy: Int8Array;
+  readonly charge: Uint8Array;
   /** Current temperatures. Double-buffered, so this array is replaced every frame: don't hold on to it. */
   temp: Float32Array;
   private tempBack: Float32Array;
@@ -110,6 +124,7 @@ export class World {
     this.vel = new Uint8Array(this.size);
     this.vx = new Int8Array(this.size);
     this.vy = new Int8Array(this.size);
+    this.charge = new Uint8Array(this.size);
     this.temp = new Float32Array(this.size).fill(AMBIENT_TEMP);
     this.tempBack = new Float32Array(this.size).fill(AMBIENT_TEMP);
     this.stamp = new Uint32Array(this.size);
@@ -185,6 +200,7 @@ export class World {
     this.vel[i] = 0;
     this.vx[i] = 0;
     this.vy[i] = 0;
+    this.charge[i] = 0;
     this.temp[i] = def.heat ? def.heat.temp : AMBIENT_TEMP;
     this.stamp[i] = this.frame;
     if (this.stepping) this.created[m]++;
@@ -205,7 +221,7 @@ export class World {
 
   /** Swap two cells (all their state) and mark both as moved this frame. */
   swap(a: number, b: number): void {
-    const { mat, shade, life, burn, vel, vx, vy, temp } = this;
+    const { mat, shade, life, burn, vel, vx, vy, temp, charge } = this;
     let t: number;
     t = mat[a]; mat[a] = mat[b]; mat[b] = t;
     t = shade[a]; shade[a] = shade[b]; shade[b] = t;
@@ -215,6 +231,7 @@ export class World {
     t = vx[a]; vx[a] = vx[b]; vx[b] = t;
     t = vy[a]; vy[a] = vy[b]; vy[b] = t;
     t = temp[a]; temp[a] = temp[b]; temp[b] = t;
+    t = charge[a]; charge[a] = charge[b]; charge[b] = t;
     this.stamp[a] = this.frame;
     this.stamp[b] = this.frame;
   }
@@ -227,6 +244,7 @@ export class World {
     this.vel.fill(0);
     this.vx.fill(0);
     this.vy.fill(0);
+    this.charge.fill(0);
     this.temp.fill(AMBIENT_TEMP);
     this.tempBack.fill(AMBIENT_TEMP);
     this.stamp.fill(0);
@@ -243,7 +261,7 @@ export class World {
 
   /**
    * Brush: fill a disc with material m. Particles only go into empty cells; Empty (the eraser)
-   * clears everything; Fire also sets flammable cells alight. Loose materials are scattered a
+   * clears everything; Fire also sets flammable cells alight; Lightning sparks conductors. Loose materials are scattered a
    * little so they look poured rather than stamped.
    */
   paint(cx: number, cy: number, radius: number, m: MaterialId): void {
@@ -265,6 +283,8 @@ export class World {
           if (this.rng.chance(scatter)) this.setCell(i, m);
         } else if (m === M.Fire) {
           this.ignite(i);
+        } else if (m === M.Lightning) {
+          this.electrify(i);
         }
       }
     }
@@ -295,6 +315,13 @@ export class World {
     // Like a new particle, a cell that has just caught fire waits until next frame to act,
     // so fire spreads the same way whichever direction the scan runs.
     this.stamp[i] = this.frame;
+    return true;
+  }
+
+  /** Start an electric pulse in cell i if it conducts and isn't already charged. Returns true if it did. */
+  electrify(i: number): boolean {
+    if (!CONDUCTS[this.mat[i]] || this.charge[i] !== 0) return false;
+    this.charge[i] = CHARGE_ACTIVE;
     return true;
   }
 
@@ -369,6 +396,7 @@ export class World {
     this.explosionsThisFrame = 0;
     this.stepping = true;
     this.updateTemperature();
+    this.updateElectricity();
     const { width: w, height: h, mat, stamp } = this;
     const f = this.frame;
     const leftToRight = (f & 1) === 0;
@@ -422,6 +450,49 @@ export class World {
     }
     this.tempBack = t;
     this.temp = out;
+  }
+
+  /**
+   * Move electricity along conductors (see CHARGE_ACTIVE). An active cell passes its charge to idle
+   * conducting neighbours, warms up, may set flammable neighbours alight, and splits neighbouring
+   * fresh water into hydrogen. Charge left in a cell that no longer conducts is dropped.
+   */
+  private updateElectricity(): void {
+    const { width: w, height: h, mat, charge } = this;
+    let pending = 0;
+    for (let i = 0; i < this.size; i++) {
+      const c = charge[i];
+      if (c === 0 || c === CHARGE_PENDING) continue;
+      if (!CONDUCTS[mat[i]]) {
+        charge[i] = 0;
+        continue;
+      }
+      if (c === CHARGE_ACTIVE) {
+        const x = i % w;
+        const y = (i - x) / w;
+        this.temp[i] += CHARGE_HEAT;
+        for (let k = 0; k < 4; k++) {
+          const nx = k === 0 ? x - 1 : k === 1 ? x + 1 : x;
+          const ny = k === 2 ? y - 1 : k === 3 ? y + 1 : y;
+          if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+          const n = ny * w + nx;
+          const t = mat[n];
+          if (CONDUCTS[t]) {
+            if (charge[n] === 0) {
+              charge[n] = CHARGE_PENDING;
+              pending++;
+            }
+          } else if (FLAMMABLE[t]) {
+            if (this.rng.chance(0.5)) this.ignite(n);
+          } else if (t === M.Water && this.rng.chance(0.05)) {
+            this.setCell(n, M.Hydrogen); // electrolysis
+          }
+        }
+      }
+      charge[i] = c - 1;
+    }
+    if (pending === 0) return;
+    for (let i = 0; i < this.size; i++) if (charge[i] === CHARGE_PENDING) charge[i] = CHARGE_ACTIVE;
   }
 
   private updateCell(x: number, y: number, i: number, def: MaterialDef): void {

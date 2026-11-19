@@ -13,6 +13,9 @@ import { M, type MaterialId } from './ids';
 import {
   corrode,
   climbVine,
+  formBattery,
+  pulseBattery,
+  updateBolt,
   dropSeeds,
   growSeaweed,
   releaseGas,
@@ -128,6 +131,8 @@ export interface MaterialDef {
   acidProof: boolean;
   /** Puts out fire and burning cells it touches, like water (water, salt water, foam). */
   extinguishes: boolean;
+  /** Carries electricity (see World.updateElectricity). */
+  conducts: boolean;
   /**
    * Explodes when it finishes burning (or, with no burnTime, after a short fuse once lit).
    * `impactSpeed`: frames of falling before a hard landing sets it off (omit: not impact-sensitive).
@@ -178,6 +183,7 @@ const base: Omit<Def, 'name' | 'key' | 'kind' | 'density' | 'colour' | 'descript
   indestructible: false,
   acidProof: false,
   extinguishes: false,
+  conducts: false,
   flames: 0.25,
   conductivity: 0.05,
   category: 'ground',
@@ -375,7 +381,13 @@ const defs: Record<MaterialId, Def> = {
     lifetime: [80, 200],
     rise: 0.35,
     // Rain on smoke: water falling onto it from above (not just touching the surface).
-    reactions: [{ with: M.Water, side: 'above', chance: 0.3, into: M.Acid }],
+    reactions: [
+      { with: M.Water, side: 'above', chance: 0.3, into: M.Acid },
+      // Smoke meeting a cold surface leaves soot on it.
+      { with: M.Stone, chance: 0.004, into: M.Soot },
+      { with: M.Iron, chance: 0.004, into: M.Soot },
+      { with: M.Ice, chance: 0.004, into: M.Soot },
+    ],
     description: 'Rises and drifts, then fades.',
   },
   [M.Steam]: {
@@ -611,6 +623,7 @@ const defs: Record<MaterialId, Def> = {
     colour: [196, 228, 234],
     colourJitter: 0.04,
     acidProof: true,
+    reactions: [{ with: M.Rust, chance: 0.01, into: M.StainedGlass, otherInto: M.Empty }],
     description: 'Melted sand. Acid cannot eat it, so it makes good containers.',
   },
   [M.Obsidian]: {
@@ -641,7 +654,11 @@ const defs: Record<MaterialId, Def> = {
     ignitesAt: 250,
     extinguishChance: 0.9,
     burnsInto: M.Smoke,
-    reactions: [{ with: M.Water, chance: 0.002, into: M.Acid }],
+    reactions: [
+      { with: M.Water, chance: 0.002, into: M.Acid },
+      // Roasting the ore with burning sulfur drives off quicksilver.
+      { with: M.IronOre, whileBurning: true, chance: 0.05, otherInto: M.Mercury },
+    ],
     description: 'Yellow powder from volcanoes. Burns with choking smoke; slowly turns water acidic.',
   },
   [M.Saltpetre]: {
@@ -682,7 +699,9 @@ const defs: Record<MaterialId, Def> = {
     conductivity: 0.12,
     acidProof: true,
     extinguishes: true,
+    conducts: true,
     reactions: [{ with: M.Sand, chance: 0.002, otherInto: M.Quicksand }],
+    update: formBattery,
     above: { temp: 102, into: M.Steam, sometimes: { into: M.Salt, chance: 0.5 } },
     wind: 0.05,
     description: 'Heavier than fresh water (sinks under it) and never freezes. Boil it to get salt back.',
@@ -789,6 +808,7 @@ const defs: Record<MaterialId, Def> = {
     colour: [150, 156, 166],
     colourJitter: 0.06,
     conductivity: 0.25,
+    conducts: true,
     reactions: [
       { with: M.Water, chance: 0.0002, into: M.Rust },
       { with: M.SaltWater, chance: 0.004, into: M.Rust },
@@ -1119,6 +1139,98 @@ const defs: Record<MaterialId, Def> = {
     update: climbVine,
     description: 'Climbs up wood, stone and brick walls.',
   },
+  [M.StainedGlass]: {
+    ...base,
+    name: 'Stained glass',
+    key: '',
+    kind: 'static',
+    density: 100,
+    colour: [204, 60, 90],
+    colourEnd: [60, 120, 220],
+    colourJitter: 0.08,
+    acidProof: true,
+    description: 'Glass coloured with rust. Acid cannot eat it.',
+  },
+  [M.Soot]: {
+    ...base,
+    name: 'Soot',
+    key: '',
+    category: 'fire',
+    kind: 'powder',
+    density: 3,
+    colour: [34, 30, 28],
+    colourJitter: 0.15,
+    flammability: 0.2,
+    burnTime: [10, 20],
+    burnsInto: M.Smoke,
+    wind: 0.3,
+    description: 'Black powder that smoke leaves on cold surfaces. Burns.',
+  },
+  [M.Mercury]: {
+    ...base,
+    name: 'Mercury',
+    key: '',
+    category: 'fluid',
+    kind: 'liquid',
+    density: 50,
+    colour: [186, 192, 204],
+    colourEnd: [224, 228, 236],
+    colourJitter: 0.06,
+    dispersion: 4,
+    conductivity: 0.2,
+    acidProof: true,
+    conducts: true,
+    description: 'Liquid metal, heavier than everything: sinks through all liquids, and sand floats on it. Conducts.',
+  },
+  [M.Lightning]: {
+    ...base,
+    name: 'Lightning',
+    key: '',
+    category: 'fire',
+    kind: 'static',
+    density: 100,
+    colour: [236, 242, 255],
+    colourEnd: [170, 196, 255],
+    colourJitter: 0.1,
+    lifetime: [4, 8],
+    heat: { temp: 3000, rate: 1 },
+    glow: true,
+    update: updateBolt,
+    description: 'A bolt of electricity: sparks metal and salt water, sets things alight. Draw it on a wire.',
+  },
+  [M.Hydrogen]: {
+    ...base,
+    name: 'Hydrogen',
+    key: '',
+    category: 'fluid',
+    kind: 'gas',
+    density: 0.07,
+    colour: [190, 210, 236],
+    colourJitter: 0.06,
+    lifetime: [600, 1200],
+    rise: 0.8,
+    flammability: 1,
+    burnTime: [1, 2],
+    ignitesAt: 400,
+    flames: 1,
+    burnsInto: M.Water,
+    explosive: { radius: 2, chance: 0.15 },
+    wind: 0.6,
+    description: 'The lightest gas. Burns with a bang, leaving water behind.',
+  },
+  [M.Battery]: {
+    ...base,
+    name: 'Battery',
+    key: '',
+    category: 'fire',
+    kind: 'static',
+    density: 100,
+    colour: [70, 74, 84],
+    colourEnd: [200, 170, 60],
+    colourJitter: 0.1,
+    update: pulseBattery,
+    description: 'Sends a pulse of electricity into any metal or salt water touching it, over and over.',
+  },
 };
 
 /** Indexed by material id. */
@@ -1128,13 +1240,13 @@ export const MATERIALS: readonly MaterialDef[] = Object.values(M).map((id) => ({
 export const PALETTE: readonly MaterialDef[] = [
   // ground
   M.Sand, M.Earth, M.Mud, M.Clay, M.Loam, M.Stone, M.Brick, M.Glass, M.Obsidian, M.Ice, M.Snow,
-  M.Salt, M.IronOre, M.Iron, M.Rust, M.Cement, M.Pumice, M.Quicksand, M.Hail, M.DryIce,
+  M.Salt, M.IronOre, M.Iron, M.Rust, M.Cement, M.Pumice, M.Quicksand, M.Hail, M.DryIce, M.StainedGlass,
   // liquids and gases
   M.Water, M.SaltWater, M.Oil, M.Tar, M.Lye, M.Foam, M.Fizz, M.Acid, M.Lava, M.Smoke, M.Steam, M.Cloud,
-  M.CarbonDioxide,
+  M.CarbonDioxide, M.Hydrogen, M.Mercury,
   // fire and blasts
   M.Fire, M.Charcoal, M.Coal, M.Ash, M.Sulfur, M.Saltpetre, M.Gunpowder, M.Fireworks, M.Thermite,
-  M.Napalm, M.Nitro, M.Dynamite, M.SwampGas,
+  M.Napalm, M.Nitro, M.Dynamite, M.SwampGas, M.Soot, M.Lightning, M.Battery,
   // life
   M.Seed, M.Grass, M.Wood, M.Flower, M.Mushroom, M.Moss, M.Algae, M.Vine, M.Seaweed, M.Cactus,
 ].map((id) => MATERIALS[id]);

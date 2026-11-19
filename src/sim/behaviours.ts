@@ -432,8 +432,10 @@ export function freezeWater(w: World, x: number, y: number, i: number): boolean 
   return true;
 }
 
-/** Cloud: now and then drops rain below it; near ice it snows instead, and sometimes hails. */
+/** Cloud: now and then drops rain below it; near ice it snows instead, and sometimes hails; thick clouds strike lightning. */
 export function rainCloud(w: World, x: number, y: number, _i: number): boolean {
+  // Deep inside a thick cloud, very rarely, lightning strikes.
+  if (w.rng.chance(0.00002) && countAround(w, x, y, M.Cloud, M.Cloud) >= 6) strike(w, x, y);
   if (!w.rng.chance(0.006) || w.get(x, y + 1) !== M.Empty) return false;
   if (!w.near(x, y, 6, M.Ice)) {
     w.set(x, y + 1, M.Water);
@@ -521,4 +523,53 @@ export function spreadAlgae(w: World, x: number, y: number, _i: number): boolean
   const ny = y + w.rng.int(0, 1);
   if (w.get(nx, ny) === M.Water && w.get(nx, ny - 1) === M.Empty) w.set(nx, ny, M.Algae);
   return false;
+}
+
+/**
+ * A lightning strike from (x, y): a jagged bolt down through air and gas until it hits something,
+ * which it electrifies if it conducts, or else sets alight.
+ */
+function strike(w: World, x: number, y: number): void {
+  let bx = x;
+  for (let by = y + 1; by < w.height; by++) {
+    bx += w.rng.int(-1, 1);
+    const def = w.defAt(bx, by);
+    if (def.id === M.Cloud) continue;
+    if (def.kind === 'empty' || def.kind === 'gas') {
+      w.set(bx, by, M.Lightning);
+      continue;
+    }
+    if (w.inBounds(bx, by)) {
+      const n = w.idx(bx, by);
+      if (!w.electrify(n)) w.ignite(n);
+    }
+    return;
+  }
+}
+
+/** Lightning: for its few frames, sparks any conductor it touches and sets flammable neighbours alight. */
+export function updateBolt(w: World, x: number, y: number, _i: number): boolean {
+  for (let k = 0; k < 4; k++) {
+    const nx = k === 0 ? x - 1 : k === 1 ? x + 1 : x;
+    const ny = k === 2 ? y - 1 : k === 3 ? y + 1 : y;
+    if (w.inBounds(nx, ny)) w.electrify(w.idx(nx, ny));
+  }
+  w.igniteNeighbours(x, y);
+  return true;
+}
+
+/** Battery: now and then sends a pulse into every conductor touching it. */
+export function pulseBattery(w: World, x: number, y: number, _i: number): boolean {
+  if (!w.rng.chance(0.02)) return true;
+  for (let k = 0; k < 4; k++) {
+    const nx = k === 0 ? x - 1 : k === 1 ? x + 1 : x;
+    const ny = k === 2 ? y - 1 : k === 3 ? y + 1 : y;
+    if (w.inBounds(nx, ny)) w.electrify(w.idx(nx, ny));
+  }
+  return true;
+}
+
+/** Salt water: with iron and charcoal close by, now and then the three make a battery (a wet cell). */
+export function formBattery(w: World, x: number, y: number, i: number): boolean {
+  return mixThree(w, x, y, i, M.Iron, M.Charcoal, M.Battery);
 }

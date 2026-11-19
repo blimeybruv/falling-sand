@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { Discovery, M, PALETTE, RECIPES, REWARD, STARTERS, World, type MaterialId } from './index';
+import { CHARGE_ACTIVE, Discovery, M, MATERIALS, PALETTE, RECIPES, REWARD, STARTERS, World, type MaterialId } from './index';
 
 function run(world: World, frames: number): void {
   for (let f = 0; f < frames; f++) world.step();
@@ -30,7 +30,7 @@ describe('discovery rules', () => {
     for (const id of STARTERS) expect(d.isUnlocked(id)).toBe(true);
     expect(d.isUnlocked(M.Steam)).toBe(false);
 
-    const created = new Uint32Array(64);
+    const created = new Uint32Array(MATERIALS.length);
     created[M.Steam] = 3;
     created[M.Sand] = 9; // already unlocked: not reported again
     expect(d.update(created)).toEqual([M.Steam]);
@@ -259,6 +259,33 @@ describe('every recipe works in the simulation', () => {
     ['vine: grass meets wood', M.Vine, 600, (w) => {
       fillRect(w, 0, 37, 40, 3, M.Grass);
       fillRect(w, 18, 20, 4, 17, M.Wood);
+    }],
+    ['stained glass: glass meets rust', M.StainedGlass, 300, (w) => {
+      fillRect(w, 0, 36, 40, 4, M.Glass);
+      fillRect(w, 0, 33, 40, 3, M.Rust);
+    }],
+    ['soot: smoke under a stone ceiling', M.Soot, 400, (w) => {
+      fillRect(w, 0, 0, 40, 3, M.Stone);
+      fillRect(w, 0, 3, 40, 5, M.Smoke);
+    }],
+    ['mercury: burning sulfur against iron ore', M.Mercury, 300, (w) => {
+      fillRect(w, 0, 37, 40, 3, M.IronOre);
+      fillRect(w, 0, 35, 40, 2, M.Sulfur);
+      for (let x = 0; x < 40; x++) w.ignite(w.idx(x, 36));
+    }],
+    ['lightning: a thick cloud strikes', M.Lightning, 2500, (w) => {
+      fillRect(w, 0, 0, 40, 12, M.Cloud);
+      fillRect(w, 0, 38, 40, 2, M.Stone);
+    }],
+    ['battery: iron and charcoal in salt water', M.Battery, 300, (w) => {
+      fillRect(w, 0, 37, 40, 3, M.Iron);
+      fillRect(w, 0, 36, 40, 1, M.Charcoal);
+      fillRect(w, 0, 30, 40, 6, M.SaltWater);
+    }],
+    ['hydrogen: electricity through water', M.Hydrogen, 400, (w) => {
+      fillRect(w, 0, 39, 40, 1, M.Iron);
+      w.set(0, 38, M.Battery);
+      fillRect(w, 1, 30, 39, 9, M.Water);
     }],
     ['saltpetre: leaves buried in earth', M.Saltpetre, 600, (w) => {
       fillRect(w, 10, 30, 20, 4, M.Leaf);
@@ -637,5 +664,110 @@ describe('every recipe works in the simulation', () => {
     run(w, 4000);
     expect(w.count(M.Cactus)).toBeGreaterThan(3);
     expect(w.count(M.Wood)).toBe(0);
+  });
+});
+
+describe('electricity', () => {
+  /** An iron wire along row y, from x0 to x1 inclusive. */
+  function wire(w: World, x0: number, x1: number, y: number): void {
+    for (let x = x0; x <= x1; x++) w.set(x, y, M.Iron);
+  }
+
+  it('a pulse travels along a wire, one cell a frame, and dies away without bouncing back', () => {
+    const w = new World(70, 20, 50);
+    wire(w, 0, 59, 10);
+    w.electrify(w.idx(0, 10));
+    let furthest = 0;
+    for (let f = 0; f < 70; f++) {
+      w.step();
+      for (let x = 0; x < 70; x++) if (w.charge[w.idx(x, 10)] > 0) furthest = Math.max(furthest, x);
+    }
+    expect(furthest).toBe(59);
+    run(w, 20);
+    for (let x = 0; x < 70; x++) expect(w.charge[w.idx(x, 10)]).toBe(0);
+  });
+
+  it('does not jump a gap or pass through stone', () => {
+    const w = new World(50, 20, 51);
+    wire(w, 0, 19, 10);
+    w.set(20, 10, M.Stone);
+    wire(w, 21, 40, 10);
+    w.electrify(w.idx(0, 10));
+    for (let f = 0; f < 60; f++) {
+      w.step();
+      for (let x = 21; x <= 40; x++) expect(w.charge[w.idx(x, 10)]).toBe(0);
+    }
+  });
+
+  it('a wire sets off gunpowder at its far end', () => {
+    const w = new World(60, 20, 52);
+    fillRect(w, 0, 19, 60, 1, M.Stone);
+    wire(w, 0, 50, 18);
+    fillRect(w, 51, 15, 5, 4, M.Gunpowder);
+    const before = w.count(M.Gunpowder);
+    w.electrify(w.idx(0, 18));
+    run(w, 150);
+    expect(w.count(M.Gunpowder)).toBeLessThan(before);
+  });
+
+  it('salt water and mercury conduct; fresh water does not', () => {
+    const w = new World(30, 20, 53);
+    fillRect(w, 0, 15, 30, 5, M.SaltWater);
+    expect(w.electrify(w.idx(0, 19))).toBe(true);
+    let reached = 0;
+    for (let f = 0; f < 40; f++) {
+      w.step();
+      for (let i = 0; i < w.size; i++) if (w.charge[i] > 0) reached = Math.max(reached, i % 30);
+    }
+    expect(reached).toBeGreaterThan(20);
+
+    const fresh = new World(10, 10, 54);
+    fresh.set(5, 9, M.Water);
+    expect(fresh.electrify(fresh.idx(5, 9))).toBe(false);
+    const hg = new World(10, 10, 55);
+    hg.set(5, 9, M.Mercury);
+    expect(hg.electrify(hg.idx(5, 9))).toBe(true);
+  });
+
+  it('a battery pulses again and again; drawing lightning on a wire sparks it', () => {
+    const w = new World(40, 10, 56);
+    w.set(0, 5, M.Battery);
+    wire(w, 1, 30, 5);
+    let pulses = 0;
+    for (let f = 0; f < 600; f++) {
+      w.step();
+      if (w.charge[w.idx(10, 5)] === CHARGE_ACTIVE) pulses++;
+    }
+    expect(pulses).toBeGreaterThan(3);
+
+    const brush = new World(20, 10, 57);
+    wire(brush, 0, 19, 5);
+    brush.paint(10, 5, 0, M.Lightning);
+    expect(brush.charge[brush.idx(10, 5)]).toBe(CHARGE_ACTIVE);
+  });
+
+  it('hydrogen burns away, leaving water', () => {
+    const w = new World(20, 20, 58);
+    fillRect(w, 5, 5, 10, 5, M.Hydrogen);
+    w.paint(10, 10, 1, M.Fire);
+    run(w, 30);
+    expect(w.count(M.Hydrogen)).toBeLessThan(50);
+    expect(w.created[M.Water]).toBeGreaterThan(0);
+  });
+
+  it('mercury sinks under water, and sand floats on it', () => {
+    const w = new World(10, 30, 59);
+    fillRect(w, 0, 20, 10, 5, M.Water);
+    fillRect(w, 0, 15, 10, 3, M.Mercury);
+    run(w, 300);
+    for (let x = 0; x < 10; x++) expect(w.get(x, 29)).toBe(M.Mercury);
+
+    const f = new World(10, 30, 60);
+    fillRect(f, 0, 25, 10, 5, M.Mercury);
+    f.set(5, 10, M.Sand);
+    run(f, 200);
+    let sandY = 0;
+    for (let i = 0; i < f.size; i++) if (f.mat[i] === M.Sand) sandY = Math.floor(i / 10);
+    expect(sandY).toBeLessThan(25);
   });
 });

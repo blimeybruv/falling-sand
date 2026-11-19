@@ -64,6 +64,12 @@ export const M = {
   Seaweed: 56,
   Cactus: 57,
   Vine: 58,
+  StainedGlass: 59,
+  Soot: 60,
+  Mercury: 61,
+  Lightning: 62,
+  Hydrogen: 63,
+  Battery: 64,
 } as const;
 
 export type MaterialId = (typeof M)[keyof typeof M];

@@ -24,11 +24,14 @@ src/main.ts  creates World + Renderer + UI and runs the requestAnimationFrame lo
 - `World` (`src/sim/world.ts`) holds the grid as parallel typed arrays indexed by `i = y * width + x`:
   `mat` (material id), `shade` (colour variation), `life` (lifetime), `burn` (burn timer or fuse),
   `vel` (frames spent falling), `temp` (temperature), `vx`/`vy` (flight velocity in 1/8 cells per
-  frame). `swap()` moves all of them together; use it for every move. If you add a per-cell array,
+  frame), `charge` (electricity). `swap()` moves all of them together; use it for every move. If you add a per-cell array,
   add it to `swap()`, `setCell()` and `clear()`.
 - `temp` is double-buffered and the array object is replaced every frame, so read `world.temp`
   fresh each time instead of keeping a reference.
-- Each `step()` first spreads heat (`updateTemperature`), then updates cells. Use `transform(i, m)`
+- Each `step()` first spreads heat (`updateTemperature`), then moves electricity
+  (`updateElectricity`: a conductor's charge is `CHARGE_ACTIVE` for one frame, when it passes to idle
+  conducting neighbours, then cools down, so pulses travel one cell a frame and never flow back),
+  then updates cells. Start a pulse with `world.electrify(i)`. Use `transform(i, m)`
   instead of `setCell` for phase changes (melting, boiling), so the cell keeps its temperature.
 - `step()` updates bottom-up, alternating the row direction each frame. A `stamp` array makes sure
   each cell moves at most once a frame. Anything created with `setCell`/`set` also waits until the
@@ -44,7 +47,7 @@ src/main.ts  creates World + Renderer + UI and runs the requestAnimationFrame lo
 2. Add an entry to `defs` in `src/sim/materials.ts`: name, shortcut key, `kind`
    (`static` / `powder` / `liquid` / `gas`), density, colour, and whichever of flammability,
    burn time, residue, burnTemp, flames, fumes, lifetime, decay, dispersion, viscosity, rise, explosive,
-   acidProof, extinguishes, conductivity, heat, above (phase change, optionally `sometimes` leaving something
+   acidProof, extinguishes, conducts, conductivity, heat, above (phase change, optionally `sometimes` leaving something
    else), ignitesAt and wind apply, plus its palette
    `category` (the tab it appears under). `key` may be '' for no shortcut. The comments on `MaterialDef` explain each field. The
    "has sane values" test checks the ranges.

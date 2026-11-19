@@ -3,7 +3,7 @@
  * The canvas is exactly one pixel per cell; CSS scales it up with `image-rendering: pixelated`.
  * Reads from the sim, never writes to it.
  */
-import { AMBIENT_TEMP, M, MATERIALS, SHADES, type World } from '../sim';
+import { AMBIENT_TEMP, CHARGE_ACTIVE, M, MATERIALS, SHADES, type World } from '../sim';
 
 export interface RenderOptions {
   /** Colour cells by temperature instead of material. */
@@ -102,9 +102,12 @@ export class Renderer {
   }
 
   private renderMaterials(world: World): void {
-    const { mat, shade, life, burn, size } = world;
+    const { mat, shade, life, burn, charge, size } = world;
     const { pixels, lut, lutR, lutG, lutB, isGas, isGlow } = this;
     const glowShift = this.frame >> 3;
+    // Electricity: a bright head where the pulse is, a warm glow fading behind it.
+    const sparkHead = pack(255, 252, 200);
+    const sparkTail = pack(240, 200, 90);
     const [bgR, bgG, bgB] = this.background;
     const bg = pack(bgR, bgG, bgB);
     const fireBase = M.Fire * SHADES;
@@ -114,6 +117,10 @@ export class Renderer {
       const m = mat[i];
       if (m === M.Empty) {
         pixels[i] = bg;
+        continue;
+      }
+      if (charge[i] !== 0) {
+        pixels[i] = charge[i] >= CHARGE_ACTIVE ? sparkHead : sparkTail;
         continue;
       }
       // Cheap xorshift for flicker; no Math.random in the hot loop.

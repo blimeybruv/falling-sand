@@ -99,6 +99,7 @@ debris start fresh when a scene loads.
 | | Quicksand | Looks like wet sand, but powders sink slowly into it | Sand meets salt water |
 | | Hail | Ice pellets that fall from clouds near ice, then melt | A cloud near ice (sometimes) |
 | | Dry ice | Very cold; freezes water and slowly turns back into gas | Carbon dioxide meets ice or snow |
+| | Stained glass | Coloured glass; acid can't eat it | Glass meets rust |
 | **Liquids & gases** | | | |
 | 2 | Water | Falls and spreads sideways; puts out fire, turning it to steam; boils when hot (now and then leaving salt); freezes next to ice | Starter |
 | W | Salt water | Sinks under fresh water and never freezes; boiling it gives salt back | Salt meets water |
@@ -113,6 +114,8 @@ debris start fresh when a scene loads.
 | - | Steam | Rises; condenses back to water near the top or under a ceiling, sometimes freezing | Fire meets water |
 | V | Cloud | Hangs up high, drifts in the wind, rains (or snows near ice) | Steam crowding at the top |
 | | Carbon dioxide | Heavy, faint gas: sinks and pools, puts out flames, smothers what it buries | Burning charcoal or coal; fizz |
+| | Hydrogen | The lightest gas; burns with a bang, leaving water | Electricity through fresh water |
+| | Mercury | Liquid metal heavier than everything; sand floats on it; conducts | Burning sulfur against iron ore |
 | **Fire & blasts** | | | |
 | 7 | Fire | Short-lived; rises and flickers; ignites flammable neighbours | Starter |
 | K | Charcoal | Burns slowly and very hot, glowing rather than flaming; hot enough to make glass | Smother a wood fire with sand |
@@ -127,6 +130,9 @@ debris start fresh when a scene loads.
 | 9 | Nitroglycerin | Liquid; explodes on fire, when hot, or when it falls hard onto something | Acid meets oil |
 | | Dynamite | Stable explosive: ignores knocks, needs a flame, big blast | Nitroglycerin soaked into clay |
 | | Swamp gas | Bubbles up from rotting weeds; flashes into fire | Drowned grass |
+| | Soot | Black powder smoke leaves on cold surfaces; burns | Smoke meets cold stone, iron or ice |
+| | Lightning | A short, very hot bolt: sparks wires, sets things alight; draw it on a wire | A thick cloud strikes |
+| | Battery | Sends pulses of electricity into touching metal or salt water | Iron and charcoal in salt water |
 | **Life** | | | |
 | S | Seed | Falls; on loam, or on damp sand or earth, it grows into a tree (wood trunk, branches, leaves); on dry sand far from water, a cactus | Starter |
 | 5 | Grass | Weeds and grass: spreads over damp ground and loam, and into water; burns | A sandy shore |
@@ -146,6 +152,10 @@ The Discovery column gives the answers away, so skip it if you'd rather find the
 Burning works per cell: wood, grass, leaves, oil, napalm and gunpowder keep their material while they burn
 (they flicker with fire colours), throw off flames, set their neighbours alight, and finally burn out.
 Water can put burning cells out, but how easily depends on the material (napalm hardly at all).
+
+**Electricity** pulses along anything that conducts (iron, salt water, mercury), one cell a frame.
+A pulse warms the wire, sets flammable things beside it alight (so a wire makes a detonator) and
+splits fresh water into hydrogen. Draw Lightning on a wire to send a pulse, or build a battery.
 
 Every cell also has a temperature. Heat spreads between neighbours (quickly through stone, slowly
 through air and wood) and fades back to room temperature. Fire, lava and burning cells are hot, and
@@ -182,7 +192,7 @@ blast flies in an arc under gravity, then lands and behaves normally.
 
 Ideas for contributors. Each one should fit in a small pull request; `CLAUDE.md` explains how to add a
 material. For new materials, [`docs/elements.md`](docs/elements.md) has a menu of ideas grouped into
-chains (lightning and more to come), with recipes and effort
+chains (sap and sugar, chlorine and bleach, copper, fog...), with recipes and effort
 estimates.
 
 - [ ] **More materials**: pick one from [`docs/elements.md`](docs/elements.md). Each is a table entry, usually a `Reaction`, and a line in `RECIPES`; the tests check every one can be discovered.
