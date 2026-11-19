@@ -8,14 +8,15 @@
 import { M, type MaterialId } from './ids';
 import type { World } from './world';
 
-/** Fire: put out by water and the like (becoming steam, or smoke under foam); sets flammable neighbours alight. */
+/** Fire: put out by water and the like (becoming steam, or smoke when smothered); sets flammable neighbours alight. */
 export function updateFire(w: World, x: number, y: number, i: number): boolean {
   for (let k = 0; k < 4; k++) {
     const nx = k === 0 ? x - 1 : k === 1 ? x + 1 : x;
     const ny = k === 2 ? y - 1 : k === 3 ? y + 1 : y;
     const def = w.defAt(nx, ny);
     if (!def.extinguishes || !w.inBounds(nx, ny)) continue;
-    w.setCell(i, def.id === M.Foam ? M.Smoke : M.Steam);
+    // Water turns the flame to steam; foam and carbon dioxide smother it to smoke.
+    w.setCell(i, def.id === M.Water || def.id === M.SaltWater ? M.Steam : M.Smoke);
     return true;
   }
   w.igniteNeighbours(x, y);
@@ -101,9 +102,14 @@ export function sproutGrass(w: World, x: number, y: number, i: number): boolean 
  */
 /** Added to a growing tip's `life` (its height left) to mark a tree rooted in loam, which flowers. */
 const LOAM_TREE = 1000;
+/** Added instead to mark the growing tip of a cactus. */
+const CACTUS_TIP = 2000;
+/** Ground with no water this near counts as desert. */
+const DRY_RANGE = 10;
 
 export function updateSeed(w: World, x: number, y: number, i: number): boolean {
   const height = w.life[i];
+  if (height >= CACTUS_TIP) return growCactus(w, x, y, i, height - CACTUS_TIP);
   if (height > 0) return growTree(w, x, y, i, height);
   if (!w.rng.chance(0.02)) return false;
   if (w.get(x, y - 1) !== M.Empty) return false;
@@ -116,7 +122,36 @@ export function updateSeed(w: World, x: number, y: number, i: number): boolean {
     w.life[i] = w.rng.int(18, 34);
     return true;
   }
+  // In the desert (sand with no water anywhere near), now and then a seed grows into a cactus.
+  if (below === M.Sand && w.rng.chance(0.05) && !w.near(x, y, DRY_RANGE, M.Water)) {
+    w.life[i] = CACTUS_TIP + w.rng.int(6, 14);
+    return true;
+  }
   return false;
+}
+
+/** A cactus climbs a cell at a time, now and then putting out an arm that turns upward. */
+function growCactus(w: World, x: number, y: number, i: number, height: number): boolean {
+  if (!w.rng.chance(0.15)) return true;
+  w.setCell(i, M.Cactus);
+  if (height > 1 && w.get(x, y - 1) === M.Empty) {
+    w.set(x, y - 1, M.Seed);
+    if (w.inBounds(x, y - 1)) w.life[w.idx(x, y - 1)] = CACTUS_TIP + height - 1;
+    if (height > 3 && height < 10 && w.rng.chance(0.25)) {
+      const dir = w.rng.sign();
+      const cells: [number, number][] = [
+        [x + dir, y],
+        [x + 2 * dir, y],
+        [x + 2 * dir, y - 1],
+        [x + 2 * dir, y - 2],
+      ];
+      for (const [cx, cy] of cells) {
+        if (w.get(cx, cy) !== M.Empty) break;
+        w.set(cx, cy, M.Cactus);
+      }
+    }
+  }
+  return true;
 }
 
 function growTree(w: World, x: number, y: number, i: number, tip: number): boolean {
@@ -369,6 +404,13 @@ export function updateLava(w: World, x: number, y: number, i: number): boolean {
         else w.transform(i, M.Stone);
         return true;
       }
+    } else if (n === M.CarbonDioxide) {
+      // Gas bubbling through it froths the lava into pumice.
+      w.setCell(w.idx(nx, ny), M.Empty);
+      if (w.rng.chance(0.3)) {
+        w.transform(i, M.Pumice);
+        return true;
+      }
     } else if (n === M.Ice) {
       // Ice chills it so fast it sets as glassy obsidian.
       w.transform(w.idx(nx, ny), M.Water);
@@ -390,11 +432,69 @@ export function freezeWater(w: World, x: number, y: number, i: number): boolean 
   return true;
 }
 
-/** Cloud: now and then drops rain below it, or snow if there is ice nearby. */
+/** Cloud: now and then drops rain below it; near ice it snows instead, and sometimes hails. */
 export function rainCloud(w: World, x: number, y: number, _i: number): boolean {
   if (!w.rng.chance(0.006) || w.get(x, y + 1) !== M.Empty) return false;
-  w.set(x, y + 1, w.near(x, y, 6, M.Ice) ? M.Snow : M.Water);
+  if (!w.near(x, y, 6, M.Ice)) {
+    w.set(x, y + 1, M.Water);
+  } else if (w.rng.chance(0.15)) {
+    w.set(x, y + 1, M.Hail);
+    w.launch(w.idx(x, y + 1), 0, 3); // hail comes down hard
+  } else {
+    w.set(x, y + 1, M.Snow);
+  }
   return false;
+}
+
+/** Put material m into a random open neighbour of (x, y), if there is one there. */
+function emit(w: World, x: number, y: number, m: MaterialId): void {
+  const nx = x + w.rng.int(-1, 1);
+  const ny = y + w.rng.int(-1, 1);
+  if (w.get(nx, ny) === M.Empty) w.set(nx, ny, m);
+}
+
+/** Dry ice: slowly gives off carbon dioxide, and now and then a whole cell of it goes. */
+export function sublimate(w: World, x: number, y: number, i: number): boolean {
+  if (w.rng.chance(0.003)) emit(w, x, y, M.CarbonDioxide);
+  if (w.rng.chance(0.0005)) w.transform(i, M.CarbonDioxide);
+  return true;
+}
+
+/** Fizz: bubbles off carbon dioxide as it flows. */
+export function releaseGas(w: World, x: number, y: number, _i: number): boolean {
+  if (w.rng.chance(0.03)) emit(w, x, y, M.CarbonDioxide);
+  return false;
+}
+
+/** Seaweed: now and then grows up into the salt water above it, swaying a little. */
+export function growSeaweed(w: World, x: number, y: number, _i: number): boolean {
+  if (!w.rng.chance(0.01)) return true;
+  const nx = w.rng.chance(0.3) ? x + w.rng.sign() : x;
+  if (w.get(nx, y - 1) === M.SaltWater) w.set(nx, y - 1, M.Seaweed);
+  return true;
+}
+
+function isClimbable(t: number): boolean {
+  return t === M.Wood || t === M.Stone || t === M.Brick;
+}
+
+/** Vine: now and then climbs into an open cell above or beside it that sits against wood, stone or brick. */
+export function climbVine(w: World, x: number, y: number, _i: number): boolean {
+  if (!w.rng.chance(0.02)) return true;
+  const sideways = w.rng.chance(0.3);
+  // Mostly straight up, sometimes up and across.
+  const nx = x + (sideways ? w.rng.sign() : w.rng.chance(0.7) ? 0 : w.rng.sign());
+  const ny = sideways ? y : y - 1;
+  if (w.get(nx, ny) !== M.Empty) return true;
+  if (
+    isClimbable(w.get(nx - 1, ny)) ||
+    isClimbable(w.get(nx + 1, ny)) ||
+    isClimbable(w.get(nx, ny - 1)) ||
+    isClimbable(w.get(nx, ny + 1))
+  ) {
+    w.set(nx, ny, M.Vine);
+  }
+  return true;
 }
 
 function isMasonry(t: number): boolean {

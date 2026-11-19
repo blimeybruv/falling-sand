@@ -219,6 +219,47 @@ describe('every recipe works in the simulation', () => {
       fillRect(w, 0, 35, 40, 5, M.Loam);
       w.set(20, 20, M.Seed);
     }],
+    ['dynamite: nitroglycerin soaked into clay', M.Dynamite, 300, (w) => {
+      fillRect(w, 0, 35, 40, 5, M.Clay);
+      fillRect(w, 0, 32, 40, 3, M.Nitro);
+    }],
+    ['carbon dioxide: burning charcoal gives it off', M.CarbonDioxide, 600, (w) => {
+      fillRect(w, 0, 37, 40, 3, M.Stone);
+      fillRect(w, 5, 34, 30, 3, M.Charcoal);
+      for (let x = 5; x < 35; x++) w.ignite(w.idx(x, 34));
+    }],
+    ['dry ice: carbon dioxide meets ice', M.DryIce, 300, (w) => {
+      fillRect(w, 0, 36, 40, 4, M.Ice);
+      fillRect(w, 0, 30, 40, 4, M.CarbonDioxide);
+    }],
+    ['fizz: ash meets acid', M.Fizz, 300, (w) => {
+      fillRect(w, 0, 36, 40, 4, M.Acid);
+      fillRect(w, 0, 32, 40, 2, M.Ash);
+    }],
+    ['pumice: lava meets carbon dioxide', M.Pumice, 300, (w) => {
+      fillRect(w, 0, 36, 40, 4, M.Lava);
+      fillRect(w, 0, 30, 40, 4, M.CarbonDioxide);
+    }],
+    ['quicksand: sand meets salt water', M.Quicksand, 600, (w) => {
+      fillRect(w, 0, 35, 40, 5, M.Sand);
+      fillRect(w, 0, 30, 40, 5, M.SaltWater);
+    }],
+    ['hail: a cloud near ice', M.Hail, 1500, (w) => {
+      fillRect(w, 0, 0, 40, 2, M.Cloud);
+      fillRect(w, 0, 6, 40, 1, M.Ice);
+    }],
+    ['seaweed: grass meets salt water', M.Seaweed, 600, (w) => {
+      fillRect(w, 0, 37, 40, 3, M.Grass);
+      fillRect(w, 0, 25, 40, 12, M.SaltWater);
+    }],
+    ['cactus: a seed on dry sand', M.Cactus, 4000, (w) => {
+      fillRect(w, 0, 35, 40, 5, M.Sand);
+      w.set(20, 20, M.Seed);
+    }],
+    ['vine: grass meets wood', M.Vine, 600, (w) => {
+      fillRect(w, 0, 37, 40, 3, M.Grass);
+      fillRect(w, 18, 20, 4, 17, M.Wood);
+    }],
     ['saltpetre: leaves buried in earth', M.Saltpetre, 600, (w) => {
       fillRect(w, 10, 30, 20, 4, M.Leaf);
       fillRect(w, 0, 34, 40, 6, M.Earth);
@@ -504,12 +545,97 @@ describe('every recipe works in the simulation', () => {
     expect(w.created[M.Spark]).toBeGreaterThan(5);
   });
 
-  it('a seed on dry sand stays a seed', () => {
+  it('dynamite ignores a hard landing but explodes in a fire', () => {
+    const drop = new World(30, 60, 41);
+    fillRect(drop, 0, 55, 30, 5, M.Stone);
+    fillRect(drop, 14, 0, 2, 2, M.Dynamite);
+    // Static, so it stays put rather than falling: a knock can't set it off.
+    run(drop, 80);
+    expect(drop.count(M.Dynamite)).toBe(4);
+
+    const lit = new World(40, 40, 42);
+    fillRect(lit, 0, 37, 40, 3, M.Stone);
+    fillRect(lit, 25, 34, 5, 3, M.Sand);
+    fillRect(lit, 19, 34, 2, 3, M.Dynamite);
+    lit.paint(19, 34, 0, M.Fire); // a flame on the dynamite lights it
+    run(lit, 200);
+    expect(lit.count(M.Dynamite)).toBe(0);
+    expect(lit.count(M.Sand)).toBeLessThan(15); // the blast took the nearby sand
+  });
+
+  it('carbon dioxide sinks below air and smothers a buried fire', () => {
+    const w = new World(20, 30, 43);
+    fillRect(w, 5, 5, 10, 3, M.CarbonDioxide);
+    run(w, 100);
+    let lowest = 0;
+    for (let i = 0; i < w.size; i++) if (w.mat[i] === M.CarbonDioxide) lowest = Math.max(lowest, Math.floor(i / 20));
+    expect(lowest).toBe(29);
+
+    const burning = (co2: boolean): number => {
+      const b = new World(30, 30, 44);
+      fillRect(b, 0, 27, 30, 3, M.Stone);
+      fillRect(b, 0, 25, 30, 2, M.Wood);
+      for (let x = 0; x < 30; x++) for (let y = 25; y < 27; y++) b.ignite(b.idx(x, y));
+      if (co2) fillRect(b, 0, 15, 30, 10, M.CarbonDioxide);
+      run(b, 120);
+      return b.count(M.Wood);
+    };
+    expect(burning(true)).toBeGreaterThan(burning(false));
+  });
+
+  it('dry ice freezes water and slowly turns back into gas', () => {
+    const w = new World(20, 20, 45);
+    fillRect(w, 0, 17, 20, 3, M.DryIce);
+    fillRect(w, 0, 12, 20, 5, M.Water);
+    run(w, 600);
+    expect(w.count(M.Ice)).toBeGreaterThan(0);
+    expect(w.created[M.CarbonDioxide]).toBeGreaterThan(0);
+  });
+
+  it('pumice floats; sand sinks slowly into quicksand', () => {
+    const w = new World(20, 30, 46);
+    fillRect(w, 0, 20, 20, 10, M.Water);
+    fillRect(w, 5, 10, 10, 2, M.Pumice);
+    run(w, 300);
+    for (let i = 0; i < w.size; i++) if (w.mat[i] === M.Pumice) expect(Math.floor(i / 20)).toBeLessThanOrEqual(20);
+
+    const q = new World(20, 30, 47);
+    fillRect(q, 0, 20, 20, 10, M.Quicksand);
+    q.set(10, 10, M.Sand);
+    run(q, 600);
+    let sandY = 0;
+    for (let i = 0; i < q.size; i++) if (q.mat[i] === M.Sand) sandY = Math.floor(i / 20);
+    expect(sandY).toBeGreaterThan(21);
+  });
+
+  it('seaweed grows up through salt water but not fresh water', () => {
+    const grow = (liquid: MaterialId): number => {
+      const w = new World(20, 30, 48);
+      fillRect(w, 0, 10, 20, 20, liquid);
+      w.set(10, 29, M.Seaweed);
+      run(w, 2000);
+      return w.count(M.Seaweed);
+    };
+    expect(grow(M.SaltWater)).toBeGreaterThan(5);
+    expect(grow(M.Water)).toBe(1);
+  });
+
+  it('vines climb walls', () => {
+    const w = new World(30, 40, 49);
+    fillRect(w, 15, 0, 2, 40, M.Stone);
+    w.set(14, 39, M.Vine);
+    run(w, 3000);
+    let top = 39;
+    for (let i = 0; i < w.size; i++) if (w.mat[i] === M.Vine) top = Math.min(top, Math.floor(i / 30));
+    expect(top).toBeLessThan(30);
+  });
+
+  it('a seed on dry sand grows a cactus, never a tree', () => {
     const w = new World(40, 40, 9);
     fillRect(w, 0, 35, 40, 5, M.Sand);
     w.set(20, 10, M.Seed);
-    run(w, 1000);
-    expect(w.count(M.Seed)).toBe(1);
+    run(w, 4000);
+    expect(w.count(M.Cactus)).toBeGreaterThan(3);
     expect(w.count(M.Wood)).toBe(0);
   });
 });

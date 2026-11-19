@@ -149,6 +149,16 @@ export class World {
     return false;
   }
 
+  /** True if any of the 4 neighbours of (x, y) is open air. */
+  touchesAir(x: number, y: number): boolean {
+    return (
+      this.get(x - 1, y) === M.Empty ||
+      this.get(x + 1, y) === M.Empty ||
+      this.get(x, y - 1) === M.Empty ||
+      this.get(x, y + 1) === M.Empty
+    );
+  }
+
   /** True for walls, static materials and powders (things fluids can't pass through). */
   isSolid(x: number, y: number): boolean {
     if (!this.inBounds(x, y)) return true;
@@ -484,16 +494,18 @@ export class World {
     for (const [dx, dy] of N4) {
       const t = this.get(x + dx, y + dy);
       if (!EXTINGUISHES[t] || !this.inBounds(x + dx, y + dy)) continue;
+      // Carbon dioxide only smothers a burning cell once it has cut off the air entirely.
+      if (t === M.CarbonDioxide && this.touchesAir(x, y)) continue;
       const n = this.idx(x + dx, y + dy);
-      // Water boils away into steam; foam just pops.
-      const usedUp = t === M.Foam ? M.Empty : M.Steam;
+      // Water boils away into steam and foam pops; carbon dioxide just smothers and stays.
+      const usedUp = t === M.Water || t === M.SaltWater ? M.Steam : t === M.Foam ? M.Empty : -1;
       if (this.rng.chance(def.extinguishChance)) {
         this.burn[i] = 0;
-        if (this.rng.chance(0.5)) this.setCell(n, usedUp);
+        if (usedUp >= 0 && this.rng.chance(0.5)) this.setCell(n, usedUp as MaterialId);
         return false;
       }
       // Too hot to put out: the water slowly boils (or the foam pops) instead.
-      if (this.rng.chance(0.04)) this.setCell(n, usedUp);
+      if (usedUp >= 0 && this.rng.chance(0.04)) this.setCell(n, usedUp as MaterialId);
       break;
     }
 
@@ -510,12 +522,12 @@ export class World {
 
     this.igniteNeighbours(x, y);
 
-    // Flames and a little smoke above the burning cell.
+    // Flames and a little smoke (or other fumes) above the burning cell.
     if (this.rng.chance(def.flames)) {
       const fx = x + this.rng.int(-1, 1);
       if (this.get(fx, y - 1) === M.Empty) this.set(fx, y - 1, M.Fire);
     } else if (this.rng.chance(0.02) && this.get(x, y - 1) === M.Empty) {
-      this.set(x, y - 1, M.Smoke);
+      this.set(x, y - 1, def.fumes ?? M.Smoke);
     }
     return false;
   }

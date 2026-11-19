@@ -95,6 +95,10 @@ debris start fresh when a scene loads.
 | | Iron | Metal; conducts heat fast; rusts in water, much faster in salt water | Burning charcoal against iron ore |
 | | Rust | Crumbly orange powder | Iron in water |
 | | Cement | Pours like a thick liquid, then sets into stone | Ash, sand and water stirred together |
+| | Pumice | Light, holey rock that floats on water | Lava meets carbon dioxide |
+| | Quicksand | Looks like wet sand, but powders sink slowly into it | Sand meets salt water |
+| | Hail | Ice pellets that fall from clouds near ice, then melt | A cloud near ice (sometimes) |
+| | Dry ice | Very cold; freezes water and slowly turns back into gas | Carbon dioxide meets ice or snow |
 | **Liquids & gases** | | | |
 | 2 | Water | Falls and spreads sideways; puts out fire, turning it to steam; boils when hot (now and then leaving salt); freezes next to ice | Starter |
 | W | Salt water | Sinks under fresh water and never freezes; boiling it gives salt back | Salt meets water |
@@ -102,11 +106,13 @@ debris start fresh when a scene loads.
 | | Tar | Thick, black and very slow; floats on water; burns smokily | Oil heated gently, before it catches |
 | | Lye | Slippery liquid; neutralises acid into salt water | Ash meets water |
 | | Foam | Light soap foam: floats on everything, smothers fires, then pops | Lye meets oil |
+| | Fizz | Bubbling froth that gives off carbon dioxide | Ash meets acid |
 | A | Acid | Liquid; dissolves what it touches (but not stone, water, glass, brick or obsidian), using itself up | Rain on smoke (or sulfur in water) |
 | L | Lava | Slow, glowing, very hot liquid; sets things alight, boils water and sets to stone where they meet | Reward for 10 discoveries |
 | 0 | Smoke | Rises and drifts, then fades | Let a fire burn out |
 | - | Steam | Rises; condenses back to water near the top or under a ceiling, sometimes freezing | Fire meets water |
 | V | Cloud | Hangs up high, drifts in the wind, rains (or snows near ice) | Steam crowding at the top |
+| | Carbon dioxide | Heavy, faint gas: sinks and pools, puts out flames, smothers what it buries | Burning charcoal or coal; fizz |
 | **Fire & blasts** | | | |
 | 7 | Fire | Short-lived; rises and flickers; ignites flammable neighbours | Starter |
 | K | Charcoal | Burns slowly and very hot, glowing rather than flaming; hot enough to make glass | Smother a wood fire with sand |
@@ -119,13 +125,17 @@ debris start fresh when a scene loads.
 | | Thermite | Hard to light; burns at 2500° and melts through stone and metal | Rust meets charcoal |
 | 8 | Napalm | Sticky, slow-flowing liquid; burns for a long time, is hard to put out, spreads fire | Oil meets gunpowder |
 | 9 | Nitroglycerin | Liquid; explodes on fire, when hot, or when it falls hard onto something | Acid meets oil |
+| | Dynamite | Stable explosive: ignores knocks, needs a flame, big blast | Nitroglycerin soaked into clay |
 | | Swamp gas | Bubbles up from rotting weeds; flashes into fire | Drowned grass |
 | **Life** | | | |
-| S | Seed | Falls; on loam, or on damp sand or earth, it grows into a tree (wood trunk, branches, leaves) | Starter |
+| S | Seed | Falls; on loam, or on damp sand or earth, it grows into a tree (wood trunk, branches, leaves); on dry sand far from water, a cactus | Starter |
 | 5 | Grass | Weeds and grass: spreads over damp ground and loam, and into water; burns | A sandy shore |
 | 4 | Wood | Static; burns slowly; buried under sand it slowly turns to oil | Grow a tree |
 | | Flower | Blooms on trees grown in loam; now and then drops a seed | A tree rooted in loam |
 | | Mushroom | Grows in buried damp wood and slowly eats through wood and leaves | Wood buried in damp ground |
+| | Vine | Climbs wood, stone and brick walls | Grass meets wood |
+| | Seaweed | Grows upward through salt water | Grass meets salt water |
+| | Cactus | Grows in the desert; burning releases water | A seed on dry sand far from water |
 | R | Moss | Creeps over damp stone and brick | Grass touching stone |
 | Y | Algae | Floats and spreads across water | Weeds reaching the surface |
 | | **Tools** | | |

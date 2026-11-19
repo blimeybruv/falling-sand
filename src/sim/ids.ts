@@ -54,6 +54,16 @@ export const M = {
   Mushroom: 46,
   Flower: 47,
   Spark: 48,
+  Dynamite: 49,
+  CarbonDioxide: 50,
+  DryIce: 51,
+  Fizz: 52,
+  Pumice: 53,
+  Quicksand: 54,
+  Hail: 55,
+  Seaweed: 56,
+  Cactus: 57,
+  Vine: 58,
 } as const;
 
 export type MaterialId = (typeof M)[keyof typeof M];

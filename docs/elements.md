@@ -69,16 +69,16 @@ New chains that grow out of what already exists. Same effort key.
 
 | | Material | How it's made | What it does | Leads to | Effort |
 |---|---|---|---|---|---|
-| | Dynamite | Nitroglycerin soaked into clay (as dynamite really was) | A stable explosive: ignores hard landings, needs a flame, bigger blast than gunpowder | Safe demolition | T |
-| | Carbon dioxide | Burning charcoal and coal sometimes give it off; fizzing (below) | A heavy, faint gas that sinks and pools in low places, smothering fires | Dry ice, fizz | F |
-| | Dry ice | Carbon dioxide frozen by ice and snow | Very cold static block that slowly turns back into carbon dioxide fog | Fog effects | T |
-| | Fizz | Lye meets acid with salt (or ash meets acid) | Bubbling foam that gives off carbon dioxide | Carbon dioxide | T |
-| | Pumice | Lava meeting swamp gas or steam bubbles | Light, holey rock that floats on water | Rafts | T |
-| | Quicksand | Sand soaked in salt water | Looks like sand, but powders and seeds sink into it | Traps | F |
-| | Hail | A cloud near snow sometimes hails instead | Ice pellets that fall hard and bounce, then melt | | T |
-| | Seaweed | Grass in salt water | Grows upward in salt water, swaying; burns badly when wet | Salt marshes | F |
-| | Cactus | A seed on dry, warm sand far from water | Grows in columns without water; burning releases water | Deserts | F |
-| | Vine | Grass touching wood (a tree trunk or a wooden wall) | Climbs up wood and stone walls; burns quickly | Overgrown ruins | F |
+| ✅ | Dynamite | Nitroglycerin soaked into clay (as dynamite really was) | Static and stable: ignores knocks, needs a flame, bigger blast than nitroglycerin | Safe demolition | T |
+| ✅ | Carbon dioxide | Burning charcoal and coal give it off; so does fizz | A heavy, faint gas that sinks and pools low; puts out flames, and smothers burning things once it cuts off their air | Dry ice, pumice | T |
+| ✅ | Dry ice | Carbon dioxide meets ice or snow | Very cold (−78°) static block; freezes water and slowly turns back into gas | Fog effects | F |
+| ✅ | Fizz | Ash meets acid | Bubbling froth that gives off carbon dioxide | Carbon dioxide | F |
+| ✅ | Pumice | Lava meets carbon dioxide | Light, holey rock that floats on water | Rafts | T |
+| ✅ | Quicksand | Sand meets salt water | Looks like wet sand, but powders and seeds sink slowly into it | Traps | T |
+| ✅ | Hail | Clouds near ice sometimes hail instead of snowing | Ice pellets that come down hard, then melt | | T |
+| ✅ | Seaweed | Grass meets salt water | Grows upward through salt water, swaying | Salt marshes | F |
+| ✅ | Cactus | A seed on dry sand, far from any water | Grows in columns with arms; burning releases water | Deserts | F |
+| ✅ | Vine | Grass meets wood (trees on grass grow them too) | Climbs up wood, stone and brick walls | Overgrown ruins | F |
 | | Stained glass | Glass touching rust or salt while hot | Coloured static glass, acid-proof | Decoration | T |
 | | Soot | Smoke touching cold stone, ice or metal | Black powder that builds up on surfaces; burns | Ink | T |
 | | Mercury | Sulfur heated with iron ore | Silvery liquid heavier than everything (sinks through all liquids) | Thermometers | T |
