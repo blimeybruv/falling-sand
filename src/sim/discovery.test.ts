@@ -329,6 +329,45 @@ describe('every recipe works in the simulation', () => {
       fillRect(w, 0, 37, 40, 3, M.Copper);
       fillRect(w, 0, 30, 40, 7, M.SaltWater);
     }],
+    ['plasma: lightning through hydrogen', M.Plasma, 30, (w) => {
+      fillRect(w, 0, 20, 40, 10, M.Hydrogen);
+      fillRect(w, 20, 20, 1, 10, M.Lightning);
+    }],
+    ['fog: steam meets snow', M.Fog, 300, (w) => {
+      fillRect(w, 0, 36, 40, 4, M.Snow);
+      fillRect(w, 0, 30, 40, 6, M.Steam);
+    }],
+    ['stalactite: salt water under a stone ceiling', M.Stalactite, 400, (w) => {
+      fillRect(w, 0, 0, 40, 3, M.Stone);
+      fillRect(w, 0, 3, 40, 37, M.SaltWater);
+    }],
+    ['rubber: sap meets sulfur', M.Rubber, 200, (w) => {
+      fillRect(w, 0, 36, 40, 4, M.Sap);
+      fillRect(w, 0, 33, 40, 2, M.Sulfur);
+    }],
+    ['sulfur dioxide: burning sulfur', M.SulfurDioxide, 400, (w) => {
+      fillRect(w, 0, 37, 40, 3, M.Stone);
+      fillRect(w, 0, 34, 40, 3, M.Sulfur);
+      for (let x = 0; x < 40; x++) w.ignite(w.idx(x, 34));
+    }],
+    ['pulp: wood meets lye', M.Pulp, 400, (w) => {
+      fillRect(w, 0, 36, 40, 4, M.Wood);
+      fillRect(w, 0, 30, 40, 6, M.Lye);
+    }],
+    ['paper: drying pulp', M.Paper, 600, (w) => {
+      fillRect(w, 0, 36, 40, 4, M.Lava);
+      fillRect(w, 0, 34, 40, 2, M.Stone);
+      fillRect(w, 0, 31, 40, 3, M.Pulp);
+    }],
+    ['ink: soot meets oil', M.Ink, 200, (w) => {
+      fillRect(w, 0, 34, 40, 6, M.Oil);
+      fillRect(w, 0, 30, 40, 2, M.Soot);
+    }],
+    ['fruit: flowers ripen', M.Fruit, 1500, (w) => fillRect(w, 0, 10, 40, 3, M.Flower)],
+    ['gold: mercury pans sand', M.Gold, 800, (w) => {
+      fillRect(w, 0, 35, 40, 5, M.Mercury);
+      fillRect(w, 0, 30, 40, 5, M.Sand);
+    }],
     ['saltpetre: leaves buried in earth', M.Saltpetre, 600, (w) => {
       fillRect(w, 10, 30, 20, 4, M.Leaf);
       fillRect(w, 0, 34, 40, 6, M.Earth);
@@ -863,5 +902,39 @@ describe('kitchen and electrochemistry', () => {
     const v = new World(10, 10, 66);
     v.set(5, 5, M.Verdigris);
     expect(v.electrify(v.idx(5, 5))).toBe(false);
+  });
+});
+
+describe('round 3', () => {
+  it('any gas heated past 2000° becomes plasma', () => {
+    const w = new World(10, 10, 70);
+    w.set(5, 5, M.Smoke);
+    w.temp[w.idx(5, 5)] = 2500;
+    w.step();
+    expect(w.created[M.Plasma]).toBe(1);
+  });
+
+  it('clouds in sulfur dioxide rain acid', () => {
+    const w = new World(40, 40, 71);
+    fillRect(w, 0, 0, 40, 2, M.Cloud);
+    fillRect(w, 0, 2, 40, 3, M.SulfurDioxide);
+    run(w, 300);
+    expect(w.created[M.Acid]).toBeGreaterThan(0);
+  });
+
+  it('rubber does not conduct; gold does', () => {
+    const w = new World(10, 10, 72);
+    w.set(1, 1, M.Rubber);
+    w.set(3, 3, M.Gold);
+    expect(w.electrify(w.idx(1, 1))).toBe(false);
+    expect(w.electrify(w.idx(3, 3))).toBe(true);
+  });
+
+  it('stalactites only grow from stone ceilings, not from a pool floor', () => {
+    const w = new World(30, 30, 73);
+    fillRect(w, 0, 25, 30, 5, M.Stone);
+    fillRect(w, 0, 15, 30, 10, M.SaltWater);
+    run(w, 1000);
+    expect(w.created[M.Stalactite]).toBe(0);
   });
 });

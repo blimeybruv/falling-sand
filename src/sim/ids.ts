@@ -80,6 +80,16 @@ export const M = {
   CopperOre: 72,
   Copper: 73,
   Verdigris: 74,
+  Plasma: 75,
+  Fog: 76,
+  Stalactite: 77,
+  Rubber: 78,
+  SulfurDioxide: 79,
+  Pulp: 80,
+  Paper: 81,
+  Ink: 82,
+  Fruit: 83,
+  Gold: 84,
 } as const;
 
 export type MaterialId = (typeof M)[keyof typeof M];

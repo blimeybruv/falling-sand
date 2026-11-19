@@ -97,6 +97,9 @@ debris start fresh when a scene loads.
 | | Copper ore | Green-speckled rock | Lava meets salt water (rarely) |
 | | Copper | Conducts electricity and heat; never rusts | Burning charcoal against copper ore |
 | | Verdigris | Green crust on copper; doesn't conduct | Copper meets salt water or vinegar |
+| | Gold | Heavy shining flecks; conducts, never tarnishes | Mercury pans sand |
+| | Stalactite | Mineral points growing down from stone ceilings | Salt water under a stone ceiling |
+| | Rubber | Never conducts; acid-proof; burns smokily | Sap meets sulfur |
 | | Cement | Pours like a thick liquid, then sets into stone | Ash, sand and water stirred together |
 | | Pumice | Light, holey rock that floats on water | Lava meets carbon dioxide |
 | | Quicksand | Looks like wet sand, but powders sink slowly into it | Sand meets salt water |
@@ -123,6 +126,9 @@ debris start fresh when a scene loads.
 | | Vinegar | Weak acid: fizzes with ash, cleans rust, greens copper | Alcohol left open to the air |
 | | Chlorine | Heavy yellow-green gas; wilts plants | Electrified salt water |
 | | Bleach | Kills algae, moss and mushrooms; clears stained glass | Chlorine meets lye |
+| | Sulfur dioxide | Heavy choking gas; makes water acidic and clouds rain acid | Burning sulfur |
+| | Fog | Thin mist that lingers low and drifts | Steam meets snow or ice |
+| | Ink | Deep blue-black liquid that burns | Soot meets oil |
 | **Fire & blasts** | | | |
 | 7 | Fire | Short-lived; rises and flickers; ignites flammable neighbours | Starter |
 | K | Charcoal | Burns slowly and very hot, glowing rather than flaming; hot enough to make glass | Smother a wood fire with sand |
@@ -140,6 +146,7 @@ debris start fresh when a scene loads.
 | | Soot | Black powder smoke leaves on cold surfaces; burns | Smoke meets cold stone, iron or ice |
 | | Lightning | A short, very hot bolt: sparks wires, sets things alight; draw it on a wire | A thick cloud strikes |
 | | Battery | Sends pulses of electricity into touching metal or salt water | Iron and charcoal in salt water |
+| | Plasma | Glowing gas at 4000° | Lightning through hydrogen, or gas past 2000° |
 | **Life** | | | |
 | S | Seed | Falls; on loam, or on damp sand or earth, it grows into a tree (wood trunk, branches, leaves); on dry sand far from water, a cactus | Starter |
 | 5 | Grass | Weeds and grass: spreads over damp ground and loam, and into water; burns | A sandy shore |
@@ -152,6 +159,9 @@ debris start fresh when a scene loads.
 | | Sap | Slow, sticky amber liquid | Wood tapped with iron |
 | | Sugar | Sweet white powder | Sap heated past 120° |
 | | Caramel | Sticky, very slow brown liquid; burns | Sugar heated past 160° |
+| | Fruit | Ripens from flowers and falls; rots into a seed | Flowers ripen |
+| | Pulp | Thick slurry of broken-down wood | Wood meets lye |
+| | Paper | Catches fire very easily | Pulp dried past 100° |
 | R | Moss | Creeps over damp stone and brick | Grass touching stone |
 | Y | Algae | Floats and spreads across water | Weeds reaching the surface |
 | | **Tools** | | |
@@ -202,7 +212,7 @@ blast flies in an arc under gravity, then lands and behaves normally.
 
 Ideas for contributors. Each one should fit in a small pull request; `CLAUDE.md` explains how to add a
 material. For new materials, [`docs/elements.md`](docs/elements.md) has a menu of ideas grouped into
-chains (plasma, fog, stalactites, and more to come), with recipes and effort
+chains (bamboo, wax, glaze, magnets...), with recipes and effort
 estimates.
 
 - [ ] **More materials**: pick one from [`docs/elements.md`](docs/elements.md). Each is a table entry, usually a `Reaction`, and a line in `RECIPES`; the tests check every one can be discovered.

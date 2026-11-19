@@ -96,12 +96,30 @@ New chains that grow out of what already exists. Same effort key.
 | ✅ | Vinegar | Alcohol with open air above it, over time | A weak acid: fizzes with ash, cleans away rust, turns copper green | Fizz, verdigris | T |
 | ✅ | Chlorine | Electrified salt water gives it off | Heavy yellow-green gas that sinks; wilts plants it touches | Bleach | T |
 | ✅ | Bleach | Chlorine meets lye | Kills algae, moss and mushrooms; fades stained glass back to glass | Cleaning | T |
-| | Plasma | Lightning through hydrogen, or any gas past 2000° | Glowing, extremely hot, short-lived gas | | F |
+| ✅ | Plasma | Lightning through hydrogen, or smoke or steam heated past 2000° | Glowing, extremely hot (4000°), short-lived gas that sets things alight | | F |
 | ✅ | Copper ore | Lava meets salt water (rarely; it also leaves salt) | Green-speckled rock | Copper | T |
 | ✅ | Copper | Burning charcoal against copper ore | Conducts electricity and heat; never rusts | Verdigris, wiring | T |
 | ✅ | Verdigris | Copper meets salt water or vinegar | Green crust that doesn't conduct | Patina | T |
-| | Fog | Steam meeting snow or ice low down | A thin mist that lingers and drifts, then fades | Atmosphere | T |
-| | Stalactite | Salt water dripping from a stone ceiling | Slowly grows downward in icicle-like points | Caves | F |
+| ✅ | Fog | Steam meeting snow or ice | A thin mist that lingers low and drifts in the wind, then fades | Atmosphere | T |
+| ✅ | Stalactite | Salt water under a stone ceiling | Grows downward from the ceiling as salt water seeps past | Caves | T |
+
+## Fresh ideas, round 3 (brainstormed 19 Nov, evening)
+
+| | Material | How it's made | What it does | Leads to | Effort |
+|---|---|---|---|---|---|
+| ✅ | Rubber | Sap meets sulfur (vulcanising) | Static insulator: never conducts, acid can't eat it, burns smokily | Insulated wiring | T |
+| ✅ | Sulfur dioxide | Burning sulfur gives it off | Heavy choking gas; turns water to acid, and clouds in it rain acid | Acid rain | T |
+| ✅ | Pulp | Wood soaked in lye | Thick slurry | Paper | T |
+| ✅ | Paper | Pulp dried past 100° | Catches fire very easily, leaving ash | Kindling | T |
+| ✅ | Ink | Soot meets oil | Deep blue-black liquid that burns | Writing (one day) | T |
+| ✅ | Fruit | Flowers now and then ripen into fruit, which falls | Rots away leaving a seed; ferments with water and mushroom like sugar | Orchards, wine | T |
+| ✅ | Gold | Mercury picks flecks out of sand | Heavy shining powder; conducts, never tarnishes | Treasure | T |
+| | Bamboo | A seed in wet loam beside water | Grows very fast in tall segmented stalks; hollow, so it floats when cut | Rafts | F |
+| | Wax | Tar heated with steam (cracking) | Solid that melts into a liquid when warm and sets again when cool (needs a "below" phase change) | Candles | F |
+| | Glaze | Brick fired with salt on it | Shiny, waterproof, acid-proof tiles | Pottery | T |
+| | Ozone | Lightning through plain air, now and then | A faint, short-lived gas that bleaches what it touches | | T |
+| | Magnet | Iron struck by lightning | Pulls loose iron powder and rust towards it (needs a simple force pass) | Motors (one day) | S |
+| | Iron filings | Iron ground by an explosion | Powder that conducts and is pulled by magnets | Magnet toys | T |
 
 ## Notes
 

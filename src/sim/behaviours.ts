@@ -318,9 +318,14 @@ export function spreadMushroom(w: World, x: number, y: number, _i: number): bool
   return true;
 }
 
-/** Flower: now and then drops a seed into the open air below it. */
-export function dropSeeds(w: World, x: number, y: number, _i: number): boolean {
+/** Flower: now and then drops a seed into the open air below it, or ripens into fruit. */
+export function dropSeeds(w: World, x: number, y: number, i: number): boolean {
   if (w.rng.chance(0.0002) && w.get(x, y + 1) === M.Empty) w.set(x, y + 1, M.Seed);
+  // Now and then a flower ripens into fruit, which falls.
+  if (w.rng.chance(0.0003)) {
+    w.transform(i, M.Fruit);
+    return true;
+  }
   return true;
 }
 
@@ -477,7 +482,8 @@ export function rainCloud(w: World, x: number, y: number, _i: number): boolean {
   if (w.rng.chance(0.00002) && countAround(w, x, y, M.Cloud, M.Cloud) >= 6) strike(w, x, y);
   if (!w.rng.chance(0.006) || w.get(x, y + 1) !== M.Empty) return false;
   if (!w.near(x, y, 6, M.Ice)) {
-    w.set(x, y + 1, M.Water);
+    // Acid rain where the air is full of sulfur dioxide.
+    w.set(x, y + 1, w.near(x, y, 6, M.SulfurDioxide) ? M.Acid : M.Water);
   } else if (w.rng.chance(0.15)) {
     w.set(x, y + 1, M.Hail);
     w.launch(w.idx(x, y + 1), 0, 3); // hail comes down hard
@@ -586,12 +592,16 @@ function strike(w: World, x: number, y: number): void {
   }
 }
 
-/** Lightning: for its few frames, sparks any conductor it touches and sets flammable neighbours alight. */
+/** Lightning: for its few frames, sparks any conductor it touches, turns hydrogen to plasma, and sets flammable neighbours alight. */
 export function updateBolt(w: World, x: number, y: number, _i: number): boolean {
   for (let k = 0; k < 4; k++) {
     const nx = k === 0 ? x - 1 : k === 1 ? x + 1 : x;
     const ny = k === 2 ? y - 1 : k === 3 ? y + 1 : y;
-    if (w.inBounds(nx, ny)) w.electrify(w.idx(nx, ny));
+    if (!w.inBounds(nx, ny)) continue;
+    const n = w.idx(nx, ny);
+    // Lightning through hydrogen strips it into plasma.
+    if (w.get(nx, ny) === M.Hydrogen) w.transform(n, M.Plasma);
+    else w.electrify(n);
   }
   w.igniteNeighbours(x, y);
   return true;
