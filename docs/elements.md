@@ -114,12 +114,30 @@ New chains that grow out of what already exists. Same effort key.
 | ✅ | Ink | Soot meets oil | Deep blue-black liquid that burns | Writing (one day) | T |
 | ✅ | Fruit | Flowers now and then ripen into fruit, which falls | Rots away leaving a seed; ferments with water and mushroom like sugar | Orchards, wine | T |
 | ✅ | Gold | Mercury picks flecks out of sand | Heavy shining powder; conducts, never tarnishes | Treasure | T |
-| | Bamboo | A seed in wet loam beside water | Grows very fast in tall segmented stalks; hollow, so it floats when cut | Rafts | F |
-| | Wax | Tar heated with steam (cracking) | Solid that melts into a liquid when warm and sets again when cool (needs a "below" phase change) | Candles | F |
-| | Glaze | Brick fired with salt on it | Shiny, waterproof, acid-proof tiles | Pottery | T |
-| | Ozone | Lightning through plain air, now and then | A faint, short-lived gas that bleaches what it touches | | T |
-| | Magnet | Iron struck by lightning | Pulls loose iron powder and rust towards it (needs a simple force pass) | Motors (one day) | S |
-| | Iron filings | Iron ground by an explosion | Powder that conducts and is pulled by magnets | Magnet toys | T |
+| ✅ | Bamboo | A seed on loam with water within 2 cells | Shoots straight up fast in a tall stalk, topped with a few leaves | | F |
+| ✅ | Wax | Tar meets steam (cracking) | Solid that melts above 60° and sets again below 50° (new `below` phase change); burns slowly like a candle | Candles | F |
+| ✅ | Glaze | Salt on brick hotter than 300° (new reaction `minTemp`) | Shiny, waterproof, acid-proof tiles | Pottery | T |
+| ✅ | Ozone | Lightning bolts sometimes leave it as they fade | A faint gas that hangs about and bleaches algae, moss and stained glass | | T |
+| ✅ | Magnet | Lightning touching iron now and then magnetises it | Reaches up to 8 cells and pulls iron filings and rust a step closer (a local pull, no global force pass) | Motors (one day) | F |
+| ✅ | Iron filings | Explosions shatter iron (new `shattersInto`) | Powder that conducts, rusts, and is pulled by magnets | Magnet toys | T |
+
+## Fresh ideas, round 4 (brainstormed 19 Nov, late)
+
+Uses the new `below` (setting solid when cool) and `startTemp` (created hot).
+
+| | Material | How it's made | What it does | Leads to | Effort |
+|---|---|---|---|---|---|
+| ✅ | Molten glass | Glass heated past 1200° (thermite or plasma) | Glowing slow liquid that sets back into glass below 900°: glassblowing | | T |
+| ✅ | Molten iron | Iron past 1500°; burning thermite leaves it (and melts iron into it) | White-hot heavy liquid that sets back into iron below 1300° | Steel, casting | T |
+| ✅ | Steel | Molten iron meets charcoal | Conducts, never rusts | | T |
+| ✅ | Amber | Sap left touching sand for a long time | Golden static solid | | T |
+| | Salt crystal | Salt water cooled by ice or dry ice | Clear pink shards that grow slowly from the cold surface | Caves | F |
+| | Basalt | Lava cooling slowly in open air (no water) | Dark grey columns; a slow alternative to stone | Volcanoes | F |
+| | Glass fibre | Molten glass blown by wind | Fine strands that insulate heat | Insulation | T |
+| | Molten copper | Copper past 1100° | Liquid copper that sets back; with tin (or zinc), bronze | Bronze | T |
+| | Tin | Lava meets mud (rarely) | Soft grey metal | Bronze | T |
+| | Bronze | Molten copper meets tin | Golden metal; conducts; never rusts or greens | Bells, statues (materials only!) | T |
+| | Geyser rock | Stone above lava with water seeping in | Now and then blasts steam and water upward | Hot springs | F |
 
 ## Notes
 

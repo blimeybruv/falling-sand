@@ -201,7 +201,7 @@ export class World {
     this.vx[i] = 0;
     this.vy[i] = 0;
     this.charge[i] = 0;
-    this.temp[i] = def.heat ? def.heat.temp : AMBIENT_TEMP;
+    this.temp[i] = def.heat ? def.heat.temp : (def.startTemp ?? AMBIENT_TEMP);
     this.stamp[i] = this.frame;
     if (this.stepping) this.created[m]++;
   }
@@ -365,7 +365,8 @@ export class World {
         const i = y * this.width + x;
         const def = MATS[this.mat[i]];
         if (d2 <= r2) {
-          if (!def.indestructible) this.setCell(i, this.rng.chance(0.25) ? M.Fire : M.Empty);
+          if (def.shattersInto !== undefined) this.setCell(i, def.shattersInto);
+          else if (!def.indestructible) this.setCell(i, this.rng.chance(0.25) ? M.Fire : M.Empty);
           continue;
         }
         if (def.kind === 'empty') continue;
@@ -510,6 +511,11 @@ export class World {
       this.transform(i, other && this.rng.chance(other.chance) ? other.into : above.into);
       return;
     }
+    const below = def.below;
+    if (below && t < below.temp) {
+      this.transform(i, below.into);
+      return;
+    }
     if (def.ignitesAt !== undefined && this.burn[i] === 0 && t >= def.ignitesAt && this.ignite(i)) return;
 
     if (def.reactions && this.react(x, y, i, def.reactions)) return;
@@ -553,6 +559,7 @@ export class World {
       const re = reactions[r];
       if (re.with !== other || (re.whileBurning && this.burn[i] === 0)) continue;
       if (re.side && re.side !== (k === 2 ? 'above' : k === 3 ? 'below' : 'beside')) continue;
+      if (re.minTemp !== undefined && this.temp[i] < re.minTemp) continue;
       if (!this.rng.chance(re.chance)) continue;
       if (re.otherInto !== undefined) this.transform(n, re.otherInto);
       if (re.into !== undefined) {

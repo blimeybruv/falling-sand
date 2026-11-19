@@ -104,18 +104,22 @@ export function sproutGrass(w: World, x: number, y: number, i: number): boolean 
 const LOAM_TREE = 1000;
 /** Added instead to mark the growing tip of a cactus. */
 const CACTUS_TIP = 2000;
+/** ...or of a bamboo stalk. */
+const BAMBOO_TIP = 3000;
 /** Ground with no water this near counts as desert. */
 const DRY_RANGE = 10;
 
 export function updateSeed(w: World, x: number, y: number, i: number): boolean {
   const height = w.life[i];
+  if (height >= BAMBOO_TIP) return growBamboo(w, x, y, i, height - BAMBOO_TIP);
   if (height >= CACTUS_TIP) return growCactus(w, x, y, i, height - CACTUS_TIP);
   if (height > 0) return growTree(w, x, y, i, height);
   if (!w.rng.chance(0.02)) return false;
   if (w.get(x, y - 1) !== M.Empty) return false;
   const below = w.get(x, y + 1);
   if (below === M.Loam) {
-    w.life[i] = w.rng.int(28, 46) + LOAM_TREE;
+    // Right beside water, loam grows bamboo; otherwise a flowering tree.
+    w.life[i] = w.near(x, y, 2, M.Water) ? BAMBOO_TIP + w.rng.int(20, 40) : w.rng.int(28, 46) + LOAM_TREE;
     return true;
   }
   if ((below === M.Sand || below === M.Earth || below === M.Grass) && w.near(x, y, DAMP_RANGE, M.Water)) {
@@ -128,6 +132,19 @@ export function updateSeed(w: World, x: number, y: number, i: number): boolean {
     return true;
   }
   return false;
+}
+
+/** Bamboo shoots straight up, fast, and tops out with a few leaves. */
+function growBamboo(w: World, x: number, y: number, i: number, height: number): boolean {
+  if (!w.rng.chance(0.5)) return true;
+  w.setCell(i, M.Bamboo);
+  if (height > 1 && w.get(x, y - 1) === M.Empty) {
+    w.set(x, y - 1, M.Seed);
+    if (w.inBounds(x, y - 1)) w.life[w.idx(x, y - 1)] = BAMBOO_TIP + height - 1;
+  } else {
+    growCrown(w, x, y - 1, 2, false);
+  }
+  return true;
 }
 
 /** A cactus climbs a cell at a time, now and then putting out an arm that turns upward. */
@@ -331,19 +348,22 @@ export function dropSeeds(w: World, x: number, y: number, i: number): boolean {
 
 /**
  * Thermite: while it burns, it melts what it touches into lava, even stone (the one thing that
- * can) and metal. Obsidian holds.
+ * can), and metal into molten iron. Obsidian holds.
  */
 export function meltThrough(w: World, x: number, y: number, _i: number): boolean {
   if (w.burn[w.idx(x, y)] === 0 || !w.rng.chance(0.15)) return false;
   const nx = x + w.rng.int(-1, 1);
   const ny = y + w.rng.int(-1, 1);
   const t = w.get(nx, ny);
-  if (w.inBounds(nx, ny) && isMeltable(t)) w.transform(w.idx(nx, ny), M.Lava);
+  if (!w.inBounds(nx, ny)) return false;
+  if (t === M.Iron || t === M.Steel || t === M.IronFilings) w.setCell(w.idx(nx, ny), M.MoltenIron);
+  else if (isMeltable(t)) w.transform(w.idx(nx, ny), M.Lava);
   return false;
 }
 
 function isMeltable(t: number): boolean {
-  return t === M.Stone || t === M.Iron || t === M.IronOre || t === M.Brick || t === M.Glass || t === M.Sand;
+  // Glass isn't here: thermite's heat melts it into molten glass instead (see Glass's `above`).
+  return t === M.Stone || t === M.IronOre || t === M.Brick || t === M.Sand;
 }
 
 /**
@@ -599,8 +619,10 @@ export function updateBolt(w: World, x: number, y: number, _i: number): boolean 
     const ny = k === 2 ? y - 1 : k === 3 ? y + 1 : y;
     if (!w.inBounds(nx, ny)) continue;
     const n = w.idx(nx, ny);
-    // Lightning through hydrogen strips it into plasma.
-    if (w.get(nx, ny) === M.Hydrogen) w.transform(n, M.Plasma);
+    const t = w.get(nx, ny);
+    // Lightning through hydrogen strips it into plasma, and now and then magnetises iron.
+    if (t === M.Hydrogen) w.transform(n, M.Plasma);
+    else if (t === M.Iron && w.rng.chance(0.05)) w.transform(n, M.Magnet);
     else w.electrify(n);
   }
   w.igniteNeighbours(x, y);
@@ -627,3 +649,17 @@ export function formBattery(w: World, x: number, y: number, i: number): boolean 
 export function formAlcohol(w: World, x: number, y: number, i: number): boolean {
   return mixThree(w, x, y, i, M.Water, M.Mushroom, M.Alcohol);
 }
+
+/** Magnet: now and then reaches to a random cell nearby and, if it's iron filings or rust, pulls it a step closer. */
+export function pullIron(w: World, x: number, y: number, _i: number): boolean {
+  if (!w.rng.chance(0.3)) return true;
+  const tx = x + w.rng.int(-MAGNET_REACH, MAGNET_REACH);
+  const ty = y + w.rng.int(-MAGNET_REACH, MAGNET_REACH);
+  const t = w.get(tx, ty);
+  if (t !== M.IronFilings && t !== M.Rust) return true;
+  const sx = tx + Math.sign(x - tx);
+  const sy = ty + Math.sign(y - ty);
+  if (w.get(sx, sy) === M.Empty) w.swap(w.idx(tx, ty), w.idx(sx, sy));
+  return true;
+}
+const MAGNET_REACH = 8;

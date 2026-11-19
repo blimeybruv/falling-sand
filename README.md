@@ -100,6 +100,11 @@ debris start fresh when a scene loads.
 | | Gold | Heavy shining flecks; conducts, never tarnishes | Mercury pans sand |
 | | Stalactite | Mineral points growing down from stone ceilings | Salt water under a stone ceiling |
 | | Rubber | Never conducts; acid-proof; burns smokily | Sap meets sulfur |
+| | Iron filings | Powder that conducts and rusts; magnets pull it | Explosions shatter iron |
+| | Magnet | Pulls iron filings and rust towards it | Lightning on iron |
+| | Steel | Conducts, never rusts | Molten iron meets charcoal |
+| | Wax | Melts when warm, sets when cool; burns like a candle | Tar meets steam |
+| | Glaze | Shiny, waterproof, acid-proof tiles | Salt on hot brick |
 | | Cement | Pours like a thick liquid, then sets into stone | Ash, sand and water stirred together |
 | | Pumice | Light, holey rock that floats on water | Lava meets carbon dioxide |
 | | Quicksand | Looks like wet sand, but powders sink slowly into it | Sand meets salt water |
@@ -129,6 +134,9 @@ debris start fresh when a scene loads.
 | | Sulfur dioxide | Heavy choking gas; makes water acidic and clouds rain acid | Burning sulfur |
 | | Fog | Thin mist that lingers low and drifts | Steam meets snow or ice |
 | | Ink | Deep blue-black liquid that burns | Soot meets oil |
+| | Ozone | Faint gas left by lightning; bleaches | Lightning fades |
+| | Molten glass | Glowing slow liquid that sets back into glass | Glass past 1200° |
+| | Molten iron | White-hot liquid metal that sets back into iron | Iron past 1500°, or burning thermite |
 | **Fire & blasts** | | | |
 | 7 | Fire | Short-lived; rises and flickers; ignites flammable neighbours | Starter |
 | K | Charcoal | Burns slowly and very hot, glowing rather than flaming; hot enough to make glass | Smother a wood fire with sand |
@@ -138,7 +146,7 @@ debris start fresh when a scene loads.
 | P | Saltpetre | White crystals | Leaves buried in earth |
 | G | Gunpowder | Powder; burns very fast with small blasts, so a line of it works as a fuse | Charcoal with sulfur and saltpetre |
 | | Fireworks | Shoots up when lit, then bursts into coloured sparks | Gunpowder meets salt or rust |
-| | Thermite | Hard to light; burns at 2500° and melts through stone and metal | Rust meets charcoal |
+| | Thermite | Hard to light; burns at 2500°, melts stone into lava and metal into molten iron | Rust meets charcoal |
 | 8 | Napalm | Sticky, slow-flowing liquid; burns for a long time, is hard to put out, spreads fire | Oil meets gunpowder |
 | 9 | Nitroglycerin | Liquid; explodes on fire, when hot, or when it falls hard onto something | Acid meets oil |
 | | Dynamite | Stable explosive: ignores knocks, needs a flame, big blast | Nitroglycerin soaked into clay |
@@ -162,6 +170,8 @@ debris start fresh when a scene loads.
 | | Fruit | Ripens from flowers and falls; rots into a seed | Flowers ripen |
 | | Pulp | Thick slurry of broken-down wood | Wood meets lye |
 | | Paper | Catches fire very easily | Pulp dried past 100° |
+| | Bamboo | Shoots up fast in tall stalks | A seed on loam right beside water |
+| | Amber | Golden solid | Sap left on sand |
 | R | Moss | Creeps over damp stone and brick | Grass touching stone |
 | Y | Algae | Floats and spreads across water | Weeds reaching the surface |
 | | **Tools** | | |
@@ -212,7 +222,7 @@ blast flies in an arc under gravity, then lands and behaves normally.
 
 Ideas for contributors. Each one should fit in a small pull request; `CLAUDE.md` explains how to add a
 material. For new materials, [`docs/elements.md`](docs/elements.md) has a menu of ideas grouped into
-chains (bamboo, wax, glaze, magnets...), with recipes and effort
+chains (salt crystals, basalt, bronze, geysers...), with recipes and effort
 estimates.
 
 - [ ] **More materials**: pick one from [`docs/elements.md`](docs/elements.md). Each is a table entry, usually a `Reaction`, and a line in `RECIPES`; the tests check every one can be discovered.

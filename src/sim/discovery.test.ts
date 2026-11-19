@@ -368,6 +368,49 @@ describe('every recipe works in the simulation', () => {
       fillRect(w, 0, 35, 40, 5, M.Mercury);
       fillRect(w, 0, 30, 40, 5, M.Sand);
     }],
+    ['bamboo: a seed on loam right beside water', M.Bamboo, 1500, (w) => {
+      fillRect(w, 0, 35, 40, 5, M.Loam);
+      fillRect(w, 10, 30, 1, 5, M.Stone);
+      fillRect(w, 0, 30, 10, 5, M.Water);
+      w.set(11, 10, M.Seed);
+    }],
+    ['wax: tar meets steam', M.Wax, 300, (w) => {
+      fillRect(w, 0, 36, 40, 4, M.Tar);
+      fillRect(w, 0, 30, 40, 6, M.Steam);
+    }],
+    ['glaze: salt fired onto brick', M.Glaze, 1500, (w) => {
+      fillRect(w, 0, 36, 40, 4, M.Lava);
+      fillRect(w, 0, 35, 40, 1, M.Brick);
+      fillRect(w, 0, 33, 40, 2, M.Salt);
+    }],
+    ['ozone: lightning leaves it behind', M.Ozone, 30, (w) => fillRect(w, 10, 10, 20, 2, M.Lightning)],
+    ['iron filings: blowing up iron', M.IronFilings, 30, (w) => {
+      fillRect(w, 10, 30, 20, 5, M.Iron);
+      w.set(20, 29, M.Nitro);
+      w.ignite(w.idx(20, 29));
+    }],
+    ['magnet: lightning on iron', M.Magnet, 30, (w) => {
+      fillRect(w, 20, 0, 1, 40, M.Iron);
+      fillRect(w, 21, 0, 1, 40, M.Lightning);
+    }],
+    ['molten glass: thermite on glass', M.MoltenGlass, 400, (w) => {
+      fillRect(w, 0, 30, 40, 10, M.Glass);
+      fillRect(w, 10, 26, 20, 4, M.Thermite);
+      for (let x = 10; x < 30; x++) for (let y = 26; y < 30; y++) w.ignite(w.idx(x, y));
+    }],
+    ['molten iron: what burning thermite leaves', M.MoltenIron, 300, (w) => {
+      fillRect(w, 0, 37, 40, 3, M.Stone);
+      fillRect(w, 10, 33, 20, 4, M.Thermite);
+      for (let x = 10; x < 30; x++) for (let y = 33; y < 37; y++) w.ignite(w.idx(x, y));
+    }],
+    ['steel: molten iron meets charcoal', M.Steel, 10, (w) => {
+      fillRect(w, 0, 37, 40, 3, M.Charcoal);
+      fillRect(w, 0, 34, 40, 3, M.MoltenIron);
+    }],
+    ['amber: sap left on sand', M.Amber, 1500, (w) => {
+      fillRect(w, 0, 35, 40, 5, M.Sand);
+      fillRect(w, 0, 32, 40, 3, M.Sap);
+    }],
     ['saltpetre: leaves buried in earth', M.Saltpetre, 600, (w) => {
       fillRect(w, 10, 30, 20, 4, M.Leaf);
       fillRect(w, 0, 34, 40, 6, M.Earth);
@@ -936,5 +979,51 @@ describe('round 3', () => {
     fillRect(w, 0, 15, 30, 10, M.SaltWater);
     run(w, 1000);
     expect(w.created[M.Stalactite]).toBe(0);
+  });
+});
+
+describe('round 3, part 2', () => {
+  it('wax melts when warm and sets again when it cools', () => {
+    const w = new World(10, 10, 80);
+    fillRect(w, 3, 9, 4, 1, M.Wax);
+    for (let x = 3; x < 7; x++) w.temp[w.idx(x, 9)] = 100;
+    w.step();
+    expect(w.count(M.MoltenWax)).toBe(4);
+    run(w, 1500);
+    expect(w.count(M.MoltenWax)).toBe(0);
+    expect(w.count(M.Wax)).toBe(4);
+  });
+
+  it('molten iron sets back into iron as it cools', () => {
+    const w = new World(20, 10, 81);
+    fillRect(w, 0, 9, 20, 1, M.Stone);
+    fillRect(w, 8, 6, 4, 3, M.MoltenIron);
+    run(w, 600);
+    expect(w.count(M.MoltenIron)).toBe(0);
+    expect(w.count(M.Iron)).toBe(12);
+  });
+
+  it('a magnet pulls iron filings towards it', () => {
+    const w = new World(30, 10, 82);
+    fillRect(w, 0, 9, 30, 1, M.Stone);
+    fillRect(w, 5, 7, 1, 2, M.Magnet);
+    fillRect(w, 10, 8, 3, 1, M.IronFilings);
+    const distance = (): number => {
+      let d = 0;
+      for (let i = 0; i < w.size; i++) if (w.mat[i] === M.IronFilings) d += Math.abs((i % 30) - 5);
+      return d;
+    };
+    const before = distance();
+    run(w, 600);
+    expect(distance()).toBeLessThan(before);
+  });
+
+  it('seeds on loam far from water grow trees, not bamboo', () => {
+    const w = new World(40, 50, 83);
+    fillRect(w, 0, 45, 40, 5, M.Loam);
+    w.set(20, 30, M.Seed);
+    run(w, 2000);
+    expect(w.created[M.Bamboo]).toBe(0);
+    expect(w.count(M.Wood)).toBeGreaterThan(10);
   });
 });

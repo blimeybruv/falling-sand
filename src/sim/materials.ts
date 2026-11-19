@@ -13,6 +13,7 @@ import { M, type MaterialId } from './ids';
 import {
   corrode,
   climbVine,
+  pullIron,
   formAlcohol,
   formBattery,
   pulseBattery,
@@ -76,6 +77,8 @@ export interface Reaction {
   whileBurning?: boolean;
   /** Only when the other cell is on this side of this one (e.g. 'above': it's on top). */
   side?: 'above' | 'below' | 'beside';
+  /** Only when this cell is at least this hot. */
+  minTemp?: number;
 }
 
 /** Per-material hook. Return true if the cell was fully handled (moved, transformed or removed). */
@@ -130,6 +133,8 @@ export interface MaterialDef {
   indestructible: boolean;
   /** Acid can't dissolve it (but explosions can still destroy it). */
   acidProof: boolean;
+  /** What an explosion's blast turns it into, instead of clearing it (iron shatters into filings). */
+  shattersInto?: MaterialId;
   /** Puts out fire and burning cells it touches, like water (water, salt water, foam). */
   extinguishes: boolean;
   /** Carries electricity (see World.updateElectricity). */
@@ -153,6 +158,10 @@ export interface MaterialDef {
    * then into something else instead (boiling water leaving a grain of salt).
    */
   above?: { temp: number; into: MaterialId; sometimes?: { into: MaterialId; chance: number } };
+  /** Turns into `into` (keeping its temperature) once colder than `temp`: setting solid again. */
+  below?: { temp: number; into: MaterialId };
+  /** Temperature a fresh particle starts at, if not room temperature (molten things start hot). */
+  startTemp?: number;
   /** Flammable materials catch fire once this hot, as well as from touching fire. */
   ignitesAt?: number;
 
@@ -627,6 +636,8 @@ const defs: Record<MaterialId, Def> = {
     colourJitter: 0.14,
     conductivity: 0.02,
     acidProof: true,
+    // Salt fired onto hot brick melts into a glaze.
+    reactions: [{ with: M.Salt, minTemp: 300, chance: 0.02, into: M.Glaze, otherInto: M.Empty }],
     description: 'Fired clay. Insulates heat, never burns, and acid cannot eat it.',
   },
   [M.Glass]: {
@@ -638,6 +649,7 @@ const defs: Record<MaterialId, Def> = {
     colour: [196, 228, 234],
     colourJitter: 0.04,
     acidProof: true,
+    above: { temp: 1200, into: M.MoltenGlass },
     reactions: [{ with: M.Rust, chance: 0.01, into: M.StainedGlass, otherInto: M.Empty }],
     description: 'Melted sand. Acid cannot eat it, so it makes good containers.',
   },
@@ -830,6 +842,8 @@ const defs: Record<MaterialId, Def> = {
     colourJitter: 0.06,
     conductivity: 0.25,
     conducts: true,
+    shattersInto: M.IronFilings,
+    above: { temp: 1500, into: M.MoltenIron },
     reactions: [
       { with: M.Water, chance: 0.0002, into: M.Rust },
       { with: M.SaltWater, chance: 0.004, into: M.Rust },
@@ -882,6 +896,8 @@ const defs: Record<MaterialId, Def> = {
     ignitesAt: 300,
     flames: 0.15,
     burnsInto: M.Smoke,
+    // Cracked with steam it gives wax.
+    reactions: [{ with: M.Steam, chance: 0.02, into: M.Wax }],
     description: 'Thick, black and very slow. Floats on water; burns smokily for a long time.',
   },
   [M.Cement]: {
@@ -946,7 +962,7 @@ const defs: Record<MaterialId, Def> = {
     burnTemp: 2500,
     flames: 0.6,
     extinguishChance: 0,
-    burnsInto: M.Lava,
+    burnsInto: M.MoltenIron,
     update: meltThrough,
     description: 'Hard to light, then burns hotter than anything and melts through stone and metal.',
   },
@@ -1220,6 +1236,7 @@ const defs: Record<MaterialId, Def> = {
     colourEnd: [170, 196, 255],
     colourJitter: 0.1,
     lifetime: [4, 8],
+    decay: { into: M.Ozone, chance: 0.15 },
     heat: { temp: 3000, rate: 1 },
     glow: true,
     update: updateBolt,
@@ -1273,7 +1290,11 @@ const defs: Record<MaterialId, Def> = {
     burnTime: [40, 80],
     above: { temp: 120, into: M.Sugar },
     // Cured with sulfur, it sets into rubber.
-    reactions: [{ with: M.Sulfur, chance: 0.05, into: M.Rubber, otherInto: M.Empty }],
+    reactions: [
+      { with: M.Sulfur, chance: 0.05, into: M.Rubber, otherInto: M.Empty },
+      // Left soaking into sand, it slowly hardens into amber.
+      { with: M.Sand, chance: 0.0005, into: M.Amber },
+    ],
     description: 'Slow, sticky amber liquid that a tapped tree oozes. Boil it for sugar.',
   },
   [M.Sugar]: {
@@ -1568,6 +1589,183 @@ const defs: Record<MaterialId, Def> = {
     acidProof: true,
     description: 'Heavy, shining flecks that mercury picks out of sand. Conducts; never tarnishes.',
   },
+  [M.Bamboo]: {
+    ...base,
+    name: 'Bamboo',
+    key: '',
+    category: 'life',
+    kind: 'static',
+    density: 100,
+    colour: [150, 182, 80],
+    colourEnd: [104, 146, 58],
+    colourJitter: 0.1,
+    flammability: 0.08,
+    burnTime: [30, 60],
+    ignitesAt: 250,
+    residue: { into: M.Ash, chance: 0.2 },
+    description: 'Shoots up fast in tall stalks from seeds in loam right beside water.',
+  },
+  [M.Wax]: {
+    ...base,
+    name: 'Wax',
+    key: '',
+    kind: 'static',
+    density: 100,
+    colour: [240, 230, 190],
+    colourJitter: 0.05,
+    flammability: 0.1,
+    burnTime: [200, 400],
+    ignitesAt: 250,
+    flames: 0.4,
+    above: { temp: 60, into: M.MoltenWax },
+    description: 'Melts when warm and sets again when it cools. Burns slowly, like a candle.',
+  },
+  [M.MoltenWax]: {
+    ...base,
+    name: 'Molten wax',
+    key: '',
+    category: 'fluid',
+    kind: 'liquid',
+    density: 9,
+    colour: [252, 238, 170],
+    colourJitter: 0.05,
+    dispersion: 2,
+    viscosity: 0.5,
+    flammability: 0.1,
+    burnTime: [200, 400],
+    ignitesAt: 250,
+    flames: 0.4,
+    startTemp: 80,
+    below: { temp: 50, into: M.Wax },
+    description: 'Melted wax. Not drawable.',
+  },
+  [M.Glaze]: {
+    ...base,
+    name: 'Glaze',
+    key: '',
+    kind: 'static',
+    density: 100,
+    colour: [56, 118, 178],
+    colourEnd: [80, 164, 168],
+    colourJitter: 0.06,
+    conductivity: 0.02,
+    acidProof: true,
+    description: 'Shiny tiles: salt fired onto hot brick. Waterproof, and acid cannot eat them.',
+  },
+  [M.Ozone]: {
+    ...base,
+    name: 'Ozone',
+    key: '',
+    category: 'fluid',
+    kind: 'gas',
+    density: 1.2,
+    colour: [120, 152, 204],
+    colourJitter: 0.06,
+    lifetime: [200, 400],
+    rise: 0,
+    wind: 0.6,
+    reactions: [
+      { with: M.Algae, chance: 0.05, otherInto: M.Empty },
+      { with: M.Moss, chance: 0.05, otherInto: M.Empty },
+      { with: M.StainedGlass, chance: 0.02, otherInto: M.Glass },
+    ],
+    description: 'Faint blue gas left in the air after lightning. Hangs about and bleaches what it touches.',
+  },
+  [M.IronFilings]: {
+    ...base,
+    name: 'Iron filings',
+    key: '',
+    kind: 'powder',
+    density: 30,
+    colour: [118, 122, 132],
+    colourJitter: 0.2,
+    conductivity: 0.2,
+    conducts: true,
+    reactions: [
+      { with: M.Water, chance: 0.0004, into: M.Rust },
+      { with: M.SaltWater, chance: 0.008, into: M.Rust },
+    ],
+    description: 'Iron shattered by a blast into powder. Conducts, rusts, and magnets pull it.',
+  },
+  [M.Magnet]: {
+    ...base,
+    name: 'Magnet',
+    key: '',
+    kind: 'static',
+    density: 100,
+    colour: [176, 56, 56],
+    colourEnd: [84, 92, 112],
+    colourJitter: 0.08,
+    conductivity: 0.25,
+    conducts: true,
+    update: pullIron,
+    description: 'Iron magnetised by lightning. Pulls iron filings and rust towards it.',
+  },
+  [M.MoltenGlass]: {
+    ...base,
+    name: 'Molten glass',
+    key: '',
+    category: 'fluid',
+    kind: 'liquid',
+    density: 25,
+    colour: [255, 176, 88],
+    colourEnd: [255, 222, 140],
+    colourJitter: 0.08,
+    dispersion: 1,
+    viscosity: 0.85,
+    conductivity: 0.05,
+    glow: true,
+    startTemp: 1300,
+    below: { temp: 900, into: M.Glass },
+    description: 'Glass melted past 1200°. Flows slowly, glowing, and sets back into glass as it cools.',
+  },
+  [M.MoltenIron]: {
+    ...base,
+    name: 'Molten iron',
+    key: '',
+    category: 'fluid',
+    kind: 'liquid',
+    density: 75,
+    colour: [255, 120, 30],
+    colourEnd: [255, 200, 90],
+    colourJitter: 0.08,
+    dispersion: 2,
+    viscosity: 0.6,
+    conductivity: 0.2,
+    glow: true,
+    startTemp: 1800,
+    below: { temp: 1300, into: M.Iron },
+    // It only stays molten for a moment, so it takes up carbon fast.
+    reactions: [{ with: M.Charcoal, chance: 0.25, into: M.Steel, otherInto: M.Empty }],
+    description: 'White-hot liquid metal from thermite or iron past 1500°. Sets back into iron; with charcoal, steel.',
+  },
+  [M.Steel]: {
+    ...base,
+    name: 'Steel',
+    key: '',
+    kind: 'static',
+    density: 100,
+    colour: [178, 186, 198],
+    colourJitter: 0.05,
+    conductivity: 0.2,
+    conducts: true,
+    description: 'Iron with a little carbon stirred in while molten. Conducts, and never rusts.',
+  },
+  [M.Amber]: {
+    ...base,
+    name: 'Amber',
+    key: '',
+    category: 'life',
+    kind: 'static',
+    density: 100,
+    colour: [228, 146, 36],
+    colourEnd: [250, 192, 72],
+    colourJitter: 0.1,
+    flammability: 0.03,
+    burnTime: [60, 120],
+    ignitesAt: 350,
+    description: 'Golden sap hardened under sand.',
+  },
 };
 
 /** Indexed by material id. */
@@ -1577,15 +1775,15 @@ export const MATERIALS: readonly MaterialDef[] = Object.values(M).map((id) => ({
 export const PALETTE: readonly MaterialDef[] = [
   // ground
   M.Sand, M.Earth, M.Mud, M.Clay, M.Loam, M.Stone, M.Brick, M.Glass, M.Obsidian, M.Ice, M.Snow,
-  M.Salt, M.IronOre, M.Iron, M.Rust, M.CopperOre, M.Copper, M.Verdigris, M.Gold, M.Cement, M.Stalactite, M.Rubber, M.Pumice, M.Quicksand, M.Hail, M.DryIce, M.StainedGlass,
+  M.Salt, M.IronOre, M.Iron, M.Rust, M.CopperOre, M.Copper, M.Verdigris, M.Gold, M.IronFilings, M.Magnet, M.Steel, M.Cement, M.Stalactite, M.Rubber, M.Wax, M.Glaze, M.Pumice, M.Quicksand, M.Hail, M.DryIce, M.StainedGlass,
   // liquids and gases
   M.Water, M.SaltWater, M.Oil, M.Tar, M.Lye, M.Foam, M.Fizz, M.Acid, M.Lava, M.Smoke, M.Steam, M.Cloud,
-  M.CarbonDioxide, M.Hydrogen, M.Mercury, M.Alcohol, M.Vinegar, M.Chlorine, M.Bleach, M.SulfurDioxide, M.Fog, M.Ink,
+  M.CarbonDioxide, M.Hydrogen, M.Mercury, M.Alcohol, M.Vinegar, M.Chlorine, M.Bleach, M.SulfurDioxide, M.Fog, M.Ink, M.Ozone, M.MoltenGlass, M.MoltenIron,
   // fire and blasts
   M.Fire, M.Charcoal, M.Coal, M.Ash, M.Sulfur, M.Saltpetre, M.Gunpowder, M.Fireworks, M.Thermite,
   M.Napalm, M.Nitro, M.Dynamite, M.SwampGas, M.Soot, M.Lightning, M.Battery, M.Plasma,
   // life
-  M.Seed, M.Grass, M.Wood, M.Flower, M.Mushroom, M.Moss, M.Algae, M.Vine, M.Seaweed, M.Cactus, M.Sap, M.Sugar, M.Caramel, M.Fruit, M.Pulp, M.Paper,
+  M.Seed, M.Grass, M.Wood, M.Flower, M.Mushroom, M.Moss, M.Algae, M.Vine, M.Seaweed, M.Cactus, M.Sap, M.Sugar, M.Caramel, M.Fruit, M.Pulp, M.Paper, M.Bamboo, M.Amber,
 ].map((id) => MATERIALS[id]);
 
 /** Room temperature. Cells drift back towards it when nothing heats or cools them. */

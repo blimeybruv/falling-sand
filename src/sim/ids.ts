@@ -90,6 +90,17 @@ export const M = {
   Ink: 82,
   Fruit: 83,
   Gold: 84,
+  Bamboo: 85,
+  Wax: 86,
+  MoltenWax: 87,
+  Glaze: 88,
+  Ozone: 89,
+  IronFilings: 90,
+  Magnet: 91,
+  MoltenGlass: 92,
+  MoltenIron: 93,
+  Steel: 94,
+  Amber: 95,
 } as const;
 
 export type MaterialId = (typeof M)[keyof typeof M];

@@ -52,6 +52,8 @@ describe('material table', () => {
       expect(inRange(def.wind), where).toBe(true);
       if (def.heat) expect(inRange(def.heat.rate), where).toBe(true);
       if (def.ignitesAt !== undefined) expect(def.flammability, where).toBeGreaterThan(0);
+      // Something that sets solid when cold must not also be produced by melting below that point.
+      if (def.below && def.startTemp !== undefined) expect(def.startTemp, where).toBeGreaterThan(def.below.temp);
       if (def.kind === 'liquid') expect(def.dispersion, where).toBeGreaterThan(0);
     }
   });
