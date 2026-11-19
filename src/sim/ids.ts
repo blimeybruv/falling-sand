@@ -44,6 +44,16 @@ export const M = {
   IronOre: 36,
   Iron: 37,
   Rust: 38,
+  Coal: 39,
+  Tar: 40,
+  Cement: 41,
+  Lye: 42,
+  Foam: 43,
+  Thermite: 44,
+  Fireworks: 45,
+  Mushroom: 46,
+  Flower: 47,
+  Spark: 48,
 } as const;
 
 export type MaterialId = (typeof M)[keyof typeof M];

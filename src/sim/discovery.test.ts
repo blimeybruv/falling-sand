@@ -178,6 +178,47 @@ describe('every recipe works in the simulation', () => {
       fillRect(w, 0, 37, 40, 3, M.Iron);
       fillRect(w, 0, 30, 40, 7, M.SaltWater);
     }],
+    ['coal: charcoal buried and baked', M.Coal, 2000, (w) => {
+      fillRect(w, 0, 35, 40, 5, M.Lava);
+      fillRect(w, 0, 32, 40, 3, M.Stone);
+      fillRect(w, 0, 29, 40, 3, M.Charcoal);
+      fillRect(w, 0, 20, 40, 9, M.Sand);
+    }],
+    ['tar: oil cooked gently in a stone pot', M.Tar, 1500, (w) => {
+      fillRect(w, 0, 35, 40, 5, M.Lava);
+      fillRect(w, 0, 33, 40, 2, M.Stone);
+      fillRect(w, 0, 25, 40, 8, M.Oil);
+    }],
+    ['cement: ash, sand and water', M.Cement, 300, (w) => {
+      fillRect(w, 0, 37, 40, 3, M.Sand);
+      fillRect(w, 0, 36, 40, 1, M.Water);
+      fillRect(w, 0, 35, 40, 1, M.Ash);
+    }],
+    ['lye: ash meets water', M.Lye, 600, (w) => {
+      fillRect(w, 0, 30, 40, 10, M.Water);
+      fillRect(w, 0, 25, 40, 2, M.Ash);
+    }],
+    ['foam: lye meets oil', M.Foam, 200, (w) => {
+      fillRect(w, 0, 33, 40, 7, M.Lye);
+      fillRect(w, 0, 28, 40, 4, M.Oil);
+    }],
+    ['thermite: rust meets charcoal', M.Thermite, 300, (w) => {
+      fillRect(w, 0, 36, 40, 4, M.Rust);
+      fillRect(w, 0, 33, 40, 3, M.Charcoal);
+    }],
+    ['fireworks: gunpowder meets salt', M.Fireworks, 300, (w) => {
+      fillRect(w, 0, 36, 40, 4, M.Salt);
+      fillRect(w, 0, 33, 40, 3, M.Gunpowder);
+    }],
+    ['mushroom: wood buried in damp ground', M.Mushroom, 4000, (w) => {
+      fillRect(w, 0, 22, 40, 18, M.Earth);
+      fillRect(w, 15, 25, 10, 4, M.Wood);
+      fillRect(w, 0, 18, 40, 4, M.Water);
+    }],
+    ['flower: a tree grown in loam', M.Flower, 3000, (w) => {
+      fillRect(w, 0, 35, 40, 5, M.Loam);
+      w.set(20, 20, M.Seed);
+    }],
     ['saltpetre: leaves buried in earth', M.Saltpetre, 600, (w) => {
       fillRect(w, 10, 30, 20, 4, M.Leaf);
       fillRect(w, 0, 34, 40, 6, M.Earth);
@@ -387,6 +428,80 @@ describe('every recipe works in the simulation', () => {
     run(fresh, 600);
     run(salty, 600);
     expect(salty.count(M.Rust)).toBeGreaterThan(fresh.count(M.Rust) * 2);
+  });
+
+  it('trees on damp sand never flower, and open-air wood by water never grows mushrooms', () => {
+    const w = new World(40, 50, 31);
+    fillRect(w, 0, 45, 40, 5, M.Sand);
+    fillRect(w, 0, 40, 10, 5, M.Water);
+    fillRect(w, 10, 40, 1, 5, M.Stone);
+    w.set(12, 30, M.Seed);
+    run(w, 4000);
+    expect(w.count(M.Wood)).toBeGreaterThan(8);
+    expect(w.created[M.Flower]).toBe(0);
+    expect(w.created[M.Mushroom]).toBe(0);
+  });
+
+  it('oil left at room temperature stays oil, and charcoal in the open stays charcoal', () => {
+    const w = new World(30, 30, 32);
+    fillRect(w, 0, 25, 30, 5, M.Oil);
+    fillRect(w, 10, 20, 10, 2, M.Charcoal);
+    run(w, 1000);
+    expect(w.created[M.Tar]).toBe(0);
+    expect(w.created[M.Coal]).toBe(0);
+  });
+
+  it('cement sets into stone', () => {
+    const w = new World(20, 20, 33);
+    fillRect(w, 0, 15, 20, 5, M.Cement);
+    run(w, 800);
+    expect(w.count(M.Cement)).toBe(0);
+    expect(w.count(M.Stone)).toBe(100);
+  });
+
+  it('lye neutralises acid into salt water', () => {
+    const w = new World(20, 20, 34);
+    fillRect(w, 0, 15, 20, 5, M.Acid);
+    fillRect(w, 0, 10, 20, 3, M.Lye);
+    run(w, 300);
+    expect(w.count(M.SaltWater)).toBeGreaterThan(10);
+  });
+
+  it('foam smothers a fire', () => {
+    const fire = (foam: boolean): number => {
+      const w = new World(30, 30, 35);
+      fillRect(w, 0, 27, 30, 3, M.Stone);
+      fillRect(w, 5, 24, 20, 3, M.Wood);
+      for (let x = 5; x < 25; x++) for (let y = 24; y < 27; y++) w.ignite(w.idx(x, y));
+      if (foam) fillRect(w, 3, 18, 24, 5, M.Foam);
+      run(w, 200);
+      return w.count(M.Wood);
+    };
+    expect(fire(true)).toBeGreaterThan(fire(false));
+  });
+
+  it('thermite burns through stone', () => {
+    const w = new World(20, 30, 36);
+    fillRect(w, 0, 20, 20, 10, M.Stone);
+    fillRect(w, 5, 17, 10, 3, M.Thermite);
+    for (let x = 5; x < 15; x++) w.ignite(w.idx(x, 19));
+    run(w, 300);
+    expect(w.count(M.Stone)).toBeLessThan(200);
+    expect(w.created[M.Lava]).toBeGreaterThan(0);
+  });
+
+  it('a lit firework shoots up and bursts into sparks', () => {
+    const w = new World(40, 80, 37);
+    fillRect(w, 0, 79, 40, 1, M.Stone);
+    w.set(20, 78, M.Fireworks);
+    w.ignite(w.idx(20, 78));
+    let highest = 78;
+    for (let f = 0; f < 80; f++) {
+      w.step();
+      for (let i = 0; i < w.size; i++) if (w.mat[i] === M.Fireworks) highest = Math.min(highest, Math.floor(i / 40));
+    }
+    expect(highest).toBeLessThan(55);
+    expect(w.created[M.Spark]).toBeGreaterThan(5);
   });
 
   it('a seed on dry sand stays a seed', () => {

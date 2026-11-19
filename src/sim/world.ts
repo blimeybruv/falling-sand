@@ -34,6 +34,7 @@ const MAX_FALL_STEPS = 4;
 const DENSITY = Float32Array.from(MATERIALS, (d) => d.density);
 const FLUID = Uint8Array.from(MATERIALS, (d) => (d.kind === 'empty' || d.kind === 'liquid' || d.kind === 'gas' ? 1 : 0));
 const FLAMMABLE = Uint8Array.from(MATERIALS, (d) => (d.flammability > 0 ? 1 : 0));
+const EXTINGUISHES = Uint8Array.from(MATERIALS, (d) => (d.extinguishes ? 1 : 0));
 const CONDUCTIVITY = Float32Array.from(MATERIALS, (d) => d.conductivity);
 /** The temperature each material drifts towards, and how fast (its heat source, or ambient cooling). */
 const HOLD_TEMP = Float32Array.from(MATERIALS, (d) => (d.heat ? d.heat.temp : AMBIENT_TEMP));
@@ -481,15 +482,18 @@ export class World {
   /** One frame of a burning cell. Returns true if the cell burned out (or exploded). */
   private updateBurning(x: number, y: number, i: number, def: MaterialDef): boolean {
     for (const [dx, dy] of N4) {
-      if (this.get(x + dx, y + dy) !== M.Water) continue;
+      const t = this.get(x + dx, y + dy);
+      if (!EXTINGUISHES[t] || !this.inBounds(x + dx, y + dy)) continue;
       const n = this.idx(x + dx, y + dy);
+      // Water boils away into steam; foam just pops.
+      const usedUp = t === M.Foam ? M.Empty : M.Steam;
       if (this.rng.chance(def.extinguishChance)) {
         this.burn[i] = 0;
-        if (this.rng.chance(0.5)) this.setCell(n, M.Steam);
+        if (this.rng.chance(0.5)) this.setCell(n, usedUp);
         return false;
       }
-      // Too hot to put out: the water slowly boils instead.
-      if (this.rng.chance(0.04)) this.setCell(n, M.Steam);
+      // Too hot to put out: the water slowly boils (or the foam pops) instead.
+      if (this.rng.chance(0.04)) this.setCell(n, usedUp);
       break;
     }
 

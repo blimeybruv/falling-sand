@@ -8,15 +8,14 @@
 import { M, type MaterialId } from './ids';
 import type { World } from './world';
 
-/** Fire: put out by water (becoming steam), and sets flammable neighbours alight. */
+/** Fire: put out by water and the like (becoming steam, or smoke under foam); sets flammable neighbours alight. */
 export function updateFire(w: World, x: number, y: number, i: number): boolean {
-  if (
-    w.get(x, y - 1) === M.Water ||
-    w.get(x, y + 1) === M.Water ||
-    w.get(x - 1, y) === M.Water ||
-    w.get(x + 1, y) === M.Water
-  ) {
-    w.setCell(i, M.Steam);
+  for (let k = 0; k < 4; k++) {
+    const nx = k === 0 ? x - 1 : k === 1 ? x + 1 : x;
+    const ny = k === 2 ? y - 1 : k === 3 ? y + 1 : y;
+    const def = w.defAt(nx, ny);
+    if (!def.extinguishes || !w.inBounds(nx, ny)) continue;
+    w.setCell(i, def.id === M.Foam ? M.Smoke : M.Steam);
     return true;
   }
   w.igniteNeighbours(x, y);
@@ -100,6 +99,9 @@ export function sproutGrass(w: World, x: number, y: number, i: number): boolean 
  * which climbs a cell at a time leaving wood behind, puts out the odd branch, and finishes with
  * a crown of leaves.
  */
+/** Added to a growing tip's `life` (its height left) to mark a tree rooted in loam, which flowers. */
+const LOAM_TREE = 1000;
+
 export function updateSeed(w: World, x: number, y: number, i: number): boolean {
   const height = w.life[i];
   if (height > 0) return growTree(w, x, y, i, height);
@@ -107,7 +109,7 @@ export function updateSeed(w: World, x: number, y: number, i: number): boolean {
   if (w.get(x, y - 1) !== M.Empty) return false;
   const below = w.get(x, y + 1);
   if (below === M.Loam) {
-    w.life[i] = w.rng.int(28, 46);
+    w.life[i] = w.rng.int(28, 46) + LOAM_TREE;
     return true;
   }
   if ((below === M.Sand || below === M.Earth || below === M.Grass) && w.near(x, y, DAMP_RANGE, M.Water)) {
@@ -117,22 +119,24 @@ export function updateSeed(w: World, x: number, y: number, i: number): boolean {
   return false;
 }
 
-function growTree(w: World, x: number, y: number, i: number, height: number): boolean {
+function growTree(w: World, x: number, y: number, i: number, tip: number): boolean {
   if (!w.rng.chance(0.2)) return true; // grows slowly, and stays put while it does
+  const loam = tip >= LOAM_TREE;
+  const height = loam ? tip - LOAM_TREE : tip;
   const nx = w.rng.chance(0.15) ? x + w.rng.sign() : x; // a slight lean now and then
   const above = w.get(nx, y - 1);
   w.setCell(i, M.Wood);
   if (height > 1 && (above === M.Empty || above === M.Leaf)) {
     w.set(nx, y - 1, M.Seed);
-    if (w.inBounds(nx, y - 1)) w.life[w.idx(nx, y - 1)] = height - 1;
-    if (height > 5 && height < 30 && w.rng.chance(0.25)) growBranch(w, x, y, w.rng.sign());
+    if (w.inBounds(nx, y - 1)) w.life[w.idx(nx, y - 1)] = height - 1 + (loam ? LOAM_TREE : 0);
+    if (height > 5 && height < 30 && w.rng.chance(0.25)) growBranch(w, x, y, w.rng.sign(), loam);
   } else {
-    growCrown(w, x, y - 1, w.rng.int(5, 7));
+    growCrown(w, x, y - 1, w.rng.int(5, 7), loam);
   }
   return true;
 }
 
-function growBranch(w: World, x: number, y: number, dir: number): void {
+function growBranch(w: World, x: number, y: number, dir: number, loam: boolean): void {
   let bx = x;
   let by = y;
   const length = w.rng.int(3, 6);
@@ -142,14 +146,16 @@ function growBranch(w: World, x: number, y: number, dir: number): void {
     if (w.get(bx, by) !== M.Empty) return;
     w.set(bx, by, M.Wood);
   }
-  growCrown(w, bx, by - 1, w.rng.int(2, 4));
+  growCrown(w, bx, by - 1, w.rng.int(2, 4), loam);
 }
 
-function growCrown(w: World, cx: number, cy: number, r: number): void {
+/** A disc of leaves; trees rooted in loam put out the odd flower among them. */
+function growCrown(w: World, cx: number, cy: number, r: number, loam: boolean): void {
   for (let dy = -r; dy <= r; dy++) {
     for (let dx = -r; dx <= r; dx++) {
       if (dx * dx + dy * dy > r * r + r) continue;
-      if (w.get(cx + dx, cy + dy) === M.Empty && w.rng.chance(0.85)) w.set(cx + dx, cy + dy, M.Leaf);
+      if (w.get(cx + dx, cy + dy) !== M.Empty || !w.rng.chance(0.85)) continue;
+      w.set(cx + dx, cy + dy, loam && w.rng.chance(0.08) ? M.Flower : M.Leaf);
     }
   }
 }
@@ -185,6 +191,126 @@ export function formLoam(w: World, x: number, y: number, i: number): boolean {
 /** Charcoal: with sulfur and saltpetre close by, now and then the three turn into gunpowder. */
 export function formGunpowder(w: World, x: number, y: number, i: number): boolean {
   return mixThree(w, x, y, i, M.Sulfur, M.Saltpetre, M.Gunpowder);
+}
+
+/** True if none of the 4 neighbours of (x, y) is open air. */
+function enclosed(w: World, x: number, y: number): boolean {
+  return (
+    w.get(x - 1, y) !== M.Empty && w.get(x + 1, y) !== M.Empty && w.get(x, y - 1) !== M.Empty && w.get(x, y + 1) !== M.Empty
+  );
+}
+
+/** Charcoal: mixes into gunpowder (see above); buried and baked (shut in, over 200°) it slowly turns to coal. */
+export function updateCharcoal(w: World, x: number, y: number, i: number): boolean {
+  if (formGunpowder(w, x, y, i)) return true;
+  if (w.burn[i] === 0 && w.temp[i] > 200 && w.rng.chance(0.002) && enclosed(w, x, y)) {
+    w.transform(i, M.Coal);
+    return true;
+  }
+  return false;
+}
+
+/** Ash: with sand and water close by, now and then the three turn into wet cement. */
+export function formCement(w: World, x: number, y: number, i: number): boolean {
+  return mixThree(w, x, y, i, M.Sand, M.Water, M.Cement);
+}
+
+function isSoil(t: number): boolean {
+  return t === M.Earth || t === M.Sand || t === M.Loam || t === M.Mud || t === M.Clay;
+}
+
+/** Buried in the ground: no open air or leaves around it, and soil on at least one side. */
+function buriedInSoil(w: World, x: number, y: number): boolean {
+  let soil = false;
+  for (let k = 0; k < 4; k++) {
+    const nx = k === 0 ? x - 1 : k === 1 ? x + 1 : x;
+    const ny = k === 2 ? y - 1 : k === 3 ? y + 1 : y;
+    const def = w.defAt(nx, ny);
+    if (def.kind === 'empty' || def.kind === 'gas' || def.id === M.Leaf) return false;
+    if (isSoil(def.id)) soil = true;
+  }
+  return soil;
+}
+
+/**
+ * Wood: buried under sand it slowly fossilises into oil (see fossilise); buried in damp ground,
+ * it now and then grows a mushroom. (Wood in the open, like a tree, never does.)
+ */
+export function rotWood(w: World, x: number, y: number, i: number): boolean {
+  if (w.rng.chance(0.0005) && w.burn[i] === 0 && buriedInSoil(w, x, y) && w.near(x, y, DAMP_RANGE, M.Water)) {
+    w.transform(i, M.Mushroom);
+    return true;
+  }
+  return fossilise(w, x, y, i);
+}
+
+/** Mushroom: in the damp, now and then spreads into a neighbouring wood or leaf cell, eating it. */
+export function spreadMushroom(w: World, x: number, y: number, _i: number): boolean {
+  if (!w.rng.chance(0.005)) return true;
+  const nx = x + w.rng.int(-1, 1);
+  const ny = y + w.rng.int(-1, 1);
+  const t = w.get(nx, ny);
+  if ((t === M.Wood || t === M.Leaf) && w.near(nx, ny, DAMP_RANGE, M.Water)) w.set(nx, ny, M.Mushroom);
+  return true;
+}
+
+/** Flower: now and then drops a seed into the open air below it. */
+export function dropSeeds(w: World, x: number, y: number, _i: number): boolean {
+  if (w.rng.chance(0.0002) && w.get(x, y + 1) === M.Empty) w.set(x, y + 1, M.Seed);
+  return true;
+}
+
+/**
+ * Thermite: while it burns, it melts what it touches into lava, even stone (the one thing that
+ * can) and metal. Obsidian holds.
+ */
+export function meltThrough(w: World, x: number, y: number, _i: number): boolean {
+  if (w.burn[w.idx(x, y)] === 0 || !w.rng.chance(0.15)) return false;
+  const nx = x + w.rng.int(-1, 1);
+  const ny = y + w.rng.int(-1, 1);
+  const t = w.get(nx, ny);
+  if (w.inBounds(nx, ny) && isMeltable(t)) w.transform(w.idx(nx, ny), M.Lava);
+  return false;
+}
+
+function isMeltable(t: number): boolean {
+  return t === M.Stone || t === M.Iron || t === M.IronOre || t === M.Brick || t === M.Glass || t === M.Sand;
+}
+
+/**
+ * Fireworks: once lit, it shoots upwards trailing smoke; just before its fuse runs out it bursts
+ * into a ring of flying sparks.
+ */
+export function launchFirework(w: World, x: number, y: number, i: number): boolean {
+  const fuse = w.burn[i];
+  if (fuse === 0) return false;
+  if (fuse === 1) {
+    for (let k = 0; k < 18; k++) {
+      const a = (k / 18) * Math.PI * 2 + w.rng.next() * 0.3;
+      const sx = x + Math.round(Math.cos(a) * 2);
+      const sy = y + Math.round(Math.sin(a) * 2);
+      if (w.get(sx, sy) !== M.Empty) continue;
+      w.set(sx, sy, M.Spark);
+      const speed = 1.5 + w.rng.next() * 2;
+      w.launch(w.idx(sx, sy), Math.cos(a) * speed, Math.sin(a) * speed - 0.5);
+    }
+    w.setCell(i, M.Smoke);
+    return true;
+  }
+  if (w.vx[i] === 0 && w.vy[i] === 0 && fuse > 6) w.launch(i, (w.rng.next() - 0.5) * 0.8, -5.5 - w.rng.next() * 1.5);
+  if (w.rng.chance(0.3) && w.get(x, y + 1) === M.Empty) w.set(x, y + 1, M.Smoke);
+  return false;
+}
+
+/** Spark: flies; once it has landed it may set what it touches alight, and soon goes out. */
+export function igniteOnLanding(w: World, x: number, y: number, i: number): boolean {
+  if (w.vx[i] !== 0 || w.vy[i] !== 0) return false;
+  if (w.rng.chance(0.2)) w.igniteNeighbours(x, y);
+  if (w.rng.chance(0.15)) {
+    w.setCell(i, M.Empty);
+    return true;
+  }
+  return false;
 }
 
 /** Wood and leaves: buried under sand (nothing open around them), they very slowly turn into oil. */

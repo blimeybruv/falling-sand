@@ -247,6 +247,9 @@ input:focus-visible {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+  /* At most three rows on wide screens (scroll for the rest), so the canvas keeps its room. */
+  max-height: calc(3 * 32px + 2 * 6px);
+  overflow-y: auto;
 }
 
 .tool[hidden] {
@@ -478,6 +481,7 @@ button.quiet {
   .palette-tools {
     flex-wrap: nowrap;
     overflow-x: auto;
+    max-height: none;
     scrollbar-width: none;
   }
   .tool {

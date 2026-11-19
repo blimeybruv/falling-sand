@@ -44,7 +44,7 @@ src/main.ts  creates World + Renderer + UI and runs the requestAnimationFrame lo
 2. Add an entry to `defs` in `src/sim/materials.ts`: name, shortcut key, `kind`
    (`static` / `powder` / `liquid` / `gas`), density, colour, and whichever of flammability,
    burn time, residue, burnTemp, flames, lifetime, decay, dispersion, viscosity, rise, explosive,
-   acidProof, conductivity, heat, above (phase change, optionally `sometimes` leaving something
+   acidProof, extinguishes, conductivity, heat, above (phase change, optionally `sometimes` leaving something
    else), ignitesAt and wind apply, plus its palette
    `category` (the tab it appears under). `key` may be '' for no shortcut. The comments on `MaterialDef` explain each field. The
    "has sane values" test checks the ranges.
@@ -75,7 +75,7 @@ Movement is density-based: a mover can swap with an empty, liquid or gas cell th
   been created, plus the reward once enough are found. The UI saves progress in localStorage.
 - Recipes should follow from the physics where possible, and hints should nudge rather than give the
   answer. Avoid reactions that fire constantly in ordinary sandbox play.
-- Internal-only materials (like Leaf) stay out of `PALETTE` and need no recipe.
+- Internal-only materials (Leaf, Spark) stay out of `PALETTE` and need no recipe.
 
 ## Calibrating temperatures
 
