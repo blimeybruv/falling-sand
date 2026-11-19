@@ -488,6 +488,10 @@ export class World {
             this.setCell(n, M.Hydrogen); // electrolysis
           }
         }
+        // Electrified salt water gives off chlorine into the air above it.
+        if (mat[i] === M.SaltWater && y > 0 && mat[i - w] === EMPTY && this.rng.chance(0.05)) {
+          this.setCell(i - w, M.Chlorine);
+        }
       }
       charge[i] = c - 1;
     }

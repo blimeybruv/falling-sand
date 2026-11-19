@@ -250,6 +250,32 @@ export function formCement(w: World, x: number, y: number, i: number): boolean {
   return mixThree(w, x, y, i, M.Sand, M.Water, M.Cement);
 }
 
+/** Put material m into the first open cell below, beside or above (x, y), in that order. */
+function drip(w: World, x: number, y: number, m: MaterialId): void {
+  const d = w.rng.sign();
+  for (const [dx, dy] of DRIP_ORDER) {
+    if (w.get(x + dx * d, y + dy) === M.Empty) {
+      w.set(x + dx * d, y + dy, m);
+      return;
+    }
+  }
+}
+const DRIP_ORDER: readonly (readonly [number, number])[] = [
+  [0, 1],
+  [1, 1],
+  [-1, 1],
+  [1, 0],
+  [-1, 0],
+  [1, -1],
+  [-1, -1],
+  [0, -1],
+];
+
+/** True if any of the 4 neighbours of (x, y) is material m. */
+function touches(w: World, x: number, y: number, m: MaterialId): boolean {
+  return w.get(x - 1, y) === m || w.get(x + 1, y) === m || w.get(x, y - 1) === m || w.get(x, y + 1) === m;
+}
+
 function isSoil(t: number): boolean {
   return t === M.Earth || t === M.Sand || t === M.Loam || t === M.Mud || t === M.Clay;
 }
@@ -268,10 +294,13 @@ function buriedInSoil(w: World, x: number, y: number): boolean {
 }
 
 /**
- * Wood: buried under sand it slowly fossilises into oil (see fossilise); buried in damp ground,
- * it now and then grows a mushroom. (Wood in the open, like a tree, never does.)
+ * Wood: tapped with iron, it oozes sap; buried under sand it slowly fossilises into oil (see
+ * fossilise); buried in damp ground, it now and then grows a mushroom. (Wood in the open, like a
+ * tree, never does.)
  */
 export function rotWood(w: World, x: number, y: number, i: number): boolean {
+  // Tapped with metal (iron touching it), wood now and then oozes a drop of sap.
+  if (w.rng.chance(0.01) && w.burn[i] === 0 && touches(w, x, y, M.Iron)) drip(w, x, y, M.Sap);
   if (w.rng.chance(0.0005) && w.burn[i] === 0 && buriedInSoil(w, x, y) && w.near(x, y, DAMP_RANGE, M.Water)) {
     w.transform(i, M.Mushroom);
     return true;
@@ -401,6 +430,16 @@ export function updateLava(w: World, x: number, y: number, i: number): boolean {
         const r = w.rng.next();
         if (r < 0.15) w.setCell(i, M.Sulfur);
         else if (r < 0.25) w.transform(i, M.IronOre);
+        else w.transform(i, M.Stone);
+        return true;
+      }
+    } else if (n === M.SaltWater) {
+      // Like water, but the sea leaves salt behind, and now and then copper ore.
+      if (w.rng.chance(0.5)) w.transform(w.idx(nx, ny), M.Steam);
+      if (w.rng.chance(0.2)) {
+        const r = w.rng.next();
+        if (r < 0.15) w.transform(i, M.CopperOre);
+        else if (r < 0.3) w.setCell(i, M.Salt);
         else w.transform(i, M.Stone);
         return true;
       }
@@ -572,4 +611,9 @@ export function pulseBattery(w: World, x: number, y: number, _i: number): boolea
 /** Salt water: with iron and charcoal close by, now and then the three make a battery (a wet cell). */
 export function formBattery(w: World, x: number, y: number, i: number): boolean {
   return mixThree(w, x, y, i, M.Iron, M.Charcoal, M.Battery);
+}
+
+/** Sugar: with water and mushroom (yeast) close by, now and then the three ferment into alcohol. */
+export function formAlcohol(w: World, x: number, y: number, i: number): boolean {
+  return mixThree(w, x, y, i, M.Water, M.Mushroom, M.Alcohol);
 }

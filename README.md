@@ -94,6 +94,9 @@ debris start fresh when a scene loads.
 | | Iron ore | Rusty-speckled rock | Lava meets water (rarely) |
 | | Iron | Metal; conducts heat fast; rusts in water, much faster in salt water | Burning charcoal against iron ore |
 | | Rust | Crumbly orange powder | Iron in water |
+| | Copper ore | Green-speckled rock | Lava meets salt water (rarely) |
+| | Copper | Conducts electricity and heat; never rusts | Burning charcoal against copper ore |
+| | Verdigris | Green crust on copper; doesn't conduct | Copper meets salt water or vinegar |
 | | Cement | Pours like a thick liquid, then sets into stone | Ash, sand and water stirred together |
 | | Pumice | Light, holey rock that floats on water | Lava meets carbon dioxide |
 | | Quicksand | Looks like wet sand, but powders sink slowly into it | Sand meets salt water |
@@ -116,6 +119,10 @@ debris start fresh when a scene loads.
 | | Carbon dioxide | Heavy, faint gas: sinks and pools, puts out flames, smothers what it buries | Burning charcoal or coal; fizz |
 | | Hydrogen | The lightest gas; burns with a bang, leaving water | Electricity through fresh water |
 | | Mercury | Liquid metal heavier than everything; sand floats on it; conducts | Burning sulfur against iron ore |
+| | Alcohol | Runny, very flammable; sours to vinegar in the open | Sugar, water and mushroom |
+| | Vinegar | Weak acid: fizzes with ash, cleans rust, greens copper | Alcohol left open to the air |
+| | Chlorine | Heavy yellow-green gas; wilts plants | Electrified salt water |
+| | Bleach | Kills algae, moss and mushrooms; clears stained glass | Chlorine meets lye |
 | **Fire & blasts** | | | |
 | 7 | Fire | Short-lived; rises and flickers; ignites flammable neighbours | Starter |
 | K | Charcoal | Burns slowly and very hot, glowing rather than flaming; hot enough to make glass | Smother a wood fire with sand |
@@ -142,6 +149,9 @@ debris start fresh when a scene loads.
 | | Vine | Climbs wood, stone and brick walls | Grass meets wood |
 | | Seaweed | Grows upward through salt water | Grass meets salt water |
 | | Cactus | Grows in the desert; burning releases water | A seed on dry sand far from water |
+| | Sap | Slow, sticky amber liquid | Wood tapped with iron |
+| | Sugar | Sweet white powder | Sap heated past 120° |
+| | Caramel | Sticky, very slow brown liquid; burns | Sugar heated past 160° |
 | R | Moss | Creeps over damp stone and brick | Grass touching stone |
 | Y | Algae | Floats and spreads across water | Weeds reaching the surface |
 | | **Tools** | | |
@@ -153,9 +163,9 @@ Burning works per cell: wood, grass, leaves, oil, napalm and gunpowder keep thei
 (they flicker with fire colours), throw off flames, set their neighbours alight, and finally burn out.
 Water can put burning cells out, but how easily depends on the material (napalm hardly at all).
 
-**Electricity** pulses along anything that conducts (iron, salt water, mercury), one cell a frame.
+**Electricity** pulses along anything that conducts (iron, copper, salt water, mercury), one cell a frame.
 A pulse warms the wire, sets flammable things beside it alight (so a wire makes a detonator) and
-splits fresh water into hydrogen. Draw Lightning on a wire to send a pulse, or build a battery.
+splits fresh water into hydrogen (salt water gives off chlorine). Draw Lightning on a wire to send a pulse, or build a battery.
 
 Every cell also has a temperature. Heat spreads between neighbours (quickly through stone, slowly
 through air and wood) and fades back to room temperature. Fire, lava and burning cells are hot, and
@@ -192,7 +202,7 @@ blast flies in an arc under gravity, then lands and behaves normally.
 
 Ideas for contributors. Each one should fit in a small pull request; `CLAUDE.md` explains how to add a
 material. For new materials, [`docs/elements.md`](docs/elements.md) has a menu of ideas grouped into
-chains (sap and sugar, chlorine and bleach, copper, fog...), with recipes and effort
+chains (plasma, fog, stalactites, and more to come), with recipes and effort
 estimates.
 
 - [ ] **More materials**: pick one from [`docs/elements.md`](docs/elements.md). Each is a table entry, usually a `Reaction`, and a line in `RECIPES`; the tests check every one can be discovered.

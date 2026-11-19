@@ -70,6 +70,16 @@ export const M = {
   Lightning: 62,
   Hydrogen: 63,
   Battery: 64,
+  Sap: 65,
+  Sugar: 66,
+  Caramel: 67,
+  Alcohol: 68,
+  Vinegar: 69,
+  Chlorine: 70,
+  Bleach: 71,
+  CopperOre: 72,
+  Copper: 73,
+  Verdigris: 74,
 } as const;
 
 export type MaterialId = (typeof M)[keyof typeof M];

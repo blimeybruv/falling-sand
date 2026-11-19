@@ -89,17 +89,17 @@ New chains that grow out of what already exists. Same effort key.
 
 | | Material | How it's made | What it does | Leads to | Effort |
 |---|---|---|---|---|---|
-| | Sap | Wood warmed gently (100–150°, not alight) oozes it | Slow, sticky amber liquid | Sugar | T |
-| | Sugar | Sap boiled dry | Sweet white powder; dissolves in water | Caramel, alcohol | T |
-| | Caramel | Sugar heated past 160° | Sticky brown liquid that sets hard when cool; burns | | T |
-| | Alcohol | Sugar water with mushroom (yeast) in it, over time | Runny liquid that mixes with water and burns with a cool blue flame | Vinegar | F |
-| | Vinegar | Alcohol left touching air for a long time | A weak acid: fizzes with ash, slowly eats rust | Pickling, fizz | T |
-| | Chlorine | Electrified salt water gives it off | Heavy yellow-green gas that sinks; wilts plants it touches | Bleach | T |
-| | Bleach | Chlorine meets lye | Liquid that kills algae, moss and mushrooms, and fades stained glass back to glass | Cleaning | T |
+| ✅ | Sap | Wood tapped with iron (iron touching it) oozes it | Slow, sticky amber liquid | Sugar | F |
+| ✅ | Sugar | Sap heated past 120° | Sweet white powder | Caramel, alcohol | T |
+| ✅ | Caramel | Sugar heated past 160° | Sticky brown liquid, very slow; burns | | T |
+| ✅ | Alcohol | Sugar, water and mushroom (yeast) together | Runny and very flammable, burning clean to steam; sours to vinegar in the open | Vinegar | F |
+| ✅ | Vinegar | Alcohol with open air above it, over time | A weak acid: fizzes with ash, cleans away rust, turns copper green | Fizz, verdigris | T |
+| ✅ | Chlorine | Electrified salt water gives it off | Heavy yellow-green gas that sinks; wilts plants it touches | Bleach | T |
+| ✅ | Bleach | Chlorine meets lye | Kills algae, moss and mushrooms; fades stained glass back to glass | Cleaning | T |
 | | Plasma | Lightning through hydrogen, or any gas past 2000° | Glowing, extremely hot, short-lived gas | | F |
-| | Copper ore | Lava meets salt water (rarely) | Greenish speckled rock | Copper | T |
-| | Copper | Burning charcoal against copper ore | Metal that conducts electricity better (pulses travel two cells a frame) | Verdigris, wiring | F |
-| | Verdigris | Copper meets salt water or vinegar | Green crust that doesn't conduct | Patina | T |
+| ✅ | Copper ore | Lava meets salt water (rarely; it also leaves salt) | Green-speckled rock | Copper | T |
+| ✅ | Copper | Burning charcoal against copper ore | Conducts electricity and heat; never rusts | Verdigris, wiring | T |
+| ✅ | Verdigris | Copper meets salt water or vinegar | Green crust that doesn't conduct | Patina | T |
 | | Fog | Steam meeting snow or ice low down | A thin mist that lingers and drifts, then fades | Atmosphere | T |
 | | Stalactite | Salt water dripping from a stone ceiling | Slowly grows downward in icicle-like points | Caves | F |
 

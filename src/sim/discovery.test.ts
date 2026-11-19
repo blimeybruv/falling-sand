@@ -287,6 +287,48 @@ describe('every recipe works in the simulation', () => {
       w.set(0, 38, M.Battery);
       fillRect(w, 1, 30, 39, 9, M.Water);
     }],
+    ['sap: tapping wood with iron', M.Sap, 500, (w) => {
+      fillRect(w, 0, 38, 40, 2, M.Stone);
+      fillRect(w, 18, 20, 4, 18, M.Wood);
+      fillRect(w, 22, 25, 3, 1, M.Iron);
+    }],
+    ['sugar: boiling sap', M.Sugar, 600, (w) => {
+      fillRect(w, 0, 36, 40, 4, M.Lava);
+      fillRect(w, 0, 34, 40, 2, M.Stone);
+      fillRect(w, 0, 30, 40, 4, M.Sap);
+    }],
+    ['caramel: cooking sugar', M.Caramel, 600, (w) => {
+      fillRect(w, 0, 36, 40, 4, M.Lava);
+      fillRect(w, 0, 34, 40, 2, M.Stone);
+      fillRect(w, 0, 31, 40, 3, M.Sugar);
+    }],
+    ['alcohol: sugar, water and mushroom', M.Alcohol, 300, (w) => {
+      fillRect(w, 0, 38, 40, 2, M.Mushroom);
+      fillRect(w, 0, 37, 40, 1, M.Water);
+      fillRect(w, 0, 36, 40, 1, M.Sugar);
+    }],
+    ['vinegar: alcohol left open', M.Vinegar, 600, (w) => fillRect(w, 0, 35, 40, 5, M.Alcohol)],
+    ['chlorine: electrified salt water', M.Chlorine, 600, (w) => {
+      fillRect(w, 0, 35, 40, 5, M.SaltWater);
+      w.set(0, 34, M.Battery);
+    }],
+    ['bleach: chlorine meets lye', M.Bleach, 300, (w) => {
+      fillRect(w, 0, 35, 40, 5, M.Lye);
+      fillRect(w, 0, 30, 40, 4, M.Chlorine);
+    }],
+    ['copper ore: lava meets salt water', M.CopperOre, 600, (w) => {
+      fillRect(w, 0, 25, 40, 15, M.SaltWater);
+      fillRect(w, 0, 5, 40, 4, M.Lava);
+    }],
+    ['copper: smelting copper ore', M.Copper, 200, (w) => {
+      fillRect(w, 0, 37, 40, 3, M.CopperOre);
+      fillRect(w, 0, 34, 40, 3, M.Charcoal);
+      for (let x = 0; x < 40; x++) w.ignite(w.idx(x, 36));
+    }],
+    ['verdigris: copper in salt water', M.Verdigris, 400, (w) => {
+      fillRect(w, 0, 37, 40, 3, M.Copper);
+      fillRect(w, 0, 30, 40, 7, M.SaltWater);
+    }],
     ['saltpetre: leaves buried in earth', M.Saltpetre, 600, (w) => {
       fillRect(w, 10, 30, 20, 4, M.Leaf);
       fillRect(w, 0, 34, 40, 6, M.Earth);
@@ -769,5 +811,57 @@ describe('electricity', () => {
     let sandY = 0;
     for (let i = 0; i < f.size; i++) if (f.mat[i] === M.Sand) sandY = Math.floor(i / 10);
     expect(sandY).toBeLessThan(25);
+  });
+});
+
+describe('kitchen and electrochemistry', () => {
+  it('wood at room temperature with nothing touching it never oozes sap', () => {
+    const w = new World(30, 30, 61);
+    fillRect(w, 0, 28, 30, 2, M.Stone);
+    fillRect(w, 10, 10, 10, 18, M.Wood);
+    run(w, 1500);
+    expect(w.created[M.Sap]).toBe(0);
+  });
+
+  it('chlorine wilts plants', () => {
+    const w = new World(30, 20, 62);
+    fillRect(w, 0, 18, 30, 2, M.Stone);
+    fillRect(w, 0, 17, 30, 1, M.Grass);
+    fillRect(w, 0, 10, 30, 5, M.Chlorine);
+    run(w, 300);
+    expect(w.count(M.Grass)).toBeLessThan(15);
+  });
+
+  it('bleach kills algae and fades stained glass back to glass', () => {
+    const w = new World(30, 20, 63);
+    fillRect(w, 0, 17, 30, 3, M.StainedGlass);
+    fillRect(w, 0, 10, 30, 7, M.Bleach);
+    w.set(15, 5, M.Algae);
+    run(w, 400);
+    expect(w.count(M.Glass)).toBeGreaterThan(0);
+    expect(w.count(M.Algae)).toBe(0);
+  });
+
+  it('vinegar cleans rust away', () => {
+    const w = new World(30, 20, 64);
+    fillRect(w, 0, 17, 30, 3, M.Rust);
+    fillRect(w, 0, 10, 30, 7, M.Vinegar);
+    run(w, 400);
+    expect(w.count(M.Rust)).toBeLessThan(90);
+  });
+
+  it('copper conducts; verdigris does not', () => {
+    const w = new World(40, 10, 65);
+    for (let x = 0; x < 30; x++) w.set(x, 5, M.Copper);
+    w.electrify(w.idx(0, 5));
+    let reached = 0;
+    for (let f = 0; f < 40; f++) {
+      w.step();
+      for (let x = 0; x < 40; x++) if (w.charge[w.idx(x, 5)] > 0) reached = Math.max(reached, x);
+    }
+    expect(reached).toBe(29);
+    const v = new World(10, 10, 66);
+    v.set(5, 5, M.Verdigris);
+    expect(v.electrify(v.idx(5, 5))).toBe(false);
   });
 });
