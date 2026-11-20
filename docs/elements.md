@@ -189,7 +189,7 @@ Also built in round 4: **Slag** (molten iron meets sand: glassy waste powder).
 
 | | Material | How it's made | What it does |
 |---|---|---|---|
-| ✅ | Red sprite | Lightning from a thick cloud with open sky above (clouds now hang below the top 22% of the screen, the upper atmosphere) | Eerie red jellyfish of light: a red head, violet tendrils hanging towards the cloud, faint streamers and sometimes a dim ring above; flickers and is gone in under half a second |
+| ✅ | Red sprite | Lightning from a thick cloud with open sky above (clouds hang below the upper atmosphere, a rolling ceiling roughly 22% of the way down the screen) | Eerie red jellyfish of light: a red head, violet tendrils hanging towards the cloud, faint streamers and sometimes a dim ring above; flickers and is gone in under half a second |
 
 ## Creatures (single cell)
 
