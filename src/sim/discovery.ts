@@ -147,7 +147,7 @@ export const RECIPES: Readonly<Partial<Record<MaterialId, Recipe>>> = {
   [M.Briquette]: { hint: 'Press charcoal with something sticky.', recipe: 'Charcoal meets clay.' },
   [M.Terracotta]: { hint: 'Fire clay, but gently.', recipe: 'Clay kept warm (120–250°) without getting hot enough for brick.' },
   [M.Porcelain]: { hint: 'Fire brick far hotter, with ash.', recipe: 'Brick with ash on it, past 450° (lava will do).' },
-  [M.Gravel]: { hint: "Blow up some rock that isn't stone.", recipe: 'Explosions shatter basalt, brick, terracotta or slag into gravel.' },
+  [M.Gravel]: { hint: 'Blow up some rock.', recipe: 'Explosions shatter stone, basalt, brick, terracotta or slag into gravel.' },
   [M.Concrete]: { hint: 'Something coarse stirred into cement.', recipe: 'Cement meets gravel.' },
   [M.Peat]: { hint: 'Bury grass under earth.', recipe: 'Grass or moss with earth on top.' },
   [M.Brimstone]: { hint: 'Melt the yellow powder gently.', recipe: 'Sulfur heated past 115° (before it catches fire).' },

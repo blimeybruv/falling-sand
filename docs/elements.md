@@ -148,7 +148,7 @@ Also built in round 4: **Slag** (molten iron meets sand: glassy waste powder).
 | ✅ | Briquette | Charcoal meets clay | Burns for ages (1500–2500 frames) at a steady 800° | Kilns | T |
 | ✅ | Terracotta | Clay kept at 120–250° (any hotter and it's brick) | Porous orange tiles: water slowly seeps through | Planters | F |
 | ✅ | Porcelain | Brick with ash on it past 450° (lava will do; brick over lava reaches about 520°) | White, hard, acid-proof | | T |
-| ✅ | Gravel | Explosions shatter basalt, brick, terracotta or slag (stone stays indestructible) | Coarse stony powder | Concrete | T |
+| ✅ | Gravel | Explosions shatter stone, basalt, brick, terracotta or slag | Coarse stony powder (aggregate) | Concrete | T |
 | ✅ | Concrete | Cement meets gravel | Indestructible and acid-proof | Bunkers | T |
 | ✅ | Peat | Grass or moss with earth on top | Brown slow-burning fuel | Bogs | T |
 | ✅ | Honeydew | Flowers now and then drip it | Sweet sticky drops; ferments like sugar | | T |
