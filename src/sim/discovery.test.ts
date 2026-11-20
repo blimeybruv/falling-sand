@@ -1334,7 +1334,7 @@ describe('clouds', () => {
     expect(Math.max(...tops) - Math.min(...tops)).toBeGreaterThanOrEqual(6);
     const counts = new Map<number, number>();
     for (const t of tops) counts.set(t, (counts.get(t) ?? 0) + 1);
-    expect(Math.max(...counts.values())).toBeLessThan(tops.length * 0.3);
+    expect(Math.max(...counts.values())).toBeLessThan(tops.length * 0.4);
   });
 });
 

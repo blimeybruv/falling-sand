@@ -514,14 +514,22 @@ export function freezeWater(w: World, x: number, y: number, i: number): boolean 
 
 /**
  * The top of the cloud layer at column x: above it is the upper atmosphere, where red sprites
- * appear. It rolls gently along the sky and slowly drifts over time (two slow waves), so cloud tops
- * billow into domes and dips instead of pressing flat against one row.
+ * appear. It rolls gently along the sky and slowly drifts over time, so cloud tops billow into
+ * domes and dips instead of pressing flat against one row. Three waves with unrelated lengths,
+ * drifting at different speeds and in both directions, keep the domes from looking evenly spaced:
+ * a long swell raises whole stretches, the middle wave makes the domes, a short one lumps them.
  */
 function cloudCeiling(w: World, x: number): number {
   const base = w.height * 0.22;
-  const swell = w.height * 0.035;
+  const swell = w.height * 0.03;
   const t = w.frame;
-  return Math.round(base + swell * (Math.sin(x * 0.11 + t * 0.002) + 0.6 * Math.sin(x * 0.31 - t * 0.0035)));
+  return Math.round(
+    base +
+      swell *
+        (0.7 * Math.sin(x * 0.043 + t * 0.0011) +
+          Math.sin(x * 0.11 - t * 0.002) +
+          0.45 * Math.sin(x * 0.29 + t * 0.0037)),
+  );
 }
 
 /**
