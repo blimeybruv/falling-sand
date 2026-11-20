@@ -14,6 +14,12 @@ export interface RenderOptions {
 
 /** Gases fade out over their last FADE_FRAMES frames of life. */
 const FADE_FRAMES = 40;
+/** Clouds darken with depth: the top CLOUD_LIT cells stay bright, full grey CLOUD_DEEP cells further down. */
+const CLOUD_LIT = 3;
+const CLOUD_DEEP = 24;
+const CLOUD_LEVELS = 16;
+/** A gap of up to this many rows (minus one) inside a cloud still counts as the same cloud. */
+const CLOUD_GAP = 6;
 
 const LITTLE_ENDIAN = new Uint8Array(new Uint32Array([0x0a0b0c0d]).buffer)[0] === 0x0d;
 
@@ -43,6 +49,11 @@ export class Renderer {
   private readonly dimLut: Uint32Array;
   /** 256 colours from cold (blue) through ambient (dark) to hot (red, yellow, white). */
   private readonly heatLut: Uint32Array;
+  /** Cloud colours from sunlit white (level 0) to storm grey (CLOUD_LEVELS - 1). */
+  private readonly cloudLut: Uint32Array;
+  /** Per column while drawing: the row of the last cloud cell seen, and how deep into cloud it was. */
+  private readonly cloudRow: Int32Array;
+  private readonly cloudDepth: Uint16Array;
   private frame = 0;
   private readonly background: readonly [number, number, number];
   private seed = 0x9e3779b9;
@@ -94,6 +105,17 @@ export class Renderer {
       }
     }
     this.background = MATERIALS[M.Empty].colour;
+    this.cloudLut = new Uint32Array(CLOUD_LEVELS * SHADES);
+    for (let level = 0; level < CLOUD_LEVELS; level++) {
+      const t = level / (CLOUD_LEVELS - 1);
+      for (let s = 0; s < SHADES; s++) {
+        const j = M.Cloud * SHADES + s;
+        // Slightly bluer as it darkens: slate rather than plain grey.
+        this.cloudLut[level * SHADES + s] = pack(this.lutR[j] * (1 - 0.55 * t), this.lutG[j] * (1 - 0.53 * t), this.lutB[j] * (1 - 0.45 * t));
+      }
+    }
+    this.cloudRow = new Int32Array(world.width);
+    this.cloudDepth = new Uint16Array(world.width);
   }
 
   render(world: World, options: RenderOptions = { heatView: false, cursor: null }): void {
@@ -105,8 +127,10 @@ export class Renderer {
   }
 
   private renderMaterials(world: World): void {
-    const { mat, shade, life, burn, charge, size } = world;
-    const { pixels, lut, lutR, lutG, lutB, fadeFrames, flickers, isGlow } = this;
+    const { mat, shade, life, burn, charge, size, width } = world;
+    const { pixels, lut, lutR, lutG, lutB, fadeFrames, flickers, isGlow, cloudLut, cloudRow, cloudDepth } = this;
+    // Thick clouds are lit from above: they darken the deeper a cell is below the cloud's top.
+    cloudRow.fill(-100);
     const glowShift = this.frame >> 3;
     // Electricity: a bright head where the pulse is, a warm glow fading behind it.
     const sparkHead = pack(255, 252, 200);
@@ -146,6 +170,16 @@ export class Renderer {
           (bgG + (lutG[j] - bgG) * a) | 0,
           (bgB + (lutB[j] - bgB) * a) | 0,
         );
+      } else if (m === M.Cloud) {
+        const x = i % width;
+        const y = (i - x) / width;
+        // Small gaps (raindrops, holes, wind) don't count as the cloud ending, or every hole
+        // would draw a bright streak down its column.
+        const depth = y - cloudRow[x] <= CLOUD_GAP ? Math.min(cloudDepth[x] + 1, 255) : 1;
+        cloudDepth[x] = depth;
+        cloudRow[x] = y;
+        const level = depth <= CLOUD_LIT ? 0 : Math.min(CLOUD_LEVELS - 1, (((depth - CLOUD_LIT) * (CLOUD_LEVELS - 1)) / CLOUD_DEEP) | 0);
+        pixels[i] = cloudLut[level * SHADES + shade[i]];
       } else {
         pixels[i] = lut[m * SHADES + shade[i]];
       }

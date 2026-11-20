@@ -536,10 +536,48 @@ function cloudCeiling(w: World, x: number): number {
  * Cloud: hangs below the upper atmosphere; now and then drops rain below it; near ice it snows
  * instead, and sometimes hails; thick clouds strike lightning (and sometimes red sprites).
  */
+/** Cells a second a cloud travels in a strong wind, divided by 60: whole clouds sail at this pace. */
+const CLOUD_DRIFT = 0.18;
+
+/**
+ * Wind carries a cloud along as a body. The downwind edge moves into open air, and the upwind
+ * edge hops through the cloud to the first gap ahead (at most a row away; only edge cells look,
+ * now and then, so it stays cheap), so each row advances at both ends and the cloud keeps its
+ * shape instead of smearing out. Blown against the edge of the world, a cloud
+ * breaks up there, partly raining out.
+ */
+function cloudDrift(w: World, x: number, y: number, i: number): boolean {
+  const d = w.wind > 0 ? 1 : -1;
+  const nx = x + d;
+  if (!w.inBounds(nx, y)) {
+    // As fast as the wind brings cloud in, so it doesn't pile up against the edge.
+    if (w.rng.chance(0.5)) w.transform(i, M.Water);
+    else w.setCell(i, M.Empty);
+    return true;
+  }
+  // Only a cell on the true upwind edge moves (no cloud just behind it), so each row advances one
+  // cell per move however many little holes it has.
+  for (let k = 1; k <= 3; k++) if (w.get(x - d * k, y) === M.Cloud) return false;
+  // It goes to the row's leading edge: the first gap with open air beyond it (or, if something
+  // solid is in the way, the last hole before that). Raindrops inside the cloud don't stop it.
+  let hole = 0;
+  for (let k = 1, end = d > 0 ? w.width - x : x + 1; k < end; k++) {
+    const t = w.get(x + d * k, y);
+    if (t === M.Empty) {
+      hole = k;
+      if (w.get(x + d * (k + 1), y) !== M.Cloud && w.get(x + d * (k + 2), y) !== M.Cloud && w.get(x + d * (k + 3), y) !== M.Cloud) break;
+    } else if (t !== M.Cloud && w.isSolid(x + d * k, y)) break;
+  }
+  if (hole === 0) return false;
+  w.swap(i, w.idx(x + d * hole, y));
+  return true;
+}
+
 export function rainCloud(w: World, x: number, y: number, i: number): boolean {
   // Deep inside a thick cloud, very rarely, lightning strikes.
   if (w.rng.chance(0.00002) && countAround(w, x, y, M.Cloud, M.Cloud) >= 6) strike(w, x, y);
   if (w.rng.chance(0.006) && w.get(x, y + 1) === M.Empty) rainFrom(w, x, y);
+  if (w.wind !== 0 && w.rng.chance(Math.abs(w.wind) * CLOUD_DRIFT) && cloudDrift(w, x, y, i)) return true;
   // Clouds don't climb into the upper atmosphere (the top of the screen): they hang below it,
   // drifting, and sink back down if they find themselves up there.
   const ceiling = cloudCeiling(w, x);

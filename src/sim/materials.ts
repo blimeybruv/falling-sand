@@ -799,7 +799,8 @@ const defs: Record<MaterialId, Def> = {
     lifetime: [600, 1200],
     decay: { into: M.Water, chance: 0.5 },
     rise: 0.05,
-    wind: 0.6,
+    // Wind moves clouds as whole bodies, in rainCloud, rather than cell by cell (which smears them).
+    wind: 0,
     update: rainCloud,
     description: 'Hangs up high and drifts in the wind, raining (or snowing, near ice).',
   },

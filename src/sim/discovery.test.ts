@@ -1336,6 +1336,48 @@ describe('clouds', () => {
     for (const t of tops) counts.set(t, (counts.get(t) ?? 0) + 1);
     expect(Math.max(...counts.values())).toBeLessThan(tops.length * 0.4);
   });
+
+  function cloudSpan(w: World): { n: number; meanX: number; minX: number } {
+    let n = 0;
+    let sx = 0;
+    let minX = Infinity;
+    for (let i = 0; i < w.size; i++) {
+      if (w.mat[i] !== M.Cloud) continue;
+      const x = i % w.width;
+      n++;
+      sx += x;
+      minX = Math.min(minX, x);
+    }
+    return { n, meanX: sx / n, minX };
+  }
+
+  it('sail along in the wind as whole clouds, the upwind edge keeping up', () => {
+    const w = new World(300, 120, 131);
+    fillRect(w, 20, 26, 50, 10, M.Cloud);
+    w.wind = 1;
+    for (let f = 0; f < 100; f++) w.step();
+    const before = cloudSpan(w);
+    for (let f = 0; f < 300; f++) w.step();
+    const after = cloudSpan(w);
+    // About 10 cells a second in a strong wind (cell by cell, a settled cloud managed about 2).
+    expect(after.meanX - before.meanX).toBeGreaterThan(30);
+    expect(after.minX - before.minX).toBeGreaterThan(20);
+  });
+
+  it('break up, partly raining out, when blown against the edge of the world', () => {
+    const blown = new World(120, 120, 132);
+    const calm = new World(120, 120, 132);
+    for (const w of [blown, calm]) fillRect(w, 70, 26, 50, 10, M.Cloud);
+    blown.wind = 1;
+    for (let f = 0; f < 400; f++) {
+      blown.step();
+      calm.step();
+    }
+    expect(cloudSpan(calm).n).toBe(500);
+    expect(cloudSpan(blown).n).toBeLessThan(300);
+    // Ordinary rain falls from both; the broken-up cloud adds a downpour against the edge.
+    expect(blown.created[M.Water]).toBeGreaterThan(calm.created[M.Water] + 40);
+  });
 });
 
 describe('red sprites', () => {
