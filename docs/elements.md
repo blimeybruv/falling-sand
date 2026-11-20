@@ -209,6 +209,49 @@ The more "advanced" ones refine materials.
 | | Snail | Crawls on stone and plants near water | Eats algae and moss; leaves a shell (chalk) when it dies, which can be burnt to quicklime | Chalk | F |
 | | Coral polyp | Fixed in warm salt water | Slowly builds coral rock from the salt water: refining sea into stone | Coral rock | F |
 
+## Vents (generators, the scientific way)
+
+Real "spouts" are reservoirs under pressure finding a way out, so generators are **vents**: a static
+cell that releases a material into an open neighbour. Each vent builds up pressure (its `life`
+counter refills over time) and releases in bursts when it's full, and only into open air, so no vent
+can flood the grid like an endless tap. Proposed engine change: one new table field, something like
+`emits: { what, rate, direction, burst }`, so each vent is mostly data. Geyser rock is half of one
+already.
+
+| | Vent | Real thing | Releases | Discovered by | Effort |
+|---|---|---|---|---|---|
+| | Spring | Artesian spring | A steady trickle of water | Water trapped in loam or clay under stone | T* |
+| | Gusher | Oil well blowout | Oil shot upward in bursts | Oil buried under stone and kept hot | T* |
+| | Gas vent | Natural gas seep ("eternal flame") | Swamp gas; lit, it burns as long as the vent lasts | Swamp gas trapped under stone | T* |
+| | Fumarole | Volcanic steam vent | Steam, now and then sulfur | Water seeping onto rock near lava | T* |
+| | Mud pot | Mud volcano | Bubbling mud | Earth and water over heat | T* |
+| | Volcanic vent | Volcano | Lava in eruptions | Lava sealed under stone and kept hot | T* |
+| | Brine spring | Salt spring | Salt water | Salt water trapped under stone | T* |
+| | Sinkhole | Karst drain | Nothing: swallows liquids that reach it | Acid or vinegar eating down through chalk (once snails make chalk) | F |
+
+\* once the `emits` field exists (that first one is F).
+
+Watch for: total emission per frame (a cap, like explosions), and Discovery (the vent itself should
+be discovered by its recipe; what it releases is already known).
+
+## Load-bearing materials (design note)
+
+Feasible in its simple form; a session's work.
+
+- **Model:** each structural material gets a `strength`: how many cells it can reach from solid
+  support (say stone 12, wood 6, brick 4, glass 2). A new per-cell `support` value is that cell's
+  distance from support (the grid floor, or a column standing on it), recalculated with one
+  relaxation pass per frame, the same kind of cost as temperature.
+- **Failure:** past its strength, a cell gives way into its loose form (stone and brick into
+  gravel, wood into a new sawdust or splinters powder) and falls. Because support moves outward a
+  cell per frame, collapses ripple across a bridge rather than vanishing at once, and blasting out a
+  column brings down what it held up.
+- **Not worth it:** real weight and stress (crushing, tension in beams): an iterative solver, far
+  costlier and fiddlier for little visible gain.
+- **The catch:** most existing scenes have floating stone shelves. Make it a toggle ("Structural
+  collapse", off by default to begin with), and record the setting in the scene format (bump
+  `VERSION`, keep old scenes loading with it off).
+
 ## Notes
 
 - Electricity (lightning, conducting metal, sparks) is the biggest missing system: a per-cell

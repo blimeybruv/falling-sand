@@ -255,6 +255,8 @@ material. For new materials, [`docs/elements.md`](docs/elements.md) has a menu o
 chains (neon, toffee, popcorn, icicles, fertiliser, compost...), with recipes and effort
 estimates.
 
+- [ ] **A primordial wilderness map**: a pre-generated starting world (from a seed, so it can be shared and regenerated) that looks like untouched prehistoric land: layered rock with ore veins and a buried oil pocket, a smouldering volcano with a lava chamber, a salt-water sea with sandy shores and seaweed, caves with stalactites, loam hills with grass and trees, a peat bog, and storm clouds over it all. Offered from the Scene menu. Loading it shouldn't count as discoveries (scenes already don't), so it doubles as a sandbox for Discovery mode.
+- [ ] **Vents and load-bearing materials**: see the design notes in [`docs/elements.md`](docs/elements.md).
 - [ ] **More materials**: pick one from [`docs/elements.md`](docs/elements.md). Each is a table entry, usually a `Reaction`, and a line in `RECIPES`; the tests check every one can be discovered.
 - [ ] **Discovery goals**: small challenges once everything is unlocked ("grow a forest of 5 trees", "boil a whole pond").
 - [ ] **Metal and electricity**: a conductive solid, plus a spark that travels through connected metal and ignites or explodes what it reaches.
