@@ -540,17 +540,16 @@ function cloudCeiling(w: World, x: number): number {
 const CLOUD_DRIFT = 0.18;
 
 /**
- * Wind carries a cloud along as a body. The downwind edge moves into open air, and the upwind
- * edge hops through the cloud to the first gap ahead (at most a row away; only edge cells look,
- * now and then, so it stays cheap), so each row advances at both ends and the cloud keeps its
- * shape instead of smearing out. Blown against the edge of the world, a cloud
- * breaks up there, partly raining out.
+ * Wind carries a cloud along as a body: the upwind edge of each row hops through the cloud to the
+ * row's leading edge (at most a row away; only edge cells look, now and then, so it stays cheap),
+ * so the cloud keeps its shape instead of smearing out. Blown against a mountain (anything solid)
+ * or the edge of the world, a cloud breaks up there, partly raining out: the peak pierces it,
+ * and its windward side gets the rain.
  */
 function cloudDrift(w: World, x: number, y: number, i: number): boolean {
   const d = w.wind > 0 ? 1 : -1;
-  const nx = x + d;
-  if (!w.inBounds(nx, y)) {
-    // As fast as the wind brings cloud in, so it doesn't pile up against the edge.
+  if (w.isSolid(x + d, y)) {
+    // As fast as the wind brings cloud in, so it doesn't pile up against the slope.
     if (w.rng.chance(0.5)) w.transform(i, M.Water);
     else w.setCell(i, M.Empty);
     return true;

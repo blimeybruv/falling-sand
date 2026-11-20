@@ -145,7 +145,7 @@ debris start fresh when a scene loads.
 | L | Lava | Slow, glowing, very hot liquid; sets things alight, boils water and sets to stone where they meet, and slowly crusts into basalt in open air | Reward for 10 discoveries |
 | 0 | Smoke | Rises and drifts, then fades | Let a fire burn out |
 | - | Steam | Rises; condenses back to water near the top or under a ceiling, sometimes freezing | Fire meets water |
-| V | Cloud | Billows below the upper atmosphere, darker the thicker it is; sails along in the wind as a whole and breaks up, raining out, against the edge; rains (or snows near ice) | Steam crowding at the top |
+| V | Cloud | Billows below the upper atmosphere, darker the thicker it is; sails along in the wind as a whole and breaks up, raining out, against mountains and the edge; rains (or snows near ice) | Steam crowding at the top |
 | | Carbon dioxide | Heavy, faint gas: sinks and pools, puts out flames, smothers what it buries | Burning charcoal or coal; fizz |
 | | Hydrogen | The lightest gas; burns with a bang, leaving water | Electricity through fresh water |
 | | Mercury | Liquid metal heavier than everything; sand floats on it; conducts | Burning sulfur against iron ore |

@@ -1364,6 +1364,28 @@ describe('clouds', () => {
     expect(after.minX - before.minX).toBeGreaterThan(20);
   });
 
+  it('are pierced by a mountain in the wind, raining on its windward side', () => {
+    const w = new World(200, 120, 133);
+    // A stone peak rising through the cloud layer, and a cloud upwind of it.
+    for (let y = 15; y < 120; y++) for (let x = 120; x < 130; x++) w.set(x, y, M.Stone);
+    fillRect(w, 40, 24, 60, 12, M.Cloud);
+    w.wind = 1;
+    let windward = 0;
+    let leeward = 0;
+    for (let f = 0; f < 500; f++) {
+      w.step();
+      for (let y = 100; y < 120; y++) {
+        for (let x = 0; x < 200; x++) {
+          if (w.mat[y * 200 + x] !== M.Water) continue;
+          if (x < 120) windward++;
+          else if (x >= 130) leeward++;
+        }
+      }
+    }
+    expect(cloudSpan(w).n).toBeLessThan(400);
+    expect(windward).toBeGreaterThan(leeward * 3);
+  });
+
   it('break up, partly raining out, when blown against the edge of the world', () => {
     const blown = new World(120, 120, 132);
     const calm = new World(120, 120, 132);
