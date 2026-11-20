@@ -139,6 +139,7 @@ export const M = {
   Sawdust: 131,
   Honey: 132,
   Chalk: 133,
+  Vapour: 134,
 } as const;
 
 export type MaterialId = (typeof M)[keyof typeof M];

@@ -45,6 +45,7 @@ import {
   updateCharcoal,
   growMoss,
   rainCloud,
+  updateVapour,
   spreadAlgae,
   formLoam,
   fossilise,
@@ -178,6 +179,16 @@ export interface MaterialDef {
   /** Flammable materials catch fire once this hot, as well as from touching fire. */
   ignitesAt?: number;
 
+  // ---- sunlight (when the Sun setting is on, light comes straight down each column)
+  /** Whether sunlight shines through it. Defaults to true for gases and air, false otherwise. */
+  transparent?: boolean;
+  /**
+   * In direct sunlight, now and then (`chance` per sunlit visit, at full sun) turns into `into`:
+   * water evaporating, mud drying, a cloud burning off from the top. With `sometimes`, now and
+   * then into something else instead (salt water leaving salt).
+   */
+  sunlit?: { chance: number; into: MaterialId; sometimes?: { into: MaterialId; chance: number } };
+
   // ---- other
   /** 0..1: how strongly wind pushes it sideways. */
   wind: number;
@@ -254,6 +265,8 @@ const defs: Record<MaterialId, Def> = {
     acidProof: true,
     extinguishes: true,
     wind: 0.05,
+    // Sunshine slowly evaporates it into vapour, which makes clouds: the water cycle.
+    sunlit: { chance: 0.006, into: M.Vapour },
     key: '2',
     kind: 'liquid',
     density: 10,
@@ -425,6 +438,7 @@ const defs: Record<MaterialId, Def> = {
       { with: M.Ice, chance: 0.004, into: M.Soot },
     ],
     description: 'Rises and drifts, then fades.',
+    transparent: false,
   },
   [M.Steam]: {
     ...base,
@@ -656,6 +670,7 @@ const defs: Record<MaterialId, Def> = {
     dispersion: 1,
     viscosity: 0.9,
     above: { temp: 100, into: M.Earth },
+    sunlit: { chance: 0.004, into: M.Earth },
     reactions: [
       { with: M.Water, chance: 0.003, into: M.Clay },
       // With grass (straw) mixed in, it sets into adobe.
@@ -694,6 +709,8 @@ const defs: Record<MaterialId, Def> = {
     above: { temp: 1200, into: M.MoltenGlass },
     reactions: [{ with: M.Rust, chance: 0.01, into: M.StainedGlass, otherInto: M.Empty }],
     description: 'Melted sand. Acid cannot eat it, so it makes good containers.',
+    // Lets sunlight through: what's under it warms (a greenhouse).
+    transparent: true,
   },
   [M.Obsidian]: {
     ...base,
@@ -785,6 +802,8 @@ const defs: Record<MaterialId, Def> = {
     update: formBattery,
     above: { temp: 102, into: M.Steam, sometimes: { into: M.Salt, chance: 0.5 } },
     wind: 0.05,
+    // Evaporating in the sun, it leaves salt behind (a salt flat).
+    sunlit: { chance: 0.006, into: M.Vapour, sometimes: { into: M.Salt, chance: 0.5 } },
     description: 'Heavier than fresh water (sinks under it) and never freezes. Boil it to get salt back.',
   },
   [M.Cloud]: {
@@ -802,6 +821,9 @@ const defs: Record<MaterialId, Def> = {
     // Wind moves clouds as whole bodies, in rainCloud, rather than cell by cell (which smears them).
     wind: 0,
     update: rainCloud,
+    // Sunshine burns clouds off from the top: thin ones go first, thick storm clouds last.
+    transparent: false,
+    sunlit: { chance: 0.03, into: M.Empty },
     description: 'Hangs up high and drifts in the wind, raining (or snowing, near ice).',
   },
   [M.Snow]: {
@@ -1253,6 +1275,8 @@ const defs: Record<MaterialId, Def> = {
     colourJitter: 0.08,
     acidProof: true,
     description: 'Glass coloured with rust. Acid cannot eat it.',
+    // Lets sunlight through: what's under it warms (a greenhouse).
+    transparent: true,
   },
   [M.Soot]: {
     ...base,
@@ -1538,6 +1562,8 @@ const defs: Record<MaterialId, Def> = {
     lifetime: [600, 1200],
     rise: 0.02,
     wind: 0.8,
+    transparent: false,
+    sunlit: { chance: 0.03, into: M.Empty },
     description: 'A thin mist that lingers low and drifts, then fades.',
   },
   [M.Stalactite]: {
@@ -2389,6 +2415,24 @@ const defs: Record<MaterialId, Def> = {
     ],
     description: 'Old snail shells. Fizzes in acid or vinegar; burnt, it makes quicklime.',
   },
+  [M.Vapour]: {
+    ...base,
+    name: 'Water vapour',
+    key: '',
+    category: 'fluid',
+    kind: 'gas',
+    density: 0.3,
+    // Invisible: drawn in the colour of the air.
+    colour: [14, 15, 20],
+    colourJitter: 0,
+    lifetime: [1800, 3600],
+    // Trapped under a roof for long, it condenses back into water.
+    decay: { into: M.Water, chance: 0.5 },
+    rise: 0.4,
+    wind: 0.6,
+    update: updateVapour,
+    description: 'Invisible water vapour from water evaporating in the sun. Rises and condenses into cloud.',
+  },
 };
 
 /** Indexed by material id. */
@@ -2417,6 +2461,10 @@ export const PALETTE: readonly MaterialDef[] = [
 export const AMBIENT_TEMP = 20;
 /** Burning cells hold themselves towards this temperature. */
 export const BURNING_TEMP = 500;
+/** In full sun, whatever the light reaches first warms to about this far above ambient (a hot summer surface). */
+export const SUN_WARMTH = 28;
+/** Degrees full sun adds to a sunlit cell each time the light visits its column (every 4th frame). */
+export const SUN_HEAT = 6;
 
 /** Explosions never exceed this radius, so a chain of nitroglycerin can't freeze the page. */
 export const MAX_BLAST_RADIUS = 12;

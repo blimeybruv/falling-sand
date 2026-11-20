@@ -11,10 +11,16 @@ export const WINDS: readonly (readonly [string, number])[] = [
   ['Light →', 0.4],
   ['Strong →', 1],
 ];
+/** Sun settings offered in the sun menu: label and World.sun value. */
+export const SUNS: readonly (readonly [string, number])[] = [
+  ['Off', 0],
+  ['Weak', 0.5],
+  ['Strong', 1],
+];
 export const MIN_BRUSH = 0;
 export const MAX_BRUSH = 30;
 
-/** Everything the controls change and the main loop reads. (Wind lives on the World.) */
+/** Everything the controls change and the main loop reads. (Wind and sun live on the World.) */
 export interface GameState {
   /** Selected material; M.Empty means the eraser. */
   tool: MaterialId;

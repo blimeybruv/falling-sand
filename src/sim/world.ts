@@ -18,6 +18,8 @@ import { M, type MaterialId } from './ids';
 import {
   AMBIENT_TEMP,
   BURNING_TEMP,
+  SUN_HEAT,
+  SUN_WARMTH,
   MATERIALS,
   MAX_BLAST_RADIUS,
   MAX_EXPLOSIONS_PER_FRAME,
@@ -72,6 +74,9 @@ const HOLD_TEMP = Float32Array.from(MATERIALS, (d) => (d.heat ? d.heat.temp : AM
 const HOLD_RATE = Float32Array.from(MATERIALS, (d) => (d.heat ? d.heat.rate : d.cooling));
 const BURN_TEMP = Float32Array.from(MATERIALS, (d) => d.burnTemp ?? BURNING_TEMP);
 const WIND = Float32Array.from(MATERIALS, (d) => d.wind);
+/** Sunlight shines through these (air, gases, glass) and stops at the first thing that isn't. */
+const TRANSPARENT = Uint8Array.from(MATERIALS, (d) => ((d.transparent ?? (d.kind === 'gas' || d.kind === 'empty')) ? 1 : 0));
+const SUNLIT_CHANCE = Float32Array.from(MATERIALS, (d) => d.sunlit?.chance ?? 0);
 
 // Module-local copies of imported constants used in hot loops. (Under Vitest's module transform,
 // every read of an imported binding is a property lookup, which made benchmarks misleading.)
@@ -121,6 +126,11 @@ export class World {
   frame = 0;
   /** Sideways wind, -1 (full left) to 1 (full right). Pushes gases and falling particles. */
   wind = 0;
+  /**
+   * Sunshine, 0 (none) to 1 (full). Light comes straight down each column and warms the first thing
+   * it reaches, which may also change (`sunlit` in the material table): water evaporates, clouds burn off.
+   */
+  sun = 0;
   /** Frame number in which each cell last moved or was created; such cells are skipped. */
   private readonly stamp: Uint32Array;
   private explosionsThisFrame = 0;
@@ -420,6 +430,7 @@ export class World {
     this.stepping = true;
     this.updateTemperature();
     this.updateElectricity();
+    if (this.sun > 0) this.updateSunlight();
     const { width: w, height: h, mat, stamp } = this;
     const f = this.frame;
     const leftToRight = (f & 1) === 0;
@@ -434,6 +445,33 @@ export class World {
       }
     }
     this.stepping = false;
+  }
+
+  /**
+   * Sunlight: every 4th column each frame (taking turns), light travels down from the top through
+   * anything transparent and stops at the first cell that isn't. That cell warms towards a hot
+   * summer surface temperature (never cooling something already hotter), and may change in the sun.
+   * Whatever lies under it is in its shade.
+   */
+  private updateSunlight(): void {
+    const { width: w, height: h, mat } = this;
+    const t = this.temp;
+    const sun = this.sun;
+    const target = AMBIENT + SUN_WARMTH * sun;
+    const heat = SUN_HEAT * sun;
+    const end = w * h;
+    for (let x = this.frame & 3; x < w; x += 4) {
+      let i = x;
+      while (i < end && TRANSPARENT[mat[i]]) i += w;
+      if (i >= end) continue;
+      if (t[i] < target) t[i] = Math.min(target, t[i] + heat);
+      const m = mat[i];
+      if (SUNLIT_CHANCE[m] > 0 && this.rng.chance(SUNLIT_CHANCE[m] * sun)) {
+        const change = MATS[m].sunlit!;
+        const other = change.sometimes;
+        this.transform(i, other && this.rng.chance(other.chance) ? other.into : change.into);
+      }
+    }
   }
 
   /**

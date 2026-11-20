@@ -536,6 +536,23 @@ function cloudCeiling(w: World, x: number): number {
  * Cloud: hangs below the upper atmosphere; now and then drops rain below it; near ice it snows
  * instead, and sometimes hails; thick clouds strike lightning (and sometimes red sprites).
  */
+/**
+ * Chance per frame, per CLOUD_DEPTH_STEP rows of cloud beyond CLOUD_THIN, that a cloud's base turns
+ * to rain. Clouds up to CLOUD_THIN rows thick only drizzle; deeper ones pour until they're about that.
+ */
+const CLOUD_POUR = 0.008;
+/** Chance per frame that a cell on a cloud's base turns to rain, however thin the cloud. */
+const CLOUD_DRIZZLE = 0.006;
+const CLOUD_THIN = 8;
+const CLOUD_DEPTH_STEP = 4;
+
+/** Roughly how much thicker than CLOUD_THIN the cloud above (x, y) is, in steps (0 to 5). */
+function cloudDepth(w: World, x: number, y: number): number {
+  let n = 0;
+  while (n < 5 && w.get(x, y - CLOUD_THIN - n * CLOUD_DEPTH_STEP) === M.Cloud) n++;
+  return n;
+}
+
 /** Cells a second a cloud travels in a strong wind, divided by 60: whole clouds sail at this pace. */
 const CLOUD_DRIFT = 0.18;
 
@@ -572,10 +589,28 @@ function cloudDrift(w: World, x: number, y: number, i: number): boolean {
   return true;
 }
 
+/**
+ * Water vapour (from water evaporating in the sun) rises to the cloud layer and condenses into
+ * cloud there, sooner beside cloud that's already there, so clouds grow where vapour gathers.
+ */
+export function updateVapour(w: World, x: number, y: number, i: number): boolean {
+  if (y <= cloudCeiling(w, x) + 3 && w.rng.chance(countAround(w, x, y, M.Cloud, M.Cloud) > 0 ? 0.08 : 0.01)) {
+    w.transform(i, M.Cloud);
+    return true;
+  }
+  return false;
+}
+
 export function rainCloud(w: World, x: number, y: number, i: number): boolean {
   // Deep inside a thick cloud, very rarely, lightning strikes.
   if (w.rng.chance(0.00002) && countAround(w, x, y, M.Cloud, M.Cloud) >= 6) strike(w, x, y);
-  if (w.rng.chance(0.006) && w.get(x, y + 1) === M.Empty) rainFrom(w, x, y);
+  // The base of the cloud drizzles, and under a thick cloud it pours. The rain is the cloud itself
+  // coming down (no water from nowhere), so a deep bank rains itself thinner from the bottom up.
+  if (w.get(x, y + 1) === M.Empty && w.rng.chance(CLOUD_DRIZZLE + CLOUD_POUR * cloudDepth(w, x, y))) {
+    w.setCell(i, M.Empty);
+    rainFrom(w, x, y - 1);
+    return true;
+  }
   if (w.wind !== 0 && w.rng.chance(Math.abs(w.wind) * CLOUD_DRIFT) && cloudDrift(w, x, y, i)) return true;
   // Clouds don't climb into the upper atmosphere (the top of the screen): they hang below it,
   // drifting, and sink back down if they find themselves up there.

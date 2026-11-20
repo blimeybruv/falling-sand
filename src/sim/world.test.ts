@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { M, MATERIALS, MAX_BLAST_RADIUS, MAX_EXPLOSIONS_PER_FRAME, PALETTE, World, type MaterialId } from './index';
+import { AMBIENT_TEMP, M, MATERIALS, MAX_BLAST_RADIUS, MAX_EXPLOSIONS_PER_FRAME, PALETTE, World, type MaterialId } from './index';
 
 function run(world: World, frames: number): void {
   for (let f = 0; f < frames; f++) world.step();
@@ -423,3 +423,120 @@ describe('wind', () => {
     expect(sandX / sandN).toBeGreaterThan(51);
   });
 });
+
+describe('sunlight', () => {
+  function count(w: World, m: number): number {
+    let n = 0;
+    for (let i = 0; i < w.size; i++) if (w.mat[i] === m) n++;
+    return n;
+  }
+  function fill(w: World, x0: number, y0: number, wd: number, ht: number, m: MaterialId): void {
+    for (let y = y0; y < y0 + ht; y++) for (let x = x0; x < x0 + wd; x++) w.set(x, y, m);
+  }
+
+  it('warms the first thing it reaches, and nothing in its shade', () => {
+    const w = new World(60, 40, 1);
+    fill(w, 0, 30, 60, 10, M.Stone);
+    fill(w, 30, 10, 30, 1, M.Stone); // a roof over the right half
+    w.sun = 1;
+    for (let f = 0; f < 1200; f++) w.step();
+    expect(w.temp[30 * 60 + 10]).toBeGreaterThan(AMBIENT_TEMP + 10); // sunlit floor (it loses some into the rock)
+    expect(w.temp[10 * 60 + 45]).toBeGreaterThan(AMBIENT_TEMP + 10); // the roof
+    expect(w.temp[30 * 60 + 45]).toBeLessThan(AMBIENT_TEMP + 5); // floor in the roof's shade
+    expect(w.temp[30 * 60 + 10]).toBeLessThanOrEqual(AMBIENT_TEMP + 28.01); // a hot summer surface, no more
+  });
+
+  it('shines through glass, like a greenhouse', () => {
+    const w = new World(40, 40, 2);
+    fill(w, 0, 30, 40, 10, M.Stone);
+    fill(w, 0, 10, 40, 1, M.Glass);
+    w.sun = 1;
+    for (let f = 0; f < 1200; f++) w.step();
+    expect(w.temp[30 * 40 + 20]).toBeGreaterThan(AMBIENT_TEMP + 10);
+  });
+
+  it('strong sun melts snow in the open but not in the shade; weak sun melts none', () => {
+    const run = (sun: number): [number, number] => {
+      const w = new World(80, 60, 3);
+      fill(w, 0, 50, 80, 10, M.Stone);
+      fill(w, 0, 44, 80, 6, M.Snow);
+      fill(w, 40, 30, 40, 1, M.Stone);
+      w.sun = sun;
+      for (let f = 0; f < 1800; f++) w.step();
+      let open = 0;
+      let shade = 0;
+      for (let y = 30; y < 50; y++) {
+        for (let x = 0; x < 80; x++) {
+          if (w.mat[y * 80 + x] !== M.Snow) continue;
+          if (x < 36) open++;
+          else if (x >= 44) shade++;
+        }
+      }
+      return [open, shade];
+    };
+    const [open, shade] = run(1);
+    expect(open).toBeLessThan(216 * 0.85);
+    expect(shade).toBe(216);
+    expect(run(0.5)).toEqual([216, 216]);
+  });
+
+  it('burns clouds off from the top', () => {
+    const run = (sun: number): number => {
+      const w = new World(80, 100, 4);
+      fill(w, 0, 22, 80, 6, M.Cloud);
+      w.sun = sun;
+      for (let f = 0; f < 300; f++) w.step();
+      return count(w, M.Cloud);
+    };
+    expect(run(1)).toBeLessThan(run(0) * 0.75);
+  });
+
+  it('evaporates water into vapour, which rises and makes clouds: the water cycle', () => {
+    const run = (sun: number): World => {
+      const w = new World(120, 100, 5);
+      fill(w, 0, 80, 120, 20, M.Water);
+      w.sun = sun;
+      for (let f = 0; f < 1800; f++) w.step();
+      return w;
+    };
+    const sunny = run(0.5);
+    expect(sunny.created[M.Vapour]).toBeGreaterThan(50);
+    expect(sunny.created[M.Cloud]).toBeGreaterThan(20);
+    const dark = run(0);
+    expect(dark.created[M.Vapour]).toBe(0);
+    expect(dark.created[M.Cloud]).toBe(0);
+  });
+
+  it('dries salt water into salt, and mud into earth', () => {
+    const w = new World(80, 40, 6);
+    fill(w, 0, 36, 40, 4, M.SaltWater);
+    fill(w, 40, 36, 40, 4, M.Mud);
+    w.sun = 1;
+    for (let f = 0; f < 3600; f++) w.step();
+    expect(count(w, M.Salt)).toBeGreaterThan(20);
+    expect(count(w, M.Earth)).toBeGreaterThan(40);
+  });
+});
+
+describe('rain', () => {
+  it('is the cloud itself coming down, never water from nowhere', () => {
+    const w = new World(60, 60, 7);
+    for (let y = 20; y < 30; y++) for (let x = 0; x < 60; x++) w.set(x, y, M.Cloud);
+    for (let f = 0; f < 3000; f++) w.step();
+    let water = 0;
+    for (let i = 0; i < w.size; i++) if (w.mat[i] === M.Water) water++;
+    expect(water).toBeGreaterThan(100);
+    expect(water).toBeLessThanOrEqual(600);
+  });
+
+  it('pours from a thick cloud, which rains itself thinner from the bottom up', () => {
+    const rain = (rows: number): number => {
+      const w = new World(60, 140, 8);
+      for (let y = 30; y < 30 + rows; y++) for (let x = 0; x < 60; x++) w.set(x, y, M.Cloud);
+      for (let f = 0; f < 300; f++) w.step();
+      return w.created[M.Water];
+    };
+    expect(rain(40)).toBeGreaterThan(rain(6) * 3);
+  });
+});
+

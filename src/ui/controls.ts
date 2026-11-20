@@ -7,7 +7,7 @@ import { Journal } from './journal';
 import { ERASER_KEY, Palette } from './palette';
 import { saveDiscovery, saveMode, type Mode } from './progress';
 import { downloadScene, loadFromBrowser, loadFromFile, saveToBrowser, shareLink } from './scenes';
-import { MAX_BRUSH, MIN_BRUSH, SPEEDS, WINDS, type GameState } from './state';
+import { MAX_BRUSH, MIN_BRUSH, SPEEDS, SUNS, WINDS, type GameState } from './state';
 
 function byId<T extends HTMLElement>(id: string): T {
   const el = document.getElementById(id);
@@ -37,6 +37,7 @@ export function setupControls(state: GameState, world: World, discovery: Discove
   const clearBtn = byId<HTMLButtonElement>('clear');
   const speedSel = byId<HTMLSelectElement>('speed');
   const windSel = byId<HTMLSelectElement>('wind');
+  const sunSel = byId<HTMLSelectElement>('sun');
   const heatBtn = byId<HTMLButtonElement>('heat');
   const brush = byId<HTMLInputElement>('brush');
   const brushValue = byId<HTMLElement>('brush-value');
@@ -145,6 +146,15 @@ export function setupControls(state: GameState, world: World, discovery: Discove
     windSel.append(opt);
   }
   windSel.addEventListener('change', () => (world.wind = Number(windSel.value)));
+
+  for (const [label, value] of SUNS) {
+    const opt = document.createElement('option');
+    opt.value = String(value);
+    opt.textContent = label;
+    opt.selected = value === world.sun;
+    sunSel.append(opt);
+  }
+  sunSel.addEventListener('change', () => (world.sun = Number(sunSel.value)));
 
   brush.min = String(MIN_BRUSH);
   brush.max = String(MAX_BRUSH);

@@ -237,6 +237,30 @@ already.
 Watch for: total emission per frame (a cap, like explosions), and Discovery (the vent itself should
 be discovered by its recipe; what it releases is already known).
 
+## Weather and the sun (brainstormed 20 Nov, evening)
+
+The Sun setting (Off / Weak / Strong) shines straight down each column and warms the first thing
+that isn't `transparent`; a material's `sunlit` entry says what it turns into there. Rain is the
+cloud itself coming down, so weather can't make water from nothing.
+
+| | Idea | What it does | How | Effort |
+|---|---|---|---|---|
+| ✅ | Sun setting | Warms what it reaches first; shade where anything is in the way | `updateSunlight` in `world.ts` | S |
+| ✅ | Cloud burn-off | Clouds and fog evaporate from the top: thin wisps go first | `sunlit` on Cloud, Fog | T |
+| ✅ | Water cycle | Sunlit water evaporates into invisible water vapour, which rises and condenses into cloud | Water vapour (internal) | F |
+| ✅ | Salt flats, drying mud | Salt water dries to salt, mud to earth | `sunlit` | T |
+| ✅ | Greenhouse | Glass lets sunlight through | `transparent` | T |
+| ✅ | Thick clouds pour | A deep cloud rains harder, thinning from the bottom up | `rainCloud` | F |
+| ✅ | Mountains pierce clouds | Blown into anything solid, a cloud rains out on the windward side | `cloudDrift` | F |
+| | Solar cell | Sends electric pulses while sunlit (discovered: silicon from sand and lightning, or glass and copper?) | `update` checks it's lit | F |
+| | Heat lamp | A placeable lamp that heats in a straight line (dissipates a cloud locally, warms a greenhouse) | `update` with a ray | F |
+| | Burning glass | Sunlight through a glass lens focuses to a hot spot that lights tinder | sunlight pass bends at glass | S |
+| | Sunny plants | Grass and trees grow faster in sunlight, seeds struggle in deep shade | growth reads a "lit" flag | F |
+| | Rainbow | Sun plus falling rain draws a faint arc (render-only easter egg) | renderer | F |
+| | Gusty wind | A Wind option that varies in strength and sometimes turns | main loop varies `world.wind` | F |
+| | Day and night | The sun rises and sets, the sky colour shifts, clear nights cool things (frost) | `world.sun` over time + renderer | S |
+| | Seasons | Ambient temperature changes: winter freezes ponds, rain becomes snow | ambient is a constant today | S |
+
 ## Load-bearing materials (design note)
 
 Feasible in its simple form; a session's work.

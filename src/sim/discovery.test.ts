@@ -245,8 +245,9 @@ describe('every recipe works in the simulation', () => {
       fillRect(w, 0, 30, 40, 5, M.SaltWater);
     }],
     ['hail: a cloud near ice', M.Hail, 1500, (w) => {
-      fillRect(w, 0, 0, 40, 2, M.Cloud);
-      fillRect(w, 0, 6, 40, 1, M.Ice);
+      // Rain is the cloud coming down, so give it some depth, and air between it and the ice.
+      fillRect(w, 0, 6, 40, 7, M.Cloud);
+      fillRect(w, 0, 18, 40, 1, M.Ice);
     }],
     ['seaweed: grass meets salt water', M.Seaweed, 600, (w) => {
       fillRect(w, 0, 37, 40, 3, M.Grass);
@@ -1353,7 +1354,7 @@ describe('clouds', () => {
 
   it('sail along in the wind as whole clouds, the upwind edge keeping up', () => {
     const w = new World(300, 120, 131);
-    fillRect(w, 20, 26, 50, 10, M.Cloud);
+    fillRect(w, 20, 26, 50, 8, M.Cloud);
     w.wind = 1;
     for (let f = 0; f < 100; f++) w.step();
     const before = cloudSpan(w);
@@ -1389,16 +1390,26 @@ describe('clouds', () => {
   it('break up, partly raining out, when blown against the edge of the world', () => {
     const blown = new World(120, 120, 132);
     const calm = new World(120, 120, 132);
-    for (const w of [blown, calm]) fillRect(w, 70, 26, 50, 10, M.Cloud);
+    for (const w of [blown, calm]) fillRect(w, 70, 26, 50, 8, M.Cloud);
     blown.wind = 1;
+    // Rain falling through a strip by the downwind edge, below the cloud.
+    const edgeRain = (w: World): number => {
+      let n = 0;
+      for (let y = 50; y < 90; y++) for (let x = 110; x < 120; x++) if (w.mat[y * 120 + x] === M.Water) n++;
+      return n;
+    };
+    let blownRain = 0;
+    let calmRain = 0;
     for (let f = 0; f < 400; f++) {
       blown.step();
       calm.step();
+      blownRain += edgeRain(blown);
+      calmRain += edgeRain(calm);
     }
-    expect(cloudSpan(calm).n).toBe(500);
-    expect(cloudSpan(blown).n).toBeLessThan(300);
+    expect(cloudSpan(calm).n).toBeGreaterThan(120);
+    expect(cloudSpan(blown).n).toBeLessThan(cloudSpan(calm).n * 0.65);
     // Ordinary rain falls from both; the broken-up cloud adds a downpour against the edge.
-    expect(blown.created[M.Water]).toBeGreaterThan(calm.created[M.Water] + 40);
+    expect(blownRain).toBeGreaterThan(calmRain * 2);
   });
 });
 
@@ -1445,7 +1456,7 @@ describe('red sprites', () => {
 
   it('each flash lasts under half a second (at most 28 frames)', () => {
     const w = new World(60, 120, 122);
-    fillRect(w, 0, 22, 60, 12, M.Cloud);
+    fillRect(w, 0, 22, 60, 20, M.Cloud);
     let seen = 0;
     for (let f = 0; f < 3000; f++) {
       w.step();

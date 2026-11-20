@@ -60,6 +60,7 @@ Discovery progress is kept for when you switch back.
 | `T` | Heat view: colour everything by temperature (or the Heat view button) |
 | Speed menu | 0.25× to 3× simulation speed |
 | Wind menu | Blow smoke, fire, steam and falling particles left or right |
+| Sun menu | Sunlight from above warms whatever it reaches first: it evaporates water (which rises and makes clouds), dries mud and salt water, burns off clouds and melts snow, but not in the shade. Glass lets it through |
 | Scene menu | Save in this browser, load it again, download or open a scene file, or copy a share link |
 | `J` or Journal button | Discovery journal: what you've found, and hints for the rest |
 | Mode menu | Discovery or Sandbox |
