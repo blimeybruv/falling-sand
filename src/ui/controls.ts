@@ -8,6 +8,7 @@ import { ERASER_KEY, Palette } from './palette';
 import { saveDiscovery, saveMode, type Mode } from './progress';
 import { downloadScene, loadFromBrowser, loadFromFile, saveToBrowser, shareLink } from './scenes';
 import { MAX_BRUSH, MIN_BRUSH, SPEEDS, SUNS, WINDS, type GameState } from './state';
+import type { Sound } from './sound';
 
 function byId<T extends HTMLElement>(id: string): T {
   const el = document.getElementById(id);
@@ -30,7 +31,7 @@ export interface Controls {
   checkDiscoveries(): void;
 }
 
-export function setupControls(state: GameState, world: World, discovery: Discovery): Controls {
+export function setupControls(state: GameState, world: World, discovery: Discovery, sound: Sound): Controls {
   const toolbar = byId<HTMLElement>('toolbar');
   const playBtn = byId<HTMLButtonElement>('play');
   const stepBtn = byId<HTMLButtonElement>('step');
@@ -38,6 +39,7 @@ export function setupControls(state: GameState, world: World, discovery: Discove
   const speedSel = byId<HTMLSelectElement>('speed');
   const windSel = byId<HTMLSelectElement>('wind');
   const sunSel = byId<HTMLSelectElement>('sun');
+  const soundBtn = byId<HTMLButtonElement>('sound');
   const heatBtn = byId<HTMLButtonElement>('heat');
   const brush = byId<HTMLInputElement>('brush');
   const brushValue = byId<HTMLElement>('brush-value');
@@ -96,6 +98,8 @@ export function setupControls(state: GameState, world: World, discovery: Discove
     const names = fresh.map((id) => PALETTE.find((d) => d.id === id)?.name ?? '?');
     const reward = fresh.includes(discovery.rewardMaterial) ? ' Reward unlocked!' : '';
     toast(`Discovered ${names.join(', ')}! (${journal.summary()})${reward}`);
+    if (reward) sound.reward();
+    else sound.discovery();
   };
 
   // --- toolbar
@@ -160,6 +164,13 @@ export function setupControls(state: GameState, world: World, discovery: Discove
     sunSel.append(opt);
   }
   sunSel.addEventListener('change', () => (world.sun = Number(sunSel.value)));
+
+  const syncSound = (): void => soundBtn.setAttribute('aria-pressed', String(sound.enabled));
+  soundBtn.addEventListener('click', () => {
+    sound.setEnabled(!sound.enabled);
+    syncSound();
+  });
+  syncSound();
 
   brush.min = String(MIN_BRUSH);
   brush.max = String(MAX_BRUSH);
