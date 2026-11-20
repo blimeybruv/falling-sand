@@ -202,7 +202,7 @@ The more "advanced" ones refine materials.
 | | Earthworm | Burrows through earth and loam | Slowly turns earth into loam behind it; breeds when it has eaten enough | Earth (drowns in water, burns) | F |
 | | Termite | Lives inside wood | Eats wood, leaving sawdust (a new light powder); breeds in large timbers | Ash | F |
 | | Ant | Digs in sand and earth, needs open air nearby | Carries grains up and drops them, building anthills and tunnels | Earth | F |
-| | Fish | Swims in water (salt or fresh) | Darts about; eats algae and breeds when fed | Flops on land, then becomes bone-white "chalk"? (or just Empty) | F |
+| | Fish | Swims in water (salt or fresh) | Darts about; eats algae and breeds when fed | Empty (it flops about out of water, then is gone) | F |
 | | Bee | Flies between flowers | Turns honeydew into honey (a new thick golden liquid): refining | Smoke near fire, otherwise Empty | F |
 | | Firefly | Drifts in open air near grass | Blinks with a soft green glow (uses the renderer's flicker) | Empty | F |
 | | Yeast | In sugar water | Ferments sugar into alcohol and carbon dioxide, multiplying while there's sugar | Empty when the sugar runs out | F |
