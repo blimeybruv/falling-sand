@@ -35,7 +35,9 @@ export class Renderer {
   private readonly lutR: Uint8Array;
   private readonly lutG: Uint8Array;
   private readonly lutB: Uint8Array;
-  private readonly isGas: Uint8Array;
+  /** Frames over which a material fades out at the end of its life (0: it doesn't). */
+  private readonly fadeFrames: Uint8Array;
+  private readonly flickers: Uint8Array;
   private readonly isGlow: Uint8Array;
   /** Material colours at 30% brightness, the backdrop for the heat view. */
   private readonly dimLut: Uint32Array;
@@ -75,7 +77,8 @@ export class Renderer {
         this.lutB[j] = b;
       }
     }
-    this.isGas = Uint8Array.from(MATERIALS, (d) => (d.kind === 'gas' ? 1 : 0));
+    this.fadeFrames = Uint8Array.from(MATERIALS, (d) => d.fadeFrames ?? (d.kind === 'gas' ? FADE_FRAMES : 0));
+    this.flickers = Uint8Array.from(MATERIALS, (d) => (d.flicker ? 1 : 0));
     this.isGlow = Uint8Array.from(MATERIALS, (d) => (d.glow ? 1 : 0));
     this.dimLut = this.lut.map((_, j) => pack(this.lutR[j] * 0.3, this.lutG[j] * 0.3, this.lutB[j] * 0.3));
     this.heatLut = new Uint32Array(256);
@@ -103,7 +106,7 @@ export class Renderer {
 
   private renderMaterials(world: World): void {
     const { mat, shade, life, burn, charge, size } = world;
-    const { pixels, lut, lutR, lutG, lutB, isGas, isGlow } = this;
+    const { pixels, lut, lutR, lutG, lutB, fadeFrames, flickers, isGlow } = this;
     const glowShift = this.frame >> 3;
     // Electricity: a bright head where the pulse is, a warm glow fading behind it.
     const sparkHead = pack(255, 252, 200);
@@ -134,8 +137,9 @@ export class Renderer {
         pixels[i] = lut[fireBase + ((seed >>> 4) & (SHADES - 1))];
       } else if (isGlow[m]) {
         pixels[i] = lut[m * SHADES + ((shade[i] + glowShift) & (SHADES - 1))];
-      } else if (isGas[m] && life[i] < FADE_FRAMES) {
-        const a = life[i] / FADE_FRAMES;
+      } else if (fadeFrames[m] && (life[i] < fadeFrames[m] || flickers[m])) {
+        let a = Math.min(1, life[i] / fadeFrames[m]);
+        if (flickers[m]) a *= 0.55 + ((seed >>> 8) & 255) / 567;
         const j = m * SHADES + shade[i];
         pixels[i] = pack(
           (bgR + (lutR[j] - bgR) * a) | 0,

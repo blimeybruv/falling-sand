@@ -177,6 +177,10 @@ export interface MaterialDef {
   wind: number;
   /** Renderer: the colour shimmers over time (lava). */
   glow?: boolean;
+  /** Renderer: fade out over this many final frames of its lifetime (gases default to 40). */
+  fadeFrames?: number;
+  /** Renderer: brightness flickers frame to frame. */
+  flicker?: boolean;
   /** Two-material reactions; see Reaction. */
   reactions?: readonly Reaction[];
   /** Optional extra behaviour; runs before the generic movement for its kind. */
@@ -2207,6 +2211,22 @@ const defs: Record<MaterialId, Def> = {
     update: billowSmoke,
     description: 'Saltpetre and sugar. Lit, it pours out huge clouds of smoke.',
   },
+  [M.Sprite]: {
+    ...base,
+    name: 'Red sprite',
+    key: '',
+    category: 'fire',
+    kind: 'static',
+    density: 100,
+    // Shade picks the colour: 0 is the blood-red head, 15 the deep violet tips of the tendrils.
+    colour: [255, 36, 64],
+    colourEnd: [72, 48, 230],
+    colourJitter: 0,
+    lifetime: [14, 28],
+    fadeFrames: 14,
+    flicker: true,
+    description: 'A ghostly red jellyfish of light that flashes high above a thunderstorm, then is gone.',
+  },
 };
 
 /** Indexed by material id. */
@@ -2224,7 +2244,7 @@ export const PALETTE: readonly MaterialDef[] = [
   M.CarbonDioxide, M.Hydrogen, M.Mercury, M.Alcohol, M.Vinegar, M.Chlorine, M.Bleach, M.SulfurDioxide, M.Fog, M.Ink, M.Ozone, M.MoltenGlass, M.MoltenIron, M.MoltenCopper, M.Brimstone, M.Bubble,
   // fire and blasts
   M.Fire, M.Charcoal, M.Coal, M.Ash, M.Sulfur, M.Saltpetre, M.Gunpowder, M.Fireworks, M.Thermite,
-  M.Napalm, M.Nitro, M.Dynamite, M.SwampGas, M.Soot, M.Lightning, M.Battery, M.Plasma, M.Briquette, M.Peat, M.SmokeBomb,
+  M.Napalm, M.Nitro, M.Dynamite, M.SwampGas, M.Soot, M.Lightning, M.Battery, M.Plasma, M.Briquette, M.Peat, M.SmokeBomb, M.Sprite,
   // life
   M.Seed, M.Grass, M.Wood, M.Flower, M.Mushroom, M.Moss, M.Algae, M.Vine, M.Seaweed, M.Cactus, M.Sap, M.Sugar, M.Caramel, M.Fruit, M.Pulp, M.Paper, M.Bamboo, M.Amber, M.Honeydew,
 ].map((id) => MATERIALS[id]);

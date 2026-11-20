@@ -129,6 +129,7 @@ export const M = {
   Graphite: 121,
   Diamond: 122,
   SmokeBomb: 123,
+  Sprite: 124,
 } as const;
 
 export type MaterialId = (typeof M)[keyof typeof M];

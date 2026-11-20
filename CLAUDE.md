@@ -133,4 +133,7 @@ sub-folder.
 
 - British spelling in user-facing text (colour, behaviour), to match the existing UI.
 - Keep `LICENSE` as the unmodified MIT text. Notes about scope or licensing go in the README.
-- Materials only: no people, creatures or stick figures.
+- Materials and single-cell creatures only. A creature is one cell with a small behaviour (a worm
+  that turns earth to loam, a fish, a bee): a material with an `update` function, like any other.
+  No people, stick figures or multi-cell entities. Creatures should need a habitat and food, breed
+  slowly, and die into something (so they can't overrun a scene).

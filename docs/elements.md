@@ -185,6 +185,30 @@ Also built in round 4: **Slag** (molten iron meets sand: glassy waste powder).
 | | Red paint | Rust meets oil | A red liquid that dries into a red static coat | Murals | T |
 | | Electromagnet (behaviour) | Iron carrying a pulse briefly pulls iron filings like a magnet | No new material: wires become magnets while live | Motors | F |
 
+## Built outside the rounds
+
+| | Material | How it's made | What it does |
+|---|---|---|---|
+| ✅ | Red sprite | Lightning from a thick cloud with open sky above (clouds now hang below the top 22% of the screen, the upper atmosphere) | Eerie red jellyfish of light: a red head, violet tendrils hanging towards the cloud, faint streamers and sometimes a dim ring above; flickers and is gone in under half a second |
+
+## Creatures (single cell)
+
+Allowed since 20 Nov (see Conventions in `CLAUDE.md`): one cell, a small behaviour, a habitat and
+food, slow breeding, and something they die into. No people, stick figures or multi-cell entities.
+The more "advanced" ones refine materials.
+
+| | Creature | Habitat and food | What it does | Dies into | Effort |
+|---|---|---|---|---|---|
+| | Earthworm | Burrows through earth and loam | Slowly turns earth into loam behind it; breeds when it has eaten enough | Earth (drowns in water, burns) | F |
+| | Termite | Lives inside wood | Eats wood, leaving sawdust (a new light powder); breeds in large timbers | Ash | F |
+| | Ant | Digs in sand and earth, needs open air nearby | Carries grains up and drops them, building anthills and tunnels | Earth | F |
+| | Fish | Swims in water (salt or fresh) | Darts about; eats algae and breeds when fed | Flops on land, then becomes bone-white "chalk"? (or just Empty) | F |
+| | Bee | Flies between flowers | Turns honeydew into honey (a new thick golden liquid): refining | Smoke near fire, otherwise Empty | F |
+| | Firefly | Drifts in open air near grass | Blinks with a soft green glow (uses the renderer's flicker) | Empty | F |
+| | Yeast | In sugar water | Ferments sugar into alcohol and carbon dioxide, multiplying while there's sugar | Empty when the sugar runs out | F |
+| | Snail | Crawls on stone and plants near water | Eats algae and moss; leaves a shell (chalk) when it dies, which can be burnt to quicklime | Chalk | F |
+| | Coral polyp | Fixed in warm salt water | Slowly builds coral rock from the salt water: refining sea into stone | Coral rock | F |
+
 ## Notes
 
 - Electricity (lightning, conducting metal, sparks) is the biggest missing system: a per-cell

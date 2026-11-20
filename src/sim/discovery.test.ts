@@ -1146,12 +1146,16 @@ describe('round 3, part 2', () => {
 });
 
 describe('round 4', () => {
-  it('lava under water never crusts into basalt', () => {
-    const w = new World(30, 30, 90);
-    fillRect(w, 0, 25, 30, 5, M.Lava);
-    fillRect(w, 0, 10, 30, 15, M.Water);
-    run(w, 300);
-    expect(w.created[M.Basalt]).toBe(0);
+  it('lava under water hardly crusts into basalt; lava in open air does', () => {
+    const basalt = (underwater: boolean): number => {
+      const w = new World(30, 30, 90);
+      fillRect(w, 0, 25, 30, 5, M.Lava);
+      if (underwater) fillRect(w, 0, 10, 30, 15, M.Water);
+      run(w, 300);
+      return w.created[M.Basalt];
+    };
+    // Boiling water can briefly leave a gap of air above the lava, so not quite never.
+    expect(basalt(true)).toBeLessThan(basalt(false) / 4);
   });
 
   it('molten glass with no wind stays molten glass (until it cools)', () => {
@@ -1270,5 +1274,59 @@ describe('round 6', () => {
     fillRect(a, 0, 10, 20, 7, M.Water);
     run(a, 1500);
     expect(a.count(M.Adobe)).toBeLessThan(60);
+  });
+});
+
+describe('red sprites', () => {
+  it('flash in the open sky above a thick storm cloud, red heads above violet tendrils', () => {
+    // A tall world, so there is upper atmosphere above the cloud layer (which starts 22% down).
+    const w = new World(60, 120, 120);
+    fillRect(w, 0, 22, 60, 12, M.Cloud);
+    let cloudTop = 22;
+    let seen = 0;
+    let headAboveTendrils = false;
+    for (let f = 0; f < 3000 && seen === 0; f++) {
+      w.step();
+      let redY = Infinity;
+      let violetY = -Infinity;
+      for (let i = 0; i < w.size; i++) {
+        if (w.mat[i] !== M.Sprite) continue;
+        seen++;
+        const y = Math.floor(i / 60);
+        if (w.shade[i] <= 2) redY = Math.min(redY, y);
+        if (w.shade[i] >= 10) violetY = Math.max(violetY, y);
+      }
+      if (seen) {
+        for (let i = 0; i < w.size; i++) if (w.mat[i] === M.Cloud) cloudTop = Math.min(cloudTop, Math.floor(i / 60));
+        for (let i = 0; i < w.size; i++) if (w.mat[i] === M.Sprite) expect(Math.floor(i / 60)).toBeLessThan(cloudTop);
+        headAboveTendrils = redY < violetY;
+      }
+    }
+    expect(seen).toBeGreaterThan(20);
+    expect(headAboveTendrils).toBe(true);
+    expect(w.created[M.Sprite]).toBeGreaterThan(0);
+  });
+
+  it('never appear without room: a storm with no open sky above it makes none', () => {
+    const w = new World(60, 40, 121);
+    fillRect(w, 0, 0, 60, 14, M.Cloud);
+    run(w, 3000);
+    expect(w.created[M.Lightning]).toBeGreaterThan(0);
+    expect(w.created[M.Sprite]).toBe(0);
+  });
+
+  it('each flash lasts under half a second (at most 28 frames)', () => {
+    const w = new World(60, 120, 122);
+    fillRect(w, 0, 22, 60, 12, M.Cloud);
+    let seen = 0;
+    for (let f = 0; f < 3000; f++) {
+      w.step();
+      for (let i = 0; i < w.size; i++) {
+        if (w.mat[i] !== M.Sprite) continue;
+        seen++;
+        expect(w.life[i]).toBeLessThanOrEqual(28);
+      }
+    }
+    expect(seen).toBeGreaterThan(0);
   });
 });

@@ -144,7 +144,7 @@ debris start fresh when a scene loads.
 | L | Lava | Slow, glowing, very hot liquid; sets things alight, boils water and sets to stone where they meet, and slowly crusts into basalt in open air | Reward for 10 discoveries |
 | 0 | Smoke | Rises and drifts, then fades | Let a fire burn out |
 | - | Steam | Rises; condenses back to water near the top or under a ceiling, sometimes freezing | Fire meets water |
-| V | Cloud | Hangs up high, drifts in the wind, rains (or snows near ice) | Steam crowding at the top |
+| V | Cloud | Hangs below the upper atmosphere, drifts in the wind, rains (or snows near ice) | Steam crowding at the top |
 | | Carbon dioxide | Heavy, faint gas: sinks and pools, puts out flames, smothers what it buries | Burning charcoal or coal; fizz |
 | | Hydrogen | The lightest gas; burns with a bang, leaving water | Electricity through fresh water |
 | | Mercury | Liquid metal heavier than everything; sand floats on it; conducts | Burning sulfur against iron ore |
@@ -177,6 +177,7 @@ debris start fresh when a scene loads.
 | | Swamp gas | Bubbles up from rotting weeds; flashes into fire | Drowned grass |
 | | Soot | Black powder smoke leaves on cold surfaces; burns | Smoke meets cold stone, iron or ice |
 | | Lightning | A short, very hot bolt: sparks wires, sets things alight; draw it on a wire | A thick cloud strikes |
+| | Red sprite | Eerie red jellyfish of light flashing high above a storm | Lightning from a thick cloud with open sky above |
 | | Battery | Sends pulses of electricity into touching metal or salt water | Iron and charcoal in salt water |
 | | Plasma | Glowing gas at 4000° | Lightning through hydrogen, or gas past 2000° |
 | | Briquette | Burns for ages at a steady heat | Charcoal meets clay |
@@ -213,7 +214,8 @@ Water can put burning cells out, but how easily depends on the material (napalm 
 
 **Electricity** pulses along anything that conducts (iron, copper, salt water, mercury), one cell a frame.
 A pulse warms the wire, sets flammable things beside it alight (so a wire makes a detonator) and
-splits fresh water into hydrogen (salt water gives off chlorine). Draw Lightning on a wire to send a pulse, or build a battery.
+splits fresh water into hydrogen (salt water gives off chlorine). Draw Lightning on a wire to send a pulse, or build a battery. Big storms strike lightning, and now
+and then throw red sprites, eerie jellyfish of red light, into the clear sky above the clouds.
 
 Every cell also has a temperature. Heat spreads between neighbours (quickly through stone, slowly
 through air and wood) and fades back to room temperature. Fire, lava and burning cells are hot, and

@@ -510,11 +510,34 @@ export function freezeWater(w: World, x: number, y: number, i: number): boolean 
   return true;
 }
 
-/** Cloud: now and then drops rain below it; near ice it snows instead, and sometimes hails; thick clouds strike lightning. */
-export function rainCloud(w: World, x: number, y: number, _i: number): boolean {
+/** The top of the cloud layer: above this row is the upper atmosphere, where red sprites appear. */
+function cloudCeiling(w: World): number {
+  return Math.ceil(w.height * 0.22);
+}
+
+/**
+ * Cloud: hangs below the upper atmosphere; now and then drops rain below it; near ice it snows
+ * instead, and sometimes hails; thick clouds strike lightning (and sometimes red sprites).
+ */
+export function rainCloud(w: World, x: number, y: number, i: number): boolean {
   // Deep inside a thick cloud, very rarely, lightning strikes.
   if (w.rng.chance(0.00002) && countAround(w, x, y, M.Cloud, M.Cloud) >= 6) strike(w, x, y);
-  if (!w.rng.chance(0.006) || w.get(x, y + 1) !== M.Empty) return false;
+  if (w.rng.chance(0.006) && w.get(x, y + 1) === M.Empty) rainFrom(w, x, y);
+  // Clouds don't climb into the upper atmosphere (the top of the screen): they hang below it,
+  // drifting, and sink back down if they find themselves up there.
+  if (y < cloudCeiling(w)) {
+    if (w.get(x, y + 1) === M.Empty && w.rng.chance(0.3)) w.swap(i, w.idx(x, y + 1));
+    else if (w.rng.chance(0.3)) {
+      const nx = x + w.rng.sign();
+      if (w.get(nx, y) === M.Empty) w.swap(i, w.idx(nx, y));
+    }
+    return true;
+  }
+  return false;
+}
+
+/** One drop from a cloud: rain, acid rain in sulfur dioxide, or near ice snow and sometimes hail. */
+function rainFrom(w: World, x: number, y: number): void {
   if (!w.near(x, y, 6, M.Ice)) {
     // Acid rain where the air is full of sulfur dioxide.
     w.set(x, y + 1, w.near(x, y, 6, M.SulfurDioxide) ? M.Acid : M.Water);
@@ -524,7 +547,6 @@ export function rainCloud(w: World, x: number, y: number, _i: number): boolean {
   } else {
     w.set(x, y + 1, M.Snow);
   }
-  return false;
 }
 
 /** Put material m into a random open neighbour of (x, y), if there is one there. */
@@ -606,9 +628,11 @@ export function spreadAlgae(w: World, x: number, y: number, _i: number): boolean
 
 /**
  * A lightning strike from (x, y): a jagged bolt down through air and gas until it hits something,
- * which it electrifies if it conducts, or else sets alight.
+ * which it electrifies if it conducts, or else sets alight. Now and then the same discharge throws
+ * red sprites up into the clear sky above the cloud.
  */
 function strike(w: World, x: number, y: number): void {
+  if (w.rng.chance(0.35)) spawnSprites(w, x, y);
   let bx = x;
   for (let by = y + 1; by < w.height; by++) {
     bx += w.rng.int(-1, 1);
@@ -745,4 +769,66 @@ export function slake(w: World, x: number, y: number, i: number): boolean {
 export function billowSmoke(w: World, x: number, y: number, i: number): boolean {
   if (w.burn[i] > 0 && w.rng.chance(0.8)) emit(w, x, y, M.Smoke);
   return false;
+}
+
+/**
+ * Red sprites: when a storm discharges, eerie red jellyfish of light can flash in the clear sky far
+ * above the cloud: a bright red head, long tendrils hanging towards the cloud that fade to violet,
+ * a few faint streamers reaching up, and sometimes a dim ring above. They come in ones, twos or
+ * threes, flicker, and are gone in a fraction of a second. Only where there is enough open sky.
+ */
+function spawnSprites(w: World, x: number, y: number): void {
+  let top = y;
+  while (w.get(x, top - 1) === M.Cloud) top--;
+  let sky = 0;
+  while (sky < top && w.get(x, top - 1 - sky) === M.Empty) sky++;
+  if (sky < 14) return;
+  const count = w.rng.chance(0.5) ? 1 : w.rng.int(2, 3);
+  for (let k = 0; k < count; k++) {
+    const cx = x + (k === 0 ? 0 : w.rng.sign() * w.rng.int(7, 14));
+    spawnSprite(w, cx, top - 1, sky);
+  }
+}
+
+function spawnSprite(w: World, cx: number, base: number, sky: number): void {
+  const life = w.rng.int(16, 26);
+  const headY = base - Math.round(sky * w.rng.next() * 0.15 + sky * 0.6);
+  const r = w.rng.int(2, 3);
+  const glow = (x: number, y: number, shade: number, frames: number): void => {
+    if (w.get(x, y) !== M.Empty) return;
+    w.set(x, y, M.Sprite);
+    const i = w.idx(x, y);
+    w.shade[i] = shade;
+    w.life[i] = frames;
+  };
+  // Head: a squat red dome.
+  for (let dy = -r; dy <= 1; dy++) {
+    for (let dx = -r * 2; dx <= r * 2; dx++) {
+      if ((dx * dx) / (r * r * 4) + (dy * dy) / (r * r) <= 1) glow(cx + dx, headY + dy, w.rng.int(0, 2), life);
+    }
+  }
+  // Tendrils: hanging down towards the cloud, wavering, red turning violet as they go.
+  const strands = w.rng.int(6, 10);
+  const reach = base - headY - 1;
+  for (let s = 0; s < strands; s++) {
+    let tx = cx + w.rng.int(-r * 2, r * 2);
+    const length = Math.round(reach * (0.5 + w.rng.next() * 0.5));
+    for (let d = 2; d <= length; d++) {
+      if (w.rng.chance(0.25)) tx += w.rng.sign();
+      glow(tx, headY + d, Math.min(15, 3 + Math.round((d / reach) * 12)), life - w.rng.int(0, 4));
+    }
+  }
+  // Streamers: a few faint threads reaching up from the head.
+  for (let s = w.rng.int(2, 4); s > 0; s--) {
+    let tx = cx + w.rng.int(-r, r);
+    for (let d = r + 1; d <= r + w.rng.int(3, 7); d++) {
+      if (w.rng.chance(0.3)) tx += w.rng.sign();
+      glow(tx, headY - d, w.rng.int(4, 7), life - 6);
+    }
+  }
+  // Now and then a dim ring (an "elve") flickers higher still.
+  if (w.rng.chance(0.4)) {
+    const ringY = headY - r - 9;
+    for (let dx = -r * 5; dx <= r * 5; dx++) if (w.rng.chance(0.7)) glow(cx + dx, ringY, w.rng.int(1, 3), life - 8);
+  }
 }

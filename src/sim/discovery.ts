@@ -164,6 +164,10 @@ export const RECIPES: Readonly<Partial<Record<MaterialId, Recipe>>> = {
   [M.Graphite]: { hint: 'Run lightning through charcoal.', recipe: 'Lightning touching charcoal or coal (an arc furnace).' },
   [M.Diamond]: { hint: 'Bake graphite fiercely hot.', recipe: 'Graphite past 1600° (burning thermite will do).' },
   [M.SmokeBomb]: { hint: 'Saltpetre and something sweet.', recipe: 'Saltpetre meets sugar.' },
+  [M.Sprite]: {
+    hint: 'Watch the clear sky high above a big storm.',
+    recipe: 'Lightning from a thick cloud with open sky above it sometimes throws up red sprites.',
+  },
   [M.Gunpowder]: { hint: 'Three powders, one bang.', recipe: 'Charcoal with sulfur and saltpetre around it.' },
   [M.Nitro]: { hint: 'Something that eats meets something that burns.', recipe: 'Acid meets oil.' },
   [M.Napalm]: { hint: 'Thicken a fuel with something explosive.', recipe: 'Oil meets gunpowder.' },
