@@ -101,6 +101,14 @@ export const M = {
   MoltenIron: 93,
   Steel: 94,
   Amber: 95,
+  SaltCrystal: 96,
+  Basalt: 97,
+  GlassFibre: 98,
+  MoltenCopper: 99,
+  Tin: 100,
+  Bronze: 101,
+  GeyserRock: 102,
+  Slag: 103,
 } as const;
 
 export type MaterialId = (typeof M)[keyof typeof M];

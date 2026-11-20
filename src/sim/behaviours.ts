@@ -439,7 +439,8 @@ export function corrode(w: World, x: number, y: number, i: number): boolean {
 
 /**
  * Lava: sets neighbours alight. Where it meets water the water boils and the lava sets to stone
- * (or, now and then, sulfur or iron ore); where it meets ice it sets to obsidian.
+ * (or, now and then, sulfur or iron ore); salt water leaves salt and copper ore; mud gives tin;
+ * ice sets it to obsidian; and in open air its surface slowly crusts into basalt.
  */
 export function updateLava(w: World, x: number, y: number, i: number): boolean {
   w.igniteNeighbours(x, y);
@@ -475,6 +476,13 @@ export function updateLava(w: World, x: number, y: number, i: number): boolean {
         w.transform(i, M.Pumice);
         return true;
       }
+    } else if (n === M.Mud) {
+      // Baking mud dries it back to earth; now and then the lava sets around a lump of tin.
+      w.transform(w.idx(nx, ny), M.Earth);
+      if (w.rng.chance(0.1)) {
+        w.transform(i, w.rng.chance(0.3) ? M.Tin : M.Stone);
+        return true;
+      }
     } else if (n === M.Ice) {
       // Ice chills it so fast it sets as glassy obsidian.
       w.transform(w.idx(nx, ny), M.Water);
@@ -483,6 +491,11 @@ export function updateLava(w: World, x: number, y: number, i: number): boolean {
         return true;
       }
     }
+  }
+  // Open to the air, the surface slowly crusts over into basalt.
+  if (w.get(x, y - 1) === M.Empty && w.rng.chance(0.0005)) {
+    w.transform(i, M.Basalt);
+    return true;
   }
   return false;
 }
@@ -663,3 +676,21 @@ export function pullIron(w: World, x: number, y: number, _i: number): boolean {
   return true;
 }
 const MAGNET_REACH = 8;
+
+/** Molten glass: caught by the wind at its surface, it now and then spins out into glass fibre. */
+export function spinFibre(w: World, x: number, y: number, i: number): boolean {
+  if (w.wind === 0 || w.get(x, y - 1) !== M.Empty || !w.rng.chance(Math.abs(w.wind) * 0.02)) return false;
+  w.transform(i, M.GlassFibre);
+  return true;
+}
+
+/** Geyser rock: when hot, now and then blasts a column of water and steam up out of the open cells above it. */
+export function erupt(w: World, x: number, y: number, i: number): boolean {
+  if (w.temp[i] < 150 || !w.rng.chance(0.004)) return true;
+  for (let k = 1; k <= 6; k++) {
+    if (w.get(x, y - k) !== M.Empty) break;
+    w.set(x, y - k, k % 3 === 0 ? M.Steam : M.Water);
+    if (k % 3 !== 0) w.launch(w.idx(x, y - k), (w.rng.next() - 0.5) * 0.6, -4 - w.rng.next() * 2);
+  }
+  return true;
+}

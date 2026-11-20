@@ -105,6 +105,13 @@ debris start fresh when a scene loads.
 | | Steel | Conducts, never rusts | Molten iron meets charcoal |
 | | Wax | Melts when warm, sets when cool; burns like a candle | Tar meets steam |
 | | Glaze | Shiny, waterproof, acid-proof tiles | Salt on hot brick |
+| | Tin | Soft silvery metal; conducts | Lava meets mud |
+| | Bronze | Conducts; never rusts or greens | Molten copper meets tin |
+| | Slag | Glassy waste powder | Molten iron meets sand |
+| | Basalt | Dark volcanic rock | Lava cooling in open air |
+| | Geyser rock | When hot, now and then blasts water and steam upward | Basalt meets water |
+| | Salt crystal | Clear pink shards that keep growing | Salt water touching ice |
+| | Glass fibre | Light strands that hardly let heat through | Molten glass in the wind |
 | | Cement | Pours like a thick liquid, then sets into stone | Ash, sand and water stirred together |
 | | Pumice | Light, holey rock that floats on water | Lava meets carbon dioxide |
 | | Quicksand | Looks like wet sand, but powders sink slowly into it | Sand meets salt water |
@@ -120,7 +127,7 @@ debris start fresh when a scene loads.
 | | Foam | Light soap foam: floats on everything, smothers fires, then pops | Lye meets oil |
 | | Fizz | Bubbling froth that gives off carbon dioxide | Ash meets acid |
 | A | Acid | Liquid; dissolves what it touches (but not stone, water, glass, brick or obsidian), using itself up | Rain on smoke (or sulfur in water) |
-| L | Lava | Slow, glowing, very hot liquid; sets things alight, boils water and sets to stone where they meet | Reward for 10 discoveries |
+| L | Lava | Slow, glowing, very hot liquid; sets things alight, boils water and sets to stone where they meet, and slowly crusts into basalt in open air | Reward for 10 discoveries |
 | 0 | Smoke | Rises and drifts, then fades | Let a fire burn out |
 | - | Steam | Rises; condenses back to water near the top or under a ceiling, sometimes freezing | Fire meets water |
 | V | Cloud | Hangs up high, drifts in the wind, rains (or snows near ice) | Steam crowding at the top |
@@ -137,6 +144,7 @@ debris start fresh when a scene loads.
 | | Ozone | Faint gas left by lightning; bleaches | Lightning fades |
 | | Molten glass | Glowing slow liquid that sets back into glass | Glass past 1200° |
 | | Molten iron | White-hot liquid metal that sets back into iron | Iron past 1500°, or burning thermite |
+| | Molten copper | Liquid copper that sets back; with tin, bronze | Copper past 1100° |
 | **Fire & blasts** | | | |
 | 7 | Fire | Short-lived; rises and flickers; ignites flammable neighbours | Starter |
 | K | Charcoal | Burns slowly and very hot, glowing rather than flaming; hot enough to make glass | Smother a wood fire with sand |
@@ -222,7 +230,7 @@ blast flies in an arc under gravity, then lands and behaves normally.
 
 Ideas for contributors. Each one should fit in a small pull request; `CLAUDE.md` explains how to add a
 material. For new materials, [`docs/elements.md`](docs/elements.md) has a menu of ideas grouped into
-chains (salt crystals, basalt, bronze, geysers...), with recipes and effort
+chains (terracotta, porcelain, gravel and concrete, peat, quartz...), with recipes and effort
 estimates.
 
 - [ ] **More materials**: pick one from [`docs/elements.md`](docs/elements.md). Each is a table entry, usually a `Reaction`, and a line in `RECIPES`; the tests check every one can be discovered.

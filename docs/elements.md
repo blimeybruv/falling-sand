@@ -131,13 +131,31 @@ Uses the new `below` (setting solid when cool) and `startTemp` (created hot).
 | ✅ | Molten iron | Iron past 1500°; burning thermite leaves it (and melts iron into it) | White-hot heavy liquid that sets back into iron below 1300° | Steel, casting | T |
 | ✅ | Steel | Molten iron meets charcoal | Conducts, never rusts | | T |
 | ✅ | Amber | Sap left touching sand for a long time | Golden static solid | | T |
-| | Salt crystal | Salt water cooled by ice or dry ice | Clear pink shards that grow slowly from the cold surface | Caves | F |
-| | Basalt | Lava cooling slowly in open air (no water) | Dark grey columns; a slow alternative to stone | Volcanoes | F |
-| | Glass fibre | Molten glass blown by wind | Fine strands that insulate heat | Insulation | T |
-| | Molten copper | Copper past 1100° | Liquid copper that sets back; with tin (or zinc), bronze | Bronze | T |
-| | Tin | Lava meets mud (rarely) | Soft grey metal | Bronze | T |
-| | Bronze | Molten copper meets tin | Golden metal; conducts; never rusts or greens | Bells, statues (materials only!) | T |
-| | Geyser rock | Stone above lava with water seeping in | Now and then blasts steam and water upward | Hot springs | F |
+| ✅ | Salt crystal | Salt water touching ice or dry ice | Clear pink shards that keep growing from the salt water | Caves | T |
+| ✅ | Basalt | Lava open to the air slowly crusts over | Dark volcanic rock | Geyser rock | F |
+| ✅ | Glass fibre | Molten glass at the surface with the wind blowing | Light strands that hardly let heat through | Insulation | F |
+| ✅ | Molten copper | Copper past 1100° (thermite or plasma) | Liquid copper that sets back below 1000°; with tin, bronze | Bronze | T |
+| ✅ | Tin | Lava meeting mud (rarely) | Soft silvery metal; conducts | Bronze | T |
+| ✅ | Bronze | Molten copper meets tin | Golden metal; conducts; never rusts or greens | | T |
+| ✅ | Geyser rock | Basalt meets water | When hot (150°+), now and then blasts water and steam upward | Hot springs | F |
+
+Also built in round 4: **Slag** (molten iron meets sand: glassy waste powder).
+
+## Fresh ideas, round 5 (brainstormed 20 Nov)
+
+| | Material | How it's made | What it does | Leads to | Effort |
+|---|---|---|---|---|---|
+| | Charcoal briquette | Charcoal mixed with clay | Burns even longer than coal, at a steady heat | Kilns | T |
+| | Terracotta | Clay fired gently (100–250°, below brick) | Porous orange pots: water slowly seeps through | Planters | T |
+| | Porcelain | Clay with ash, fired past 900° | White, hard, acid-proof | | T |
+| | Gravel | Stone hit by an explosion (`shattersInto`) | Coarse powder that water drains through | Concrete | T |
+| | Concrete | Cement with gravel in it | Sets into a stone that lets nothing through and resists blasts | Bunkers | T |
+| | Peat | Grass and moss buried in damp earth | Brown spongy soil; dries into a slow-burning fuel | Bogs | T |
+| | Honeydew | Flowers drip it now and then | Sweet sticky drops; ferments like sugar | | T |
+| | Brimstone | Sulfur melted past 115° | Red liquid sulfur that sets back to yellow | Volcanic pools | T |
+| | Quartz | Sand and salt water under heat and pressure (buried, 300°+) | Clear hard crystal; makes glass at a lower heat | Glassworks | F |
+| | Tar sand | Sand meets tar | Heavy sticky sand; heated, gives oil back | | T |
+| | Soap bubble | Foam blown by wind | Floats up and pops into a few drops of water | | T |
 
 ## Notes
 

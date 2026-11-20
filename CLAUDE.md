@@ -101,6 +101,9 @@ does not melt sand into glass").
 - Explosions are bounded: `MAX_BLAST_RADIUS` and `MAX_EXPLOSIONS_PER_FRAME` in `materials.ts`. Chains
   must go through fuses (the `burn` timer), never recursion.
 - The main loop runs at most `MAX_STEPS_PER_FRAME` sim steps per animation frame.
+- `step()` skips cells of inert materials (static with no behaviour, reactions, phase changes,
+  lifetime or flammability, e.g. stone) unless they're burning: see `INERT` in `world.ts`. Giving a
+  material any of those makes it active again automatically.
 - The temperature pass touches every cell every frame (about 0.5 ms at 80,000 cells). Keep it
   branch-light, and keep its fast path for idle cells at room temperature.
 - In hot loops, use module-local copies of imported constants (see the top of `world.ts`). Under

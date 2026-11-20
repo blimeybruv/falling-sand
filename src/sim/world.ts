@@ -37,6 +37,24 @@ const FLUID = Uint8Array.from(MATERIALS, (d) => (d.kind === 'empty' || d.kind ==
 const FLAMMABLE = Uint8Array.from(MATERIALS, (d) => (d.flammability > 0 ? 1 : 0));
 const EXTINGUISHES = Uint8Array.from(MATERIALS, (d) => (d.extinguishes ? 1 : 0));
 const CONDUCTS = Uint8Array.from(MATERIALS, (d) => (d.conducts ? 1 : 0));
+/**
+ * Materials that never do anything by themselves (static, no behaviour, reactions, phase changes,
+ * lifetime or flammability), like stone. step() skips their cells entirely unless they're burning.
+ * Electricity and temperature are handled in their own passes, so those still reach them.
+ */
+const INERT = Uint8Array.from(MATERIALS, (d) =>
+  d.kind === 'static' &&
+  !d.update &&
+  !d.reactions &&
+  !d.above &&
+  !d.below &&
+  d.ignitesAt === undefined &&
+  !d.lifetime &&
+  d.flammability === 0 &&
+  !d.explosive
+    ? 1
+    : 0,
+);
 
 /**
  * Electricity. A conductor cell's charge is CHARGE_ACTIVE for one frame (when it passes the charge
@@ -407,7 +425,7 @@ export class World {
         const x = leftToRight ? k : w - 1 - k;
         const i = row + x;
         const m = mat[i];
-        if (m === EMPTY || stamp[i] === f) continue;
+        if (m === EMPTY || stamp[i] === f || (INERT[m] && this.burn[i] === 0)) continue;
         this.updateCell(x, y, i, MATS[m]);
       }
     }

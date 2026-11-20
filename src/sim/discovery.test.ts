@@ -411,6 +411,36 @@ describe('every recipe works in the simulation', () => {
       fillRect(w, 0, 35, 40, 5, M.Sand);
       fillRect(w, 0, 32, 40, 3, M.Sap);
     }],
+    ['salt crystal: salt water chilled by ice', M.SaltCrystal, 600, (w) => {
+      fillRect(w, 0, 36, 40, 4, M.Ice);
+      fillRect(w, 0, 28, 40, 8, M.SaltWater);
+    }],
+    ['basalt: lava cooling in open air', M.Basalt, 600, (w) => fillRect(w, 0, 35, 40, 5, M.Lava)],
+    ['glass fibre: molten glass in the wind', M.GlassFibre, 300, (w) => {
+      w.wind = 1;
+      fillRect(w, 0, 36, 40, 4, M.MoltenGlass);
+    }],
+    ['molten copper: copper melted by thermite', M.MoltenCopper, 400, (w) => {
+      fillRect(w, 0, 30, 40, 10, M.Copper);
+      fillRect(w, 10, 26, 20, 4, M.Thermite);
+      for (let x = 10; x < 30; x++) for (let y = 26; y < 30; y++) w.ignite(w.idx(x, y));
+    }],
+    ['tin: lava meets mud', M.Tin, 600, (w) => {
+      fillRect(w, 0, 30, 40, 10, M.Mud);
+      fillRect(w, 0, 10, 40, 4, M.Lava);
+    }],
+    ['bronze: molten copper meets tin', M.Bronze, 10, (w) => {
+      fillRect(w, 0, 37, 40, 3, M.Tin);
+      fillRect(w, 0, 34, 40, 3, M.MoltenCopper);
+    }],
+    ['geyser rock: basalt meets water', M.GeyserRock, 400, (w) => {
+      fillRect(w, 0, 35, 40, 5, M.Basalt);
+      fillRect(w, 0, 30, 40, 5, M.Water);
+    }],
+    ['slag: molten iron meets sand', M.Slag, 10, (w) => {
+      fillRect(w, 0, 37, 40, 3, M.Sand);
+      fillRect(w, 0, 34, 40, 3, M.MoltenIron);
+    }],
     ['saltpetre: leaves buried in earth', M.Saltpetre, 600, (w) => {
       fillRect(w, 10, 30, 20, 4, M.Leaf);
       fillRect(w, 0, 34, 40, 6, M.Earth);
@@ -541,13 +571,14 @@ describe('every recipe works in the simulation', () => {
     expect(fire.temp[fire.idx(5, 9)]).toBeGreaterThan(800);
   });
 
-  it('salt water does not freeze next to ice, and salt melts ice', () => {
+  it('salt water does not freeze next to ice (it grows crystals), and salt melts ice', () => {
     const w = new World(20, 20, 21);
     fillRect(w, 0, 15, 20, 5, M.Ice);
     fillRect(w, 0, 10, 20, 5, M.SaltWater);
     run(w, 1500);
     expect(w.count(M.Ice)).toBe(100);
-    expect(w.count(M.SaltWater)).toBe(100);
+    expect(w.created[M.Ice]).toBe(0); // it never freezes (it grows salt crystals instead)
+    expect(w.count(M.SaltWater) + w.count(M.SaltCrystal)).toBe(100);
 
     const melt = new World(20, 20, 22);
     fillRect(melt, 0, 15, 20, 5, M.Ice);
@@ -1025,5 +1056,48 @@ describe('round 3, part 2', () => {
     run(w, 2000);
     expect(w.created[M.Bamboo]).toBe(0);
     expect(w.count(M.Wood)).toBeGreaterThan(10);
+  });
+});
+
+describe('round 4', () => {
+  it('lava under water never crusts into basalt', () => {
+    const w = new World(30, 30, 90);
+    fillRect(w, 0, 25, 30, 5, M.Lava);
+    fillRect(w, 0, 10, 30, 15, M.Water);
+    run(w, 300);
+    expect(w.created[M.Basalt]).toBe(0);
+  });
+
+  it('molten glass with no wind stays molten glass (until it cools)', () => {
+    const w = new World(20, 10, 91);
+    fillRect(w, 0, 7, 20, 3, M.MoltenGlass);
+    run(w, 200);
+    expect(w.created[M.GlassFibre]).toBe(0);
+  });
+
+  it('hot geyser rock erupts; cold geyser rock does not', () => {
+    const erupts = (hot: boolean): number => {
+      const w = new World(20, 40, 92);
+      fillRect(w, 0, 39, 20, 1, M.GeyserRock);
+      if (hot) for (let x = 0; x < 20; x++) w.temp[w.idx(x, 39)] = 400;
+      let highest = 39;
+      for (let f = 0; f < 120; f++) {
+        if (hot) for (let x = 0; x < 20; x++) w.temp[w.idx(x, 39)] = 400;
+        w.step();
+        for (let i = 0; i < w.size; i++) if (w.mat[i] === M.Water) highest = Math.min(highest, Math.floor(i / 20));
+      }
+      return 39 - highest;
+    };
+    expect(erupts(true)).toBeGreaterThan(10);
+    expect(erupts(false)).toBe(0);
+  });
+
+  it('molten copper sets back into copper', () => {
+    const w = new World(20, 10, 93);
+    fillRect(w, 0, 9, 20, 1, M.Stone);
+    fillRect(w, 8, 6, 4, 3, M.MoltenCopper);
+    run(w, 600);
+    expect(w.count(M.MoltenCopper)).toBe(0);
+    expect(w.count(M.Copper)).toBe(12);
   });
 });
