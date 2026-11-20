@@ -261,10 +261,8 @@ const defs: Record<MaterialId, Def> = {
     density: 100,
     colour: [120, 120, 128],
     colourJitter: 0.16,
-    // Acid and fire can't touch it, but a blast breaks it up into gravel (aggregate).
     indestructible: true,
-    shattersInto: M.Gravel,
-    description: 'Static and tough: acid cannot eat it, but explosions break it into gravel.',
+    description: 'Static and indestructible.',
   },
   [M.Wood]: {
     ...base,

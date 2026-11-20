@@ -185,7 +185,7 @@ describe('fire', () => {
 });
 
 describe('explosions', () => {
-  it('clears exactly the capped radius, and breaks stone into gravel', () => {
+  it('clears exactly the capped radius, and stone survives', () => {
     const size = 80;
     const c = 40;
     const w = new World(size, size, 10);
@@ -196,7 +196,7 @@ describe('explosions', () => {
       for (let x = 0; x < size; x++) {
         const d2 = (x - c) ** 2 + (y - c) ** 2;
         const m = w.get(x, y);
-        if (x === c + 3 && y === c) expect(m).toBe(M.Gravel);
+        if (x === c + 3 && y === c) expect(m).toBe(M.Stone);
         else if (d2 <= MAX_BLAST_RADIUS ** 2) expect([M.Empty, M.Fire]).toContain(m);
         else expect(m).toBe(M.Sand);
       }
@@ -257,7 +257,7 @@ describe('explosions', () => {
     drop.set(15, 0, M.Nitro);
     run(drop, 80);
     expect(drop.count(M.Nitro)).toBe(0);
-    expect(drop.created[M.Gravel]).toBeGreaterThan(0); // the blast broke up part of the stone floor
+    expect(drop.count(M.Stone)).toBe(150);
 
     const gentle = new World(30, 60, 15);
     fillRect(gentle, 0, 55, 30, 5, M.Stone);

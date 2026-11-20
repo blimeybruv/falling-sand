@@ -84,7 +84,7 @@ debris start fresh when a scene loads.
 | M | Mud | Thick, slow liquid; dries back to earth when heated; settles into clay in water | Earth meets water |
 | C | Clay | Sticky powder that stands in steep piles; fired in a kiln it becomes brick | Mud left in water |
 | O | Loam | Rich soil: seeds grow tall trees on it without water, and grass spreads over it | Earth with sand and clay around it |
-| 3 | Stone | Static and tough: acid can't eat it, explosions break it into gravel, burning thermite melts it; conducts heat well | Starter |
+| 3 | Stone | Static and indestructible (only burning thermite melts it); conducts heat well | Starter |
 | B | Brick | Static; insulates, never burns, and acid can't eat it | Fire clay in a kiln |
 | Q | Glass | Static; acid can't eat it | Melt sand with lava or a charcoal fire |
 | N | Obsidian | Black volcanic glass; indestructible | Lava meets ice |
@@ -114,7 +114,7 @@ debris start fresh when a scene loads.
 | | Glass fibre | Light strands that hardly let heat through | Molten glass in the wind |
 | | Quartz | Clear crystal; melts into glass at 900° | Sand buried deep under heat |
 | | Tar sand | Sticky black sand; heated, gives back oil | Tar meets sand |
-| | Gravel | Coarse stony powder (aggregate) | Blasting stone, basalt, brick, terracotta or slag |
+| | Gravel | Coarse stony powder | Blasting basalt, brick, terracotta or slag |
 | | Concrete | Indestructible, acid-proof | Cement meets gravel |
 | | Terracotta | Porous tiles: water seeps through | Clay fired gently (120–250°) |
 | | Porcelain | White, hard, acid-proof | Ash on brick past 450° |
