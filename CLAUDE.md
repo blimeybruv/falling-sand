@@ -43,6 +43,10 @@ src/main.ts  creates World + Renderer + UI and runs the requestAnimationFrame lo
 - Randomness in the sim goes through `world.rng` (seeded), never `Math.random`, so tests are
   deterministic.
 - Outside the grid counts as a solid wall (`world.get` returns Stone there).
+- The sim makes no sound. It counts audible one-off events in `world.noise` (explosions and their
+  radius, lightning strikes, acid eating, fireworks bursting), which `src/ui/sound.ts` reads and
+  zeroes; everything else it hears by sampling the grid. A new noisy event is a counter there plus a
+  sound in `sound.ts`.
 
 ## Adding a material
 

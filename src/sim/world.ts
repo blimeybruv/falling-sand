@@ -127,6 +127,12 @@ export class World {
   /** Sideways wind, -1 (full left) to 1 (full right). Pushes gases and falling particles. */
   wind = 0;
   /**
+   * Audible events since the UI last looked (it reads and zeroes these; the simulation itself makes
+   * no sound): explosions and the biggest radius among them, lightning strikes, acid eating
+   * something, fireworks bursting.
+   */
+  readonly noise = { blasts: 0, blastRadius: 0, strikes: 0, fizzes: 0, bursts: 0 };
+  /**
    * Sunshine, 0 (none) to 1 (full). Light comes straight down each column and warms the first thing
    * it reaches, which may also change (`sunlit` in the material table): water evaporates, clouds burn off.
    */
@@ -390,6 +396,8 @@ export class World {
     this.explosionsThisFrame++;
 
     const r = Math.max(1, Math.min(Math.round(radius), MAX_BLAST_RADIUS));
+    this.noise.blasts++;
+    if (r > this.noise.blastRadius) this.noise.blastRadius = r;
     const outer = r + Math.ceil(r * 0.75);
     const r2 = r * r;
     const o2 = outer * outer;

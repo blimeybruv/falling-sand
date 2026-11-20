@@ -108,10 +108,26 @@ input:focus-visible {
   display: contents;
 }
 
-#heat[aria-pressed='true'],
-#sound[aria-pressed='true'] {
+#heat[aria-pressed='true'] {
   border-color: var(--accent);
   box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  padding: 0;
+}
+
+#sound[aria-pressed='false'] .icon-on,
+#sound[aria-pressed='true'] .icon-off {
+  display: none;
+}
+
+#sound[aria-pressed='false'] {
+  color: var(--muted);
 }
 
 .more,

@@ -377,6 +377,7 @@ export function launchFirework(w: World, x: number, y: number, i: number): boole
   const fuse = w.burn[i];
   if (fuse === 0) return false;
   if (fuse === 1) {
+    w.noise.bursts++;
     for (let k = 0; k < 18; k++) {
       const a = (k / 18) * Math.PI * 2 + w.rng.next() * 0.3;
       const sx = x + Math.round(Math.cos(a) * 2);
@@ -433,6 +434,7 @@ export function corrode(w: World, x: number, y: number, i: number): boolean {
     return false;
   }
   w.set(nx, ny, w.rng.chance(0.2) ? M.Smoke : M.Empty);
+  w.noise.fizzes++;
   if (w.rng.chance(0.3)) {
     w.setCell(i, M.Empty);
     return true;
@@ -727,6 +729,7 @@ export function spreadAlgae(w: World, x: number, y: number, _i: number): boolean
  * red sprites up into the clear sky above the cloud.
  */
 function strike(w: World, x: number, y: number): void {
+  w.noise.strikes++;
   if (w.rng.chance(0.35)) spawnSprites(w, x, y);
   let bx = x;
   for (let by = y + 1; by < w.height; by++) {

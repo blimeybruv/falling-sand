@@ -518,6 +518,25 @@ describe('sunlight', () => {
   });
 });
 
+describe('noise (audible events for the UI)', () => {
+  it('counts explosions with their size, acid eating, and fireworks bursting', () => {
+    const w = new World(40, 40, 10);
+    w.explode(20, 20, 6);
+    w.explode(10, 10, 3);
+    expect(w.noise.blasts).toBe(2);
+    expect(w.noise.blastRadius).toBe(6);
+    for (let x = 0; x < 40; x++) w.set(x, 39, M.Sand);
+    for (let x = 0; x < 40; x++) w.set(x, 38, M.Acid);
+    for (let f = 0; f < 30; f++) w.step();
+    expect(w.noise.fizzes).toBeGreaterThan(0);
+    const f = new World(20, 40, 11);
+    f.set(10, 35, M.Fireworks);
+    f.ignite(f.idx(10, 35));
+    for (let k = 0; k < 400 && f.noise.bursts === 0; k++) f.step();
+    expect(f.noise.bursts).toBe(1);
+  });
+});
+
 describe('solar cell', () => {
   const pulses = (sun: number, roof: MaterialId | null): number => {
     const w = new World(40, 30, 9);
