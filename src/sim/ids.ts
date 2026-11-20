@@ -140,6 +140,7 @@ export const M = {
   Honey: 132,
   Chalk: 133,
   Vapour: 134,
+  SolarCell: 135,
 } as const;
 
 export type MaterialId = (typeof M)[keyof typeof M];

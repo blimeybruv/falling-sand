@@ -46,6 +46,7 @@ import {
   growMoss,
   rainCloud,
   updateVapour,
+  solarCell,
   spreadAlgae,
   formLoam,
   fossilise,
@@ -1362,6 +1363,19 @@ const defs: Record<MaterialId, Def> = {
     update: pulseBattery,
     description: 'Sends a pulse of electricity into any metal or salt water touching it, over and over.',
   },
+  [M.SolarCell]: {
+    ...base,
+    name: 'Solar cell',
+    key: '',
+    category: 'fire',
+    kind: 'static',
+    density: 100,
+    colour: [28, 44, 96],
+    colourEnd: [70, 100, 170],
+    colourJitter: 0.12,
+    update: solarCell,
+    description: 'Silicon, made in an arc furnace. While the sun shines on it, it sends pulses of electricity into touching metal.',
+  },
   [M.Sap]: {
     ...base,
     name: 'Sap',
@@ -2450,7 +2464,7 @@ export const PALETTE: readonly MaterialDef[] = [
   M.CarbonDioxide, M.Hydrogen, M.Mercury, M.Alcohol, M.Vinegar, M.Chlorine, M.Bleach, M.SulfurDioxide, M.Fog, M.Ink, M.Ozone, M.MoltenGlass, M.MoltenIron, M.MoltenCopper, M.Brimstone, M.Bubble,
   // fire and blasts
   M.Fire, M.Charcoal, M.Coal, M.Ash, M.Sulfur, M.Saltpetre, M.Gunpowder, M.Fireworks, M.Thermite,
-  M.Napalm, M.Nitro, M.Dynamite, M.SwampGas, M.Soot, M.Lightning, M.Battery, M.Plasma, M.Briquette, M.Peat, M.SmokeBomb, M.Sprite,
+  M.Napalm, M.Nitro, M.Dynamite, M.SwampGas, M.Soot, M.Lightning, M.Battery, M.SolarCell, M.Plasma, M.Briquette, M.Peat, M.SmokeBomb, M.Sprite,
   // life
   M.Seed, M.Grass, M.Wood, M.Flower, M.Mushroom, M.Moss, M.Algae, M.Vine, M.Seaweed, M.Cactus, M.Sap, M.Sugar, M.Caramel, M.Fruit, M.Pulp, M.Paper, M.Bamboo, M.Amber, M.Honeydew, M.Honey, M.Sawdust,
   // creatures

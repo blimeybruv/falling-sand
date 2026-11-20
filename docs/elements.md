@@ -252,7 +252,7 @@ cloud itself coming down, so weather can't make water from nothing.
 | ✅ | Greenhouse | Glass lets sunlight through | `transparent` | T |
 | ✅ | Thick clouds pour | A deep cloud rains harder, thinning from the bottom up | `rainCloud` | F |
 | ✅ | Mountains pierce clouds | Blown into anything solid, a cloud rains out on the windward side | `cloudDrift` | F |
-| | Solar cell | Sends electric pulses while sunlit (discovered: silicon from sand and lightning, or glass and copper?) | `update` checks it's lit | F |
+| ✅ | Solar cell | Sends electric pulses while sunlit; silicon from lightning through quartz touching graphite (an arc furnace) | `update` checks `inSunlight` | F |
 | | Heat lamp | A placeable lamp that heats in a straight line (dissipates a cloud locally, warms a greenhouse) | `update` with a ray | F |
 | | Burning glass | Sunlight through a glass lens focuses to a hot spot that lights tinder | sunlight pass bends at glass | S |
 | | Sunny plants | Grass and trees grow faster in sunlight, seeds struggle in deep shade | growth reads a "lit" flag | F |

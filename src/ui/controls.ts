@@ -42,6 +42,7 @@ export function setupControls(state: GameState, world: World, discovery: Discove
   const brush = byId<HTMLInputElement>('brush');
   const brushValue = byId<HTMLElement>('brush-value');
   const moreBtn = byId<HTMLButtonElement>('more');
+  const lessBtn = byId<HTMLButtonElement>('less');
   const sceneBtn = byId<HTMLButtonElement>('scene-button');
   const sceneMenu = byId<HTMLElement>('scene-menu');
   const sceneFile = byId<HTMLInputElement>('scene-file');
@@ -124,10 +125,14 @@ export function setupControls(state: GameState, world: World, discovery: Discove
   stepBtn.addEventListener('click', step);
   clearBtn.addEventListener('click', () => world.clear());
   heatBtn.addEventListener('click', toggleHeat);
-  moreBtn.addEventListener('click', () => {
-    const open = toolbar.classList.toggle('expanded');
+  // Phones: the downward chevron opens the extra controls, the upward one folds them away again.
+  const setExpanded = (open: boolean): void => {
+    toolbar.classList.toggle('expanded', open);
     moreBtn.setAttribute('aria-expanded', String(open));
-  });
+    (open ? lessBtn : moreBtn).focus();
+  };
+  moreBtn.addEventListener('click', () => setExpanded(true));
+  lessBtn.addEventListener('click', () => setExpanded(false));
 
   for (const s of SPEEDS) {
     const opt = document.createElement('option');

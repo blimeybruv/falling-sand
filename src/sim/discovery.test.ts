@@ -519,6 +519,11 @@ describe('every recipe works in the simulation', () => {
       fillRect(w, 0, 32, 40, 8, M.Charcoal);
       fillRect(w, 0, 31, 40, 1, M.Lightning);
     }],
+    ['solar cell: lightning through quartz touching graphite', M.SolarCell, 30, (w) => {
+      for (let x = 0; x < 40; x++) w.set(x, 32, x % 2 === 0 ? M.Quartz : M.Graphite);
+      fillRect(w, 0, 33, 40, 7, M.Stone);
+      fillRect(w, 0, 31, 40, 1, M.Lightning);
+    }],
     ['diamond: graphite baked by thermite', M.Diamond, 400, (w) => {
       fillRect(w, 0, 32, 40, 8, M.Graphite);
       fillRect(w, 10, 28, 20, 4, M.Thermite);

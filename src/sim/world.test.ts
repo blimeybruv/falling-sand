@@ -518,6 +518,33 @@ describe('sunlight', () => {
   });
 });
 
+describe('solar cell', () => {
+  const pulses = (sun: number, roof: MaterialId | null): number => {
+    const w = new World(40, 30, 9);
+    w.set(5, 20, M.SolarCell);
+    for (let x = 6; x < 30; x++) w.set(x, 20, M.Copper);
+    if (roof !== null) for (let x = 0; x < 40; x++) w.set(x, 10, roof);
+    w.sun = sun;
+    let n = 0;
+    for (let f = 0; f < 600; f++) {
+      w.step();
+      if (w.charge[20 * 40 + 20] > 0) n++;
+    }
+    return n;
+  };
+
+  it('sends pulses along a wire while the sun shines on it, even through glass', () => {
+    expect(pulses(1, null)).toBeGreaterThan(10);
+    expect(pulses(1, M.Glass)).toBeGreaterThan(10);
+    expect(pulses(0.5, null)).toBeLessThan(pulses(1, null));
+  });
+
+  it('does nothing in the shade or with the sun off', () => {
+    expect(pulses(1, M.Stone)).toBe(0);
+    expect(pulses(0, null)).toBe(0);
+  });
+});
+
 describe('rain', () => {
   it('is the cloud itself coming down, never water from nowhere', () => {
     const w = new World(60, 60, 7);

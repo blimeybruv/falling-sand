@@ -758,6 +758,10 @@ export function updateBolt(w: World, x: number, y: number, _i: number): boolean 
     else if (t === M.Iron && w.rng.chance(0.05)) w.transform(n, M.Magnet);
     // An arc through charcoal or coal turns it to graphite.
     else if ((t === M.Charcoal || t === M.Coal) && w.rng.chance(0.2)) w.transform(n, M.Graphite);
+    // An arc through quartz against carbon makes silicon, as in a real arc furnace: a solar cell.
+    else if (t === M.Quartz && w.rng.chance(0.2) && countAround(w, nx, ny, M.Graphite, M.Graphite) > 0) {
+      w.transform(n, M.SolarCell);
+    }
     else w.electrify(n);
   }
   w.igniteNeighbours(x, y);
@@ -767,6 +771,17 @@ export function updateBolt(w: World, x: number, y: number, _i: number): boolean 
 /** Battery: now and then sends a pulse into every conductor touching it. */
 export function pulseBattery(w: World, x: number, y: number, _i: number): boolean {
   if (!w.rng.chance(0.02)) return true;
+  for (let k = 0; k < 4; k++) {
+    const nx = k === 0 ? x - 1 : k === 1 ? x + 1 : x;
+    const ny = k === 2 ? y - 1 : k === 3 ? y + 1 : y;
+    if (w.inBounds(nx, ny)) w.electrify(w.idx(nx, ny));
+  }
+  return true;
+}
+
+/** Solar cell: while sunlight reaches it, pulses touching conductors (as often as a battery in full sun). */
+export function solarCell(w: World, x: number, y: number, _i: number): boolean {
+  if (w.sun <= 0 || !w.rng.chance(0.02 * w.sun) || !w.inSunlight(x, y)) return true;
   for (let k = 0; k < 4; k++) {
     const nx = k === 0 ? x - 1 : k === 1 ? x + 1 : x;
     const ny = k === 2 ? y - 1 : k === 3 ? y + 1 : y;

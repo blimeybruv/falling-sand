@@ -113,11 +113,16 @@ input:focus-visible {
   box-shadow: inset 0 0 0 1px var(--accent);
 }
 
-.more {
+.more,
+.less {
   display: none;
-  width: 36px;
+  align-items: center;
+  justify-content: center;
   padding: 0;
-  font-weight: 700;
+}
+
+.more {
+  width: 36px;
 }
 
 .menu-wrap {
@@ -448,11 +453,25 @@ button.quiet {
   .help-button {
     margin-left: 0;
   }
+  /* Secondary controls fold away: a downward chevron in the first row opens them, and an upward
+     one along the bottom of the open bar folds it back to the first row. */
   .more {
-    display: inline-block;
+    display: inline-flex;
     margin-left: auto;
   }
-  /* Secondary controls fold away behind the ⋯ button, leaving room for the canvas. */
+  .toolbar.expanded .more {
+    display: none;
+  }
+  .toolbar.expanded .help-button {
+    margin-left: auto;
+  }
+  .toolbar.expanded .less {
+    display: flex;
+    order: 11;
+    width: 100%;
+    height: 28px;
+    min-height: 0;
+  }
   .secondary {
     display: none;
   }

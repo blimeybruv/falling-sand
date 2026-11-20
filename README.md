@@ -43,7 +43,7 @@ that grows gives you wood. Drawing a material with the brush, or loading a scene
 anything. The journal (`J`) lists what you've found and how, and lava is the reward for discovering
 ten materials. Progress is saved in your browser.
 
-Switch to Sandbox mode (the Mode menu, under `⋯` on a phone) to have everything at once. Your
+Switch to Sandbox mode (the Mode menu, behind the downward arrow on a phone) to have everything at once. Your
 Discovery progress is kept for when you switch back.
 
 ## Controls
@@ -69,7 +69,8 @@ Discovery progress is kept for when you switch back.
 
 The palette has tabs (All, Ground, Liquids & gases, Fire & blasts, Life). Picking a material by its
 key jumps to its tab. On a phone, the palette is a single row you can scroll sideways, and the
-less-used controls fold away behind the `⋯` button.
+less-used controls fold away: the downward arrow in the top bar opens them, and the upward
+arrow along the bottom of the open bar folds them away again.
 
 A share link holds the whole scene in the part of the URL after `#`, so it works wherever the game is
 hosted and nothing is uploaded anywhere. Scenes keep their materials; fires, temperatures and moving
@@ -181,6 +182,7 @@ debris start fresh when a scene loads.
 | | Lightning | A short, very hot bolt: sparks wires, sets things alight; draw it on a wire | A thick cloud strikes |
 | | Red sprite | Eerie red jellyfish of light flashing high above a storm | Lightning from a thick cloud with open sky above |
 | | Battery | Sends pulses of electricity into touching metal or salt water | Iron and charcoal in salt water |
+| | Solar cell | Silicon: sends pulses into touching metal while the sun shines on it (works under glass, not in shade) | Lightning through quartz touching graphite |
 | | Plasma | Glowing gas at 4000° | Lightning through hydrogen, or gas past 2000° |
 | | Briquette | Burns for ages at a steady heat | Charcoal meets clay |
 | | Peat | Slow-burning fuel | Grass or moss buried under earth |

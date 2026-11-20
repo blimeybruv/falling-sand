@@ -56,8 +56,9 @@
             <input id="scene-file" type="file" accept=".txt,text/plain" hidden />
           </div>
         </div>
-        <button id="more" class="more" type="button" aria-expanded="false" title="More controls">⋯</button>
+        <button id="more" class="more" type="button" aria-expanded="false" aria-controls="toolbar" aria-label="Show more controls" title="More controls"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" /></svg></button>
         <button id="help-button" class="help-button" type="button" aria-expanded="false" aria-controls="help" title="Controls (?)">?</button>
+        <button id="less" class="less" type="button" aria-controls="toolbar" aria-label="Fold the controls away" title="Fewer controls"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M6 15l6-6 6 6" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" /></svg></button>
       </header>
 
       <main id="stage">
@@ -87,7 +88,7 @@
             <tr><th>? or H</th><td>Show / hide this panel</td></tr>
           </tbody>
         </table>
-        <p><strong>Discovery mode:</strong> you start with a few materials. Make new ones happen in the sandbox (fire meets water…) to unlock them. Locked "?" buttons give a hint, and the journal keeps track. Switch to Sandbox mode (under ⋯ on a phone) to have everything.</p>
+        <p><strong>Discovery mode:</strong> you start with a few materials. Make new ones happen in the sandbox (fire meets water…) to unlock them. Locked "?" buttons give a hint, and the journal keeps track. Switch to Sandbox mode (on a phone, open the extra controls with the downward arrow) to have everything.</p>
         <p>Tips: plant seeds near water. Pour oil onto water and set it alight. Drop nitroglycerin from a height. Lay a gunpowder fuse. Pour lava into a pond. Heat a stone pot of water from below, and watch it in heat view.</p>
         <button id="help-close" type="button">Close</button>
       </div>

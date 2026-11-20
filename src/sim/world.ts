@@ -357,6 +357,13 @@ export class World {
     return true;
   }
 
+  /** Whether sunlight reaches (x, y): the sun is out and everything above it lets light through. */
+  inSunlight(x: number, y: number): boolean {
+    if (this.sun <= 0 || !this.inBounds(x, y)) return false;
+    for (let i = (y - 1) * this.width + x; i >= 0; i -= this.width) if (!TRANSPARENT[this.mat[i]]) return false;
+    return true;
+  }
+
   /** Give each flammable neighbour of (x, y) its own chance (its flammability) of catching fire. */
   igniteNeighbours(x: number, y: number): void {
     for (const [dx, dy] of N8) {
