@@ -118,6 +118,14 @@ debris start fresh when a scene loads.
 | | Concrete | Indestructible, acid-proof | Cement meets gravel |
 | | Terracotta | Porous tiles: water seeps through | Clay fired gently (120–250°) |
 | | Porcelain | White, hard, acid-proof | Ash on brick past 450° |
+| | Adobe | Earthy blocks; crumble in water | Mud meets grass |
+| | Quicklime | Gets fiercely hot when wet | Stalactite past 800° |
+| | Slaked lime | Thick white paste | Quicklime meets water |
+| | Mortar | Sets into stone | Slaked lime meets sand |
+| | Frost | Thin white coat; melts when warm | Steam meets dry ice |
+| | Permafrost | Frozen ground; thaws into mud | Earth touching ice |
+| | Graphite | Conducts electricity | Lightning through charcoal |
+| | Diamond | Sparkling, indestructible | Graphite past 1600° |
 | | Cement | Pours like a thick liquid, then sets into stone | Ash, sand and water stirred together |
 | | Pumice | Light, holey rock that floats on water | Lava meets carbon dioxide |
 | | Quicksand | Looks like wet sand, but powders sink slowly into it | Sand meets salt water |
@@ -173,6 +181,7 @@ debris start fresh when a scene loads.
 | | Plasma | Glowing gas at 4000° | Lightning through hydrogen, or gas past 2000° |
 | | Briquette | Burns for ages at a steady heat | Charcoal meets clay |
 | | Peat | Slow-burning fuel | Grass or moss buried under earth |
+| | Smoke bomb | Lit, it pours out smoke | Saltpetre meets sugar |
 | **Life** | | | |
 | S | Seed | Falls; on loam, or on damp sand or earth, it grows into a tree (wood trunk, branches, leaves); on dry sand far from water, a cactus | Starter |
 | 5 | Grass | Weeds and grass: spreads over damp ground and loam, and into water; burns | A sandy shore |
@@ -190,6 +199,7 @@ debris start fresh when a scene loads.
 | | Paper | Catches fire very easily | Pulp dried past 100° |
 | | Bamboo | Shoots up fast in tall stalks | A seed on loam right beside water |
 | | Amber | Golden solid | Sap left on sand |
+| | Honeydew | Sweet drops that ferment like sugar | Flowers drip it |
 | R | Moss | Creeps over damp stone and brick | Grass touching stone |
 | Y | Algae | Floats and spreads across water | Weeds reaching the surface |
 | | **Tools** | | |
@@ -240,7 +250,7 @@ blast flies in an arc under gravity, then lands and behaves normally.
 
 Ideas for contributors. Each one should fit in a small pull request; `CLAUDE.md` explains how to add a
 material. For new materials, [`docs/elements.md`](docs/elements.md) has a menu of ideas grouped into
-chains (adobe, lime and mortar, frost, graphite and diamond...), with recipes and effort
+chains (neon, toffee, popcorn, icicles, fertiliser, compost...), with recipes and effort
 estimates.
 
 - [ ] **More materials**: pick one from [`docs/elements.md`](docs/elements.md). Each is a table entry, usually a `Reaction`, and a line in `RECIPES`; the tests check every one can be discovered.

@@ -224,11 +224,15 @@ export class World {
     if (this.stepping) this.created[m]++;
   }
 
-  /** Like setCell, but keeps the cell's temperature (for melting, boiling, cooling to stone...). */
+  /**
+   * Like setCell, but keeps the cell's temperature (for melting, boiling, cooling to stone...),
+   * unless the new material has a `startTemp`.
+   */
   transform(i: number, m: MaterialId): void {
     const t = this.temp[i];
     this.setCell(i, m);
-    this.temp[i] = t;
+    // A material with its own starting temperature (frost, molten metal) takes that instead.
+    if (MATS[m].startTemp === undefined) this.temp[i] = t;
   }
 
   /** Throw particle i with a velocity in cells per frame (positive y is down). */

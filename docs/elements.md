@@ -151,7 +151,7 @@ Also built in round 4: **Slag** (molten iron meets sand: glassy waste powder).
 | ✅ | Gravel | Explosions shatter basalt, brick, terracotta or slag (stone stays indestructible) | Coarse stony powder | Concrete | T |
 | ✅ | Concrete | Cement meets gravel | Indestructible and acid-proof | Bunkers | T |
 | ✅ | Peat | Grass or moss with earth on top | Brown slow-burning fuel | Bogs | T |
-| | Honeydew | Flowers drip it now and then | Sweet sticky drops; ferments like sugar | | T |
+| ✅ | Honeydew | Flowers now and then drip it | Sweet sticky drops; ferments like sugar | | T |
 | ✅ | Brimstone | Sulfur past 115° (burning sulfur doesn't melt until it's out) | Red liquid that sets back to sulfur below 100°; burns with choking fumes | Volcanic pools | T |
 | ✅ | Quartz | Sand shut in at 450–640°, e.g. deep under lava | Clear crystal; melts into glass at 900° (sand needs glass first) | Glassworks | F |
 | ✅ | Tar sand | Tar meets sand | Sticky black sand; heated past 250° it gives back sand and oil | | T |
@@ -161,15 +161,29 @@ Also built in round 4: **Slag** (molten iron meets sand: glassy waste powder).
 
 | | Material | How it's made | What it does | Leads to | Effort |
 |---|---|---|---|---|---|
-| | Adobe | Mud with grass in it, dried by heat | Earthy building blocks; crumble back to mud in water | Desert houses (materials only) | T |
-| | Quicklime | Stalactite heated past 800° | White powder; gets very hot when wet | Slaked lime | T |
-| | Slaked lime | Quicklime meets water (and heats it, often to boiling) | Wet white paste | Mortar | F |
-| | Mortar | Slaked lime meets sand | Sets into stone over time, like cement | Masonry | T |
-| | Frost | Steam meeting dry ice | A thin white coat that grows on very cold surfaces and melts when warm | Winter scenes | T |
-| | Permafrost | Earth frozen by ice or dry ice | Rock-hard frozen ground; thaws into mud | Tundra | T |
-| | Graphite | Charcoal or coal heated past 2000° | Grey solid that conducts electricity | Electrodes | T |
-| | Diamond | Graphite or coal shut in past 3000° (plasma) | Sparkling, indestructible, acid-proof | Treasure | F |
-| | Smoke bomb | Saltpetre meets sugar | Burns fast giving off huge clouds of smoke | Signals | T |
+| ✅ | Adobe | Mud meets grass (straw) | Earthy blocks; crumble back to mud in water; blasts turn them to earth | Desert houses (materials only) | T |
+| ✅ | Quicklime | Stalactite past 800° (a charcoal fire) | White powder; gets fiercely hot when wet | Slaked lime | F |
+| ✅ | Slaked lime | Quicklime meets water, starting at 400° (often boiling the water) | Thick white paste | Mortar | F |
+| ✅ | Mortar | Slaked lime meets sand | Spreads, then sets into stone | Masonry | T |
+| ✅ | Frost | Steam meets dry ice (`transform` now honours `startTemp`, so it starts at −30°) | Thin white coat; melts above 5° | Winter scenes | T |
+| ✅ | Permafrost | Earth touching ice or dry ice | Frozen ground; thaws into mud above 5° | Tundra | T |
+| ✅ | Graphite | Lightning through charcoal or coal (an arc furnace; charcoal catches fire long before 2000°) | Conducts electricity | Diamond | T |
+| ✅ | Diamond | Graphite past 1600° (burning thermite on graphite reaches about 1740°) | Sparkling, indestructible, acid-proof | Treasure | T |
+| ✅ | Smoke bomb | Saltpetre meets sugar | Lit, it pours out smoke | Signals | F |
+
+## Fresh ideas, round 7 (brainstormed 20 Nov, afternoon)
+
+| | Material | How it's made | What it does | Leads to | Effort |
+|---|---|---|---|---|---|
+| | Neon | Plasma touching glass | A gas that glows bright pink while electricity passes through it | Signs | F |
+| | Candy floss | Caramel or molten sugar caught in the wind | Pink fluff that floats a little and dissolves in water | | T |
+| | Toffee | Caramel cooled below 60° (`below`) | Hard brown solid that melts back above 100° | | T |
+| | Popcorn | Seeds heated past 180° | They pop: jump upward and turn into light white puffs | Snacks (materials only) | F |
+| | Icicle | Water dripping beside a cold ceiling (ice or frost above) | Grows downward in points; melts when warm | Ice caves | F |
+| | Fertiliser | Ash meets saltpetre | Seeds touching it sprout without water; grass beside it spreads faster | Farms | F |
+| | Compost | Grass or leaves with mushroom in them | Dark crumbly soil that slowly turns into loam | Gardens | T |
+| | Red paint | Rust meets oil | A red liquid that dries into a red static coat | Murals | T |
+| | Electromagnet (behaviour) | Iron carrying a pulse briefly pulls iron filings like a magnet | No new material: wires become magnets while live | Motors | F |
 
 ## Notes
 

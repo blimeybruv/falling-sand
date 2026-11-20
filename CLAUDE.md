@@ -32,7 +32,8 @@ src/main.ts  creates World + Renderer + UI and runs the requestAnimationFrame lo
   (`updateElectricity`: a conductor's charge is `CHARGE_ACTIVE` for one frame, when it passes to idle
   conducting neighbours, then cools down, so pulses travel one cell a frame and never flow back),
   then updates cells. Start a pulse with `world.electrify(i)`. Use `transform(i, m)`
-  instead of `setCell` for phase changes (melting, boiling), so the cell keeps its temperature.
+  instead of `setCell` for phase changes (melting, boiling), so the cell keeps its temperature (unless
+  the new material has a `startTemp`, which it takes instead). Burning cells don't melt until they stop.
 - `step()` updates bottom-up, alternating the row direction each frame. A `stamp` array makes sure
   each cell moves at most once a frame. Anything created with `setCell`/`set` also waits until the
   next frame.

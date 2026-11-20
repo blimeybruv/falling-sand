@@ -119,6 +119,16 @@ export const M = {
   Quartz: 111,
   TarSand: 112,
   Bubble: 113,
+  Honeydew: 114,
+  Adobe: 115,
+  Quicklime: 116,
+  SlakedLime: 117,
+  Mortar: 118,
+  Frost: 119,
+  Permafrost: 120,
+  Graphite: 121,
+  Diamond: 122,
+  SmokeBomb: 123,
 } as const;
 
 export type MaterialId = (typeof M)[keyof typeof M];

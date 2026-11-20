@@ -335,9 +335,10 @@ export function spreadMushroom(w: World, x: number, y: number, _i: number): bool
   return true;
 }
 
-/** Flower: now and then drops a seed into the open air below it, or ripens into fruit. */
+/** Flower: now and then drops a seed or a drop of honeydew into the open air below it, or ripens into fruit. */
 export function dropSeeds(w: World, x: number, y: number, i: number): boolean {
   if (w.rng.chance(0.0002) && w.get(x, y + 1) === M.Empty) w.set(x, y + 1, M.Seed);
+  if (w.rng.chance(0.0003) && w.get(x, y + 1) === M.Empty) w.set(x, y + 1, M.Honeydew);
   // Now and then a flower ripens into fruit, which falls.
   if (w.rng.chance(0.0003)) {
     w.transform(i, M.Fruit);
@@ -636,6 +637,8 @@ export function updateBolt(w: World, x: number, y: number, _i: number): boolean 
     // Lightning through hydrogen strips it into plasma, and now and then magnetises iron.
     if (t === M.Hydrogen) w.transform(n, M.Plasma);
     else if (t === M.Iron && w.rng.chance(0.05)) w.transform(n, M.Magnet);
+    // An arc through charcoal or coal turns it to graphite.
+    else if ((t === M.Charcoal || t === M.Coal) && w.rng.chance(0.2)) w.transform(n, M.Graphite);
     else w.electrify(n);
   }
   w.igniteNeighbours(x, y);
@@ -728,4 +731,18 @@ export function blowBubbles(w: World, x: number, y: number, i: number): boolean 
   if (w.wind === 0 || w.get(x, y - 1) !== M.Empty || !w.rng.chance(Math.abs(w.wind) * 0.01)) return false;
   w.transform(i, M.Bubble);
   return true;
+}
+
+/** Quicklime: touching water, it turns to slaked lime and gets fiercely hot (often boiling the water). */
+export function slake(w: World, x: number, y: number, i: number): boolean {
+  if (!touches(w, x, y, M.Water) || !w.rng.chance(0.05)) return false;
+  w.setCell(i, M.SlakedLime);
+  w.temp[i] = 400;
+  return true;
+}
+
+/** Smoke bomb: while it burns, pours smoke into the cells around it. */
+export function billowSmoke(w: World, x: number, y: number, i: number): boolean {
+  if (w.burn[i] > 0 && w.rng.chance(0.8)) emit(w, x, y, M.Smoke);
+  return false;
 }

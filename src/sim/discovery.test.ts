@@ -487,6 +487,46 @@ describe('every recipe works in the simulation', () => {
       w.wind = 1;
       fillRect(w, 0, 36, 40, 4, M.Foam);
     }],
+    ['honeydew: flowers drip it', M.Honeydew, 1500, (w) => fillRect(w, 0, 10, 40, 3, M.Flower)],
+    ['adobe: mud meets grass', M.Adobe, 300, (w) => {
+      fillRect(w, 0, 37, 40, 3, M.Grass);
+      fillRect(w, 0, 33, 40, 4, M.Mud);
+    }],
+    ['quicklime: stalactite in a charcoal fire', M.Quicklime, 1500, (w) => {
+      fillRect(w, 0, 39, 40, 1, M.Stone);
+      fillRect(w, 5, 30, 30, 9, M.Charcoal);
+      fillRect(w, 18, 33, 4, 3, M.Stalactite);
+      for (let y = 30; y < 39; y++) for (let x = 5; x < 35; x++) w.ignite(w.idx(x, y));
+    }],
+    ['slaked lime: quicklime meets water', M.SlakedLime, 200, (w) => {
+      fillRect(w, 0, 36, 40, 4, M.Quicklime);
+      fillRect(w, 0, 30, 40, 6, M.Water);
+    }],
+    ['mortar: slaked lime meets sand', M.Mortar, 200, (w) => {
+      fillRect(w, 0, 36, 40, 4, M.Sand);
+      fillRect(w, 0, 32, 40, 4, M.SlakedLime);
+    }],
+    ['frost: steam meets dry ice', M.Frost, 200, (w) => {
+      fillRect(w, 0, 36, 40, 4, M.DryIce);
+      fillRect(w, 0, 30, 40, 6, M.Steam);
+    }],
+    ['permafrost: earth touching ice', M.Permafrost, 600, (w) => {
+      fillRect(w, 0, 36, 40, 4, M.Ice);
+      fillRect(w, 0, 32, 40, 4, M.Earth);
+    }],
+    ['graphite: lightning through charcoal', M.Graphite, 30, (w) => {
+      fillRect(w, 0, 32, 40, 8, M.Charcoal);
+      fillRect(w, 0, 31, 40, 1, M.Lightning);
+    }],
+    ['diamond: graphite baked by thermite', M.Diamond, 400, (w) => {
+      fillRect(w, 0, 32, 40, 8, M.Graphite);
+      fillRect(w, 10, 28, 20, 4, M.Thermite);
+      for (let x = 10; x < 30; x++) for (let y = 28; y < 32; y++) w.ignite(w.idx(x, y));
+    }],
+    ['smoke bomb: saltpetre meets sugar', M.SmokeBomb, 200, (w) => {
+      fillRect(w, 0, 36, 40, 4, M.Saltpetre);
+      fillRect(w, 0, 33, 40, 3, M.Sugar);
+    }],
     ['saltpetre: leaves buried in earth', M.Saltpetre, 600, (w) => {
       fillRect(w, 10, 30, 20, 4, M.Leaf);
       fillRect(w, 0, 34, 40, 6, M.Earth);
@@ -1189,5 +1229,46 @@ describe('round 5', () => {
     fillRect(w, 0, 13, 20, 3, M.TarSand);
     run(w, 1500);
     expect(w.created[M.Oil]).toBeGreaterThan(0);
+  });
+});
+
+describe('round 6', () => {
+  it('slaking quicklime gets hot enough to boil the water', () => {
+    const w = new World(20, 20, 110);
+    fillRect(w, 0, 16, 20, 4, M.Quicklime);
+    fillRect(w, 0, 10, 20, 6, M.Water);
+    run(w, 400);
+    expect(w.created[M.Steam]).toBeGreaterThan(0);
+  });
+
+  it('frost and permafrost thaw away from the cold', () => {
+    const w = new World(20, 10, 111);
+    fillRect(w, 0, 9, 20, 1, M.Stone);
+    fillRect(w, 5, 8, 4, 1, M.Frost);
+    fillRect(w, 12, 8, 4, 1, M.Permafrost);
+    run(w, 3000);
+    expect(w.count(M.Frost)).toBe(0);
+    expect(w.count(M.Permafrost)).toBe(0);
+    expect(w.created[M.Mud]).toBeGreaterThan(0);
+  });
+
+  it('a lit smoke bomb pours out smoke', () => {
+    const w = new World(30, 30, 112);
+    fillRect(w, 0, 29, 30, 1, M.Stone);
+    fillRect(w, 12, 26, 6, 3, M.SmokeBomb);
+    w.paint(15, 25, 1, M.Fire);
+    run(w, 100);
+    expect(w.created[M.Smoke]).toBeGreaterThan(40);
+  });
+
+  it('graphite conducts; adobe crumbles back to mud in water', () => {
+    const g = new World(10, 10, 113);
+    g.set(5, 5, M.Graphite);
+    expect(g.electrify(g.idx(5, 5))).toBe(true);
+    const a = new World(20, 20, 114);
+    fillRect(a, 0, 17, 20, 3, M.Adobe);
+    fillRect(a, 0, 10, 20, 7, M.Water);
+    run(a, 1500);
+    expect(a.count(M.Adobe)).toBeLessThan(60);
   });
 });
