@@ -1314,12 +1314,35 @@ describe('round 6', () => {
   });
 });
 
+describe('clouds', () => {
+  it('have billowing tops, not a flat lid against the upper atmosphere', () => {
+    // A wide bank rises from low down and settles under a ceiling that rolls along the sky.
+    const w = new World(160, 120, 130);
+    fillRect(w, 0, 60, 160, 20, M.Cloud);
+    for (let f = 0; f < 600; f++) w.step();
+    const tops: number[] = [];
+    for (let x = 0; x < 160; x++) {
+      for (let y = 0; y < 120; y++) {
+        if (w.mat[y * 160 + x] === M.Cloud) {
+          tops.push(y);
+          break;
+        }
+      }
+    }
+    expect(tops.length).toBeGreaterThan(120);
+    // Domes and dips several rows apart, and no single row holding most of the top edge.
+    expect(Math.max(...tops) - Math.min(...tops)).toBeGreaterThanOrEqual(6);
+    const counts = new Map<number, number>();
+    for (const t of tops) counts.set(t, (counts.get(t) ?? 0) + 1);
+    expect(Math.max(...counts.values())).toBeLessThan(tops.length * 0.3);
+  });
+});
+
 describe('red sprites', () => {
   it('flash in the open sky above a thick storm cloud, red heads above violet tendrils', () => {
     // A tall world, so there is upper atmosphere above the cloud layer (which starts 22% down).
     const w = new World(60, 120, 120);
     fillRect(w, 0, 22, 60, 12, M.Cloud);
-    let cloudTop = 22;
     let seen = 0;
     let headAboveTendrils = false;
     for (let f = 0; f < 3000 && seen === 0; f++) {
@@ -1334,8 +1357,12 @@ describe('red sprites', () => {
         if (w.shade[i] >= 10) violetY = Math.max(violetY, y);
       }
       if (seen) {
-        for (let i = 0; i < w.size; i++) if (w.mat[i] === M.Cloud) cloudTop = Math.min(cloudTop, Math.floor(i / 60));
-        for (let i = 0; i < w.size; i++) if (w.mat[i] === M.Sprite) expect(Math.floor(i / 60)).toBeLessThan(cloudTop);
+        // Cloud tops billow, so check column by column: every sprite cell is above the cloud there.
+        for (let x = 0; x < 60; x++) {
+          let cloudTop = 120;
+          for (let y = 0; y < 120; y++) if (w.mat[y * 60 + x] === M.Cloud) { cloudTop = y; break; }
+          for (let y = cloudTop; y < 120; y++) expect(w.mat[y * 60 + x]).not.toBe(M.Sprite);
+        }
         headAboveTendrils = redY < violetY;
       }
     }

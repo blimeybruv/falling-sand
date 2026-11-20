@@ -512,9 +512,16 @@ export function freezeWater(w: World, x: number, y: number, i: number): boolean 
   return true;
 }
 
-/** The top of the cloud layer: above this row is the upper atmosphere, where red sprites appear. */
-function cloudCeiling(w: World): number {
-  return Math.ceil(w.height * 0.22);
+/**
+ * The top of the cloud layer at column x: above it is the upper atmosphere, where red sprites
+ * appear. It rolls gently along the sky and slowly drifts over time (two slow waves), so cloud tops
+ * billow into domes and dips instead of pressing flat against one row.
+ */
+function cloudCeiling(w: World, x: number): number {
+  const base = w.height * 0.22;
+  const swell = w.height * 0.035;
+  const t = w.frame;
+  return Math.round(base + swell * (Math.sin(x * 0.11 + t * 0.002) + 0.6 * Math.sin(x * 0.31 - t * 0.0035)));
 }
 
 /**
@@ -527,12 +534,18 @@ export function rainCloud(w: World, x: number, y: number, i: number): boolean {
   if (w.rng.chance(0.006) && w.get(x, y + 1) === M.Empty) rainFrom(w, x, y);
   // Clouds don't climb into the upper atmosphere (the top of the screen): they hang below it,
   // drifting, and sink back down if they find themselves up there.
-  if (y < cloudCeiling(w)) {
+  const ceiling = cloudCeiling(w, x);
+  if (y < ceiling) {
     if (w.get(x, y + 1) === M.Empty && w.rng.chance(0.3)) w.swap(i, w.idx(x, y + 1));
     else if (w.rng.chance(0.3)) {
       const nx = x + w.rng.sign();
       if (w.get(nx, y) === M.Empty) w.swap(i, w.idx(nx, y));
     }
+    return true;
+  }
+  // Right at the top, now and then a wisp puffs up a little (and sinks back later): a ragged edge.
+  if (y <= ceiling + 1 && w.rng.chance(0.02) && w.get(x, y - 1) === M.Empty) {
+    w.swap(i, w.idx(x, y - 1));
     return true;
   }
   return false;
@@ -817,6 +830,8 @@ function spawnSprite(w: World, cx: number, base: number, sky: number): void {
     const length = Math.round(reach * (0.5 + w.rng.next() * 0.5));
     for (let d = 2; d <= length; d++) {
       if (w.rng.chance(0.25)) tx += w.rng.sign();
+      // A tendril ends where it meets a billow of cloud (tops are uneven); it never hangs into one.
+      if (w.get(tx, headY + d) !== M.Empty) break;
       glow(tx, headY + d, Math.min(15, 3 + Math.round((d / reach) * 12)), life - w.rng.int(0, 4));
     }
   }
