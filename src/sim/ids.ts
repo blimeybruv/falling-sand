@@ -109,6 +109,16 @@ export const M = {
   Bronze: 101,
   GeyserRock: 102,
   Slag: 103,
+  Briquette: 104,
+  Terracotta: 105,
+  Porcelain: 106,
+  Gravel: 107,
+  Concrete: 108,
+  Peat: 109,
+  Brimstone: 110,
+  Quartz: 111,
+  TarSand: 112,
+  Bubble: 113,
 } as const;
 
 export type MaterialId = (typeof M)[keyof typeof M];

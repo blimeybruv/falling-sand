@@ -1,0 +1,1 @@
+  for (let k = 0; k < 3; k++) await page.keyboard.press(']'); await draw('Foam', 0.40, 0.90, 0.55, 0.90, 6, 300); await page.selectOption('\

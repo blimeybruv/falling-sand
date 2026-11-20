@@ -524,7 +524,8 @@ export class World {
     // Temperature-driven changes: melting and boiling, and catching fire from heat alone.
     const t = this.temp[i];
     const above = def.above;
-    if (above && t > above.temp) {
+    // (Burning cells are hot because they're burning: they don't melt until they've stopped.)
+    if (above && t > above.temp && this.burn[i] === 0) {
       const other = above.sometimes;
       this.transform(i, other && this.rng.chance(other.chance) ? other.into : above.into);
       return;

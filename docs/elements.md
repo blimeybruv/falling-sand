@@ -145,17 +145,31 @@ Also built in round 4: **Slag** (molten iron meets sand: glassy waste powder).
 
 | | Material | How it's made | What it does | Leads to | Effort |
 |---|---|---|---|---|---|
-| | Charcoal briquette | Charcoal mixed with clay | Burns even longer than coal, at a steady heat | Kilns | T |
-| | Terracotta | Clay fired gently (100–250°, below brick) | Porous orange pots: water slowly seeps through | Planters | T |
-| | Porcelain | Clay with ash, fired past 900° | White, hard, acid-proof | | T |
-| | Gravel | Stone hit by an explosion (`shattersInto`) | Coarse powder that water drains through | Concrete | T |
-| | Concrete | Cement with gravel in it | Sets into a stone that lets nothing through and resists blasts | Bunkers | T |
-| | Peat | Grass and moss buried in damp earth | Brown spongy soil; dries into a slow-burning fuel | Bogs | T |
+| ✅ | Briquette | Charcoal meets clay | Burns for ages (1500–2500 frames) at a steady 800° | Kilns | T |
+| ✅ | Terracotta | Clay kept at 120–250° (any hotter and it's brick) | Porous orange tiles: water slowly seeps through | Planters | F |
+| ✅ | Porcelain | Brick with ash on it past 450° (lava will do; brick over lava reaches about 520°) | White, hard, acid-proof | | T |
+| ✅ | Gravel | Explosions shatter basalt, brick, terracotta or slag (stone stays indestructible) | Coarse stony powder | Concrete | T |
+| ✅ | Concrete | Cement meets gravel | Indestructible and acid-proof | Bunkers | T |
+| ✅ | Peat | Grass or moss with earth on top | Brown slow-burning fuel | Bogs | T |
 | | Honeydew | Flowers drip it now and then | Sweet sticky drops; ferments like sugar | | T |
-| | Brimstone | Sulfur melted past 115° | Red liquid sulfur that sets back to yellow | Volcanic pools | T |
-| | Quartz | Sand and salt water under heat and pressure (buried, 300°+) | Clear hard crystal; makes glass at a lower heat | Glassworks | F |
-| | Tar sand | Sand meets tar | Heavy sticky sand; heated, gives oil back | | T |
-| | Soap bubble | Foam blown by wind | Floats up and pops into a few drops of water | | T |
+| ✅ | Brimstone | Sulfur past 115° (burning sulfur doesn't melt until it's out) | Red liquid that sets back to sulfur below 100°; burns with choking fumes | Volcanic pools | T |
+| ✅ | Quartz | Sand shut in at 450–640°, e.g. deep under lava | Clear crystal; melts into glass at 900° (sand needs glass first) | Glassworks | F |
+| ✅ | Tar sand | Tar meets sand | Sticky black sand; heated past 250° it gives back sand and oil | | T |
+| ✅ | Soap bubble | Foam at the surface with the wind blowing | Floats up and pops into a few drops of water | | T |
+
+## Fresh ideas, round 6 (brainstormed 20 Nov, morning)
+
+| | Material | How it's made | What it does | Leads to | Effort |
+|---|---|---|---|---|---|
+| | Adobe | Mud with grass in it, dried by heat | Earthy building blocks; crumble back to mud in water | Desert houses (materials only) | T |
+| | Quicklime | Stalactite heated past 800° | White powder; gets very hot when wet | Slaked lime | T |
+| | Slaked lime | Quicklime meets water (and heats it, often to boiling) | Wet white paste | Mortar | F |
+| | Mortar | Slaked lime meets sand | Sets into stone over time, like cement | Masonry | T |
+| | Frost | Steam meeting dry ice | A thin white coat that grows on very cold surfaces and melts when warm | Winter scenes | T |
+| | Permafrost | Earth frozen by ice or dry ice | Rock-hard frozen ground; thaws into mud | Tundra | T |
+| | Graphite | Charcoal or coal heated past 2000° | Grey solid that conducts electricity | Electrodes | T |
+| | Diamond | Graphite or coal shut in past 3000° (plasma) | Sparkling, indestructible, acid-proof | Treasure | F |
+| | Smoke bomb | Saltpetre meets sugar | Burns fast giving off huge clouds of smoke | Signals | T |
 
 ## Notes
 

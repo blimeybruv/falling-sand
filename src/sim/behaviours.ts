@@ -694,3 +694,38 @@ export function erupt(w: World, x: number, y: number, i: number): boolean {
   }
   return true;
 }
+
+/** Sand: buried deep and hot (450-640°, below melting into glass) it slowly crystallises into quartz; otherwise see sproutGrass. */
+export function updateSand(w: World, x: number, y: number, i: number): boolean {
+  const t = w.temp[i];
+  if (t > 450 && w.rng.chance(0.003) && enclosed(w, x, y)) {
+    w.transform(i, M.Quartz);
+    return true;
+  }
+  return sproutGrass(w, x, y, i);
+}
+
+/** Clay: fired gently (120-250°; any hotter and it becomes brick), it slowly turns to terracotta. */
+export function fireClay(w: World, _x: number, _y: number, i: number): boolean {
+  const t = w.temp[i];
+  if (t > 120 && w.rng.chance(0.003)) {
+    w.transform(i, M.Terracotta);
+    return true;
+  }
+  return false;
+}
+
+/** Terracotta: water sitting on it now and then seeps through to the open cell below. */
+export function seepThrough(w: World, x: number, y: number, _i: number): boolean {
+  if (!w.rng.chance(0.01) || w.get(x, y - 1) !== M.Water || w.get(x, y + 1) !== M.Empty) return true;
+  w.setCell(w.idx(x, y - 1), M.Empty);
+  w.set(x, y + 1, M.Water);
+  return true;
+}
+
+/** Foam: caught by the wind at its surface, it now and then blows off as a soap bubble. */
+export function blowBubbles(w: World, x: number, y: number, i: number): boolean {
+  if (w.wind === 0 || w.get(x, y - 1) !== M.Empty || !w.rng.chance(Math.abs(w.wind) * 0.01)) return false;
+  w.transform(i, M.Bubble);
+  return true;
+}

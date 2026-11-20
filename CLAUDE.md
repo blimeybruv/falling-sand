@@ -85,7 +85,7 @@ Movement is density-based: a mover can swap with an empty, liquid or gas cell th
 
 Heat thresholds (`above`, `ignitesAt`) must be reachable by the heat sources you expect. Measure, don't
 guess: sand under a lava pool levels off near 680°, clay beside a burning wood fire peaks near 275°,
-burning wood holds 500°, burning charcoal 950°, fire cells 700°. Add a test that the recipe works and,
+burning wood holds 500°, burning charcoal 950°, fire cells 700°, a brick layer over lava about 520°. Add a test that the recipe works and,
 where it matters, one that an ordinary situation does *not* trigger it (see "an ordinary wood fire
 does not melt sand into glass").
 

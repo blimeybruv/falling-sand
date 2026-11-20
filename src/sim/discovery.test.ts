@@ -441,6 +441,52 @@ describe('every recipe works in the simulation', () => {
       fillRect(w, 0, 37, 40, 3, M.Sand);
       fillRect(w, 0, 34, 40, 3, M.MoltenIron);
     }],
+    ['briquette: charcoal meets clay', M.Briquette, 300, (w) => {
+      fillRect(w, 0, 36, 40, 4, M.Clay);
+      fillRect(w, 0, 33, 40, 3, M.Charcoal);
+    }],
+    ['terracotta: clay warmed gently beside a fire', M.Terracotta, 1200, (w) => {
+      fillRect(w, 0, 37, 40, 3, M.Stone);
+      fillRect(w, 0, 31, 4, 6, M.Wood);
+      for (let x = 0; x < 4; x++) for (let y = 31; y < 37; y++) w.ignite(w.idx(x, y));
+      fillRect(w, 4, 31, 12, 6, M.Clay);
+    }],
+    ['porcelain: ash on brick fired by lava', M.Porcelain, 1500, (w) => {
+      fillRect(w, 0, 36, 40, 4, M.Lava);
+      fillRect(w, 0, 35, 40, 1, M.Brick);
+      fillRect(w, 0, 33, 40, 2, M.Ash);
+    }],
+    ['gravel: blowing up basalt', M.Gravel, 30, (w) => {
+      fillRect(w, 10, 30, 20, 8, M.Basalt);
+      w.set(20, 29, M.Nitro);
+      w.ignite(w.idx(20, 29));
+    }],
+    ['concrete: cement meets gravel', M.Concrete, 100, (w) => {
+      fillRect(w, 0, 36, 40, 4, M.Gravel);
+      fillRect(w, 0, 33, 40, 3, M.Cement);
+    }],
+    ['peat: grass buried under earth', M.Peat, 600, (w) => {
+      fillRect(w, 0, 37, 40, 3, M.Stone);
+      fillRect(w, 0, 36, 40, 1, M.Grass);
+      fillRect(w, 0, 30, 40, 6, M.Earth);
+    }],
+    ['brimstone: sulfur melted gently', M.Brimstone, 600, (w) => {
+      fillRect(w, 0, 36, 40, 4, M.Lava);
+      fillRect(w, 0, 34, 40, 2, M.Stone);
+      fillRect(w, 0, 31, 40, 3, M.Sulfur);
+    }],
+    ['quartz: sand buried deep under lava', M.Quartz, 2500, (w) => {
+      fillRect(w, 0, 20, 40, 20, M.Sand);
+      fillRect(w, 0, 14, 40, 6, M.Lava);
+    }],
+    ['tar sand: tar meets sand', M.TarSand, 200, (w) => {
+      fillRect(w, 0, 36, 40, 4, M.Sand);
+      fillRect(w, 0, 32, 40, 4, M.Tar);
+    }],
+    ['soap bubble: foam in the wind', M.Bubble, 300, (w) => {
+      w.wind = 1;
+      fillRect(w, 0, 36, 40, 4, M.Foam);
+    }],
     ['saltpetre: leaves buried in earth', M.Saltpetre, 600, (w) => {
       fillRect(w, 10, 30, 20, 4, M.Leaf);
       fillRect(w, 0, 34, 40, 6, M.Earth);
@@ -1099,5 +1145,49 @@ describe('round 4', () => {
     run(w, 600);
     expect(w.count(M.MoltenCopper)).toBe(0);
     expect(w.count(M.Copper)).toBe(12);
+  });
+});
+
+describe('round 5', () => {
+  it('water seeps slowly through terracotta', () => {
+    const w = new World(20, 20, 100);
+    fillRect(w, 0, 10, 20, 1, M.Terracotta);
+    fillRect(w, 0, 5, 20, 5, M.Water);
+    run(w, 600);
+    let below = 0;
+    for (let i = 0; i < w.size; i++) if (w.mat[i] === M.Water && Math.floor(i / 20) > 10) below++;
+    expect(below).toBeGreaterThan(5);
+  });
+
+  it('concrete survives a blast that clears the gravel around it', () => {
+    const w = new World(40, 40, 101);
+    fillRect(w, 10, 20, 20, 10, M.Concrete);
+    w.explode(20, 25, 10);
+    expect(w.count(M.Concrete)).toBe(200);
+  });
+
+  it('brimstone sets back into sulfur as it cools, and burning sulfur stays alight', () => {
+    const w = new World(20, 10, 102);
+    fillRect(w, 0, 9, 20, 1, M.Stone);
+    fillRect(w, 5, 7, 10, 2, M.Brimstone);
+    run(w, 800);
+    expect(w.count(M.Brimstone)).toBe(0);
+    expect(w.count(M.Sulfur)).toBe(20);
+
+    const fire = new World(10, 10, 103);
+    fire.set(5, 9, M.Sulfur);
+    fire.ignite(fire.idx(5, 9));
+    run(fire, 5);
+    expect(fire.get(5, 9)).toBe(M.Sulfur);
+    expect(fire.burn[fire.idx(5, 9)]).toBeGreaterThan(0);
+  });
+
+  it('heated tar sand gives back oil', () => {
+    const w = new World(20, 20, 104);
+    fillRect(w, 0, 18, 20, 2, M.Lava);
+    fillRect(w, 0, 16, 20, 2, M.Stone);
+    fillRect(w, 0, 13, 20, 3, M.TarSand);
+    run(w, 1500);
+    expect(w.created[M.Oil]).toBeGreaterThan(0);
   });
 });

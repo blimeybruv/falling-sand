@@ -112,6 +112,12 @@ debris start fresh when a scene loads.
 | | Geyser rock | When hot, now and then blasts water and steam upward | Basalt meets water |
 | | Salt crystal | Clear pink shards that keep growing | Salt water touching ice |
 | | Glass fibre | Light strands that hardly let heat through | Molten glass in the wind |
+| | Quartz | Clear crystal; melts into glass at 900° | Sand buried deep under heat |
+| | Tar sand | Sticky black sand; heated, gives back oil | Tar meets sand |
+| | Gravel | Coarse stony powder | Blasting basalt, brick, terracotta or slag |
+| | Concrete | Indestructible, acid-proof | Cement meets gravel |
+| | Terracotta | Porous tiles: water seeps through | Clay fired gently (120–250°) |
+| | Porcelain | White, hard, acid-proof | Ash on brick past 450° |
 | | Cement | Pours like a thick liquid, then sets into stone | Ash, sand and water stirred together |
 | | Pumice | Light, holey rock that floats on water | Lava meets carbon dioxide |
 | | Quicksand | Looks like wet sand, but powders sink slowly into it | Sand meets salt water |
@@ -145,6 +151,8 @@ debris start fresh when a scene loads.
 | | Molten glass | Glowing slow liquid that sets back into glass | Glass past 1200° |
 | | Molten iron | White-hot liquid metal that sets back into iron | Iron past 1500°, or burning thermite |
 | | Molten copper | Liquid copper that sets back; with tin, bronze | Copper past 1100° |
+| | Brimstone | Red liquid sulfur that sets back to yellow | Sulfur past 115° |
+| | Soap bubble | Floats up and pops | Foam in the wind |
 | **Fire & blasts** | | | |
 | 7 | Fire | Short-lived; rises and flickers; ignites flammable neighbours | Starter |
 | K | Charcoal | Burns slowly and very hot, glowing rather than flaming; hot enough to make glass | Smother a wood fire with sand |
@@ -163,6 +171,8 @@ debris start fresh when a scene loads.
 | | Lightning | A short, very hot bolt: sparks wires, sets things alight; draw it on a wire | A thick cloud strikes |
 | | Battery | Sends pulses of electricity into touching metal or salt water | Iron and charcoal in salt water |
 | | Plasma | Glowing gas at 4000° | Lightning through hydrogen, or gas past 2000° |
+| | Briquette | Burns for ages at a steady heat | Charcoal meets clay |
+| | Peat | Slow-burning fuel | Grass or moss buried under earth |
 | **Life** | | | |
 | S | Seed | Falls; on loam, or on damp sand or earth, it grows into a tree (wood trunk, branches, leaves); on dry sand far from water, a cactus | Starter |
 | 5 | Grass | Weeds and grass: spreads over damp ground and loam, and into water; burns | A sandy shore |
@@ -230,7 +240,7 @@ blast flies in an arc under gravity, then lands and behaves normally.
 
 Ideas for contributors. Each one should fit in a small pull request; `CLAUDE.md` explains how to add a
 material. For new materials, [`docs/elements.md`](docs/elements.md) has a menu of ideas grouped into
-chains (terracotta, porcelain, gravel and concrete, peat, quartz...), with recipes and effort
+chains (adobe, lime and mortar, frost, graphite and diamond...), with recipes and effort
 estimates.
 
 - [ ] **More materials**: pick one from [`docs/elements.md`](docs/elements.md). Each is a table entry, usually a `Reaction`, and a line in `RECIPES`; the tests check every one can be discovered.
