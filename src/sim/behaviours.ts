@@ -339,6 +339,8 @@ export function spreadMushroom(w: World, x: number, y: number, _i: number): bool
 export function dropSeeds(w: World, x: number, y: number, i: number): boolean {
   if (w.rng.chance(0.0002) && w.get(x, y + 1) === M.Empty) w.set(x, y + 1, M.Seed);
   if (w.rng.chance(0.0003) && w.get(x, y + 1) === M.Empty) w.set(x, y + 1, M.Honeydew);
+  // Flowers draw the odd bee.
+  if (w.rng.chance(0.0001)) emit(w, x, y, M.Bee);
   // Now and then a flower ripens into fruit, which falls.
   if (w.rng.chance(0.0003)) {
     w.transform(i, M.Fruit);
@@ -831,4 +833,153 @@ function spawnSprite(w: World, cx: number, base: number, sky: number): void {
     const ringY = headY - r - 9;
     for (let dx = -r * 5; dx <= r * 5; dx++) if (w.rng.chance(0.7)) glow(cx + dx, ringY, w.rng.int(1, 3), life - 8);
   }
+}
+
+// ------------------------------------------------------------------ creatures
+// Each creature is one cell. It moves by swapping into a neighbouring cell of its habitat, keeps a
+// food count in `life` (when it has no lifetime of its own), breeds slowly once fed, and dies into
+// something. See Conventions in CLAUDE.md.
+
+/** Direction k (0-3: left, right, up, down) applied to x and to y. No allocation, for per-cell use. */
+function dirX(k: number, x: number): number {
+  return k === 0 ? x - 1 : k === 1 ? x + 1 : x;
+}
+function dirY(k: number, y: number): number {
+  return k === 2 ? y - 1 : k === 3 ? y + 1 : y;
+}
+
+/** Index of a 4-neighbour of (x, y) holding a or b, or -1. */
+function neighbourOf(w: World, x: number, y: number, a: MaterialId, b: MaterialId): number {
+  for (let k = 0; k < 4; k++) {
+    const nx = k === 0 ? x - 1 : k === 1 ? x + 1 : x;
+    const ny = k === 2 ? y - 1 : k === 3 ? y + 1 : y;
+    const t = w.get(nx, ny);
+    if ((t === a || t === b) && w.inBounds(nx, ny)) return w.idx(nx, ny);
+  }
+  return -1;
+}
+
+/** Move creature i into a random 4-neighbour holding a or b. Returns its new index, or -1. */
+function crawl(w: World, x: number, y: number, i: number, a: MaterialId, b: MaterialId): number {
+  const k = w.rng.int(0, 3);
+  const nx = dirX(k, x);
+  const ny = dirY(k, y);
+  const t = w.get(nx, ny);
+  if ((t !== a && t !== b) || !w.inBounds(nx, ny)) return -1;
+  const n = w.idx(nx, ny);
+  w.swap(i, n);
+  return n;
+}
+
+/** Breed: turn a neighbouring cell of `into` (or `orInto`) next to cell n into another `kind`. */
+function breed(w: World, n: number, kind: MaterialId, into: MaterialId, orInto: MaterialId): void {
+  const x = n % w.width;
+  const y = (n - x) / w.width;
+  const m = neighbourOf(w, x, y, into, orInto);
+  if (m >= 0) w.setCell(m, kind);
+}
+
+/** Earthworm: burrows through earth and loam, leaving loam behind; breeds when fed; drowns in water. */
+export function updateWorm(w: World, x: number, y: number, i: number): boolean {
+  if ((w.rng.chance(0.00005) || (touches(w, x, y, M.Water) && w.rng.chance(0.01)))) {
+    w.transform(i, M.Earth);
+    return true;
+  }
+  if (neighbourOf(w, x, y, M.Earth, M.Loam) < 0) return false; // in the open: it falls
+  if (!w.rng.chance(0.3)) return true;
+  const n = crawl(w, x, y, i, M.Earth, M.Loam);
+  if (n >= 0 && w.mat[i] === M.Earth && w.rng.chance(0.1)) {
+    w.transform(i, M.Loam);
+    if (++w.life[n] >= 6 && w.rng.chance(0.2)) {
+      w.life[n] = 0;
+      breed(w, n, M.Earthworm, M.Earth, M.Loam);
+    }
+  }
+  return true;
+}
+
+/** Termite: eats into neighbouring wood, leaving sawdust; breeds when fed; dies out in the open. */
+export function updateTermite(w: World, x: number, y: number, i: number): boolean {
+  const wood = neighbourOf(w, x, y, M.Wood, M.Wood);
+  if (wood < 0) {
+    if (w.rng.chance(0.003)) w.setCell(i, M.Empty);
+    return true;
+  }
+  if (!w.rng.chance(0.03)) return true;
+  const food = w.life[i] + 1;
+  w.setCell(wood, M.Termite);
+  w.life[wood] = food;
+  w.setCell(i, M.Sawdust);
+  if (food >= 8 && w.rng.chance(0.25)) {
+    w.life[wood] = 0;
+    breed(w, wood, M.Termite, M.Wood, M.Wood);
+  }
+  return true;
+}
+
+/** Fish: swims through water, eats algae and breeds when fed; out of water it falls and is soon gone. */
+export function updateFish(w: World, x: number, y: number, i: number): boolean {
+  if (neighbourOf(w, x, y, M.Water, M.SaltWater) < 0) {
+    if (w.get(x, y + 1) === M.Empty) w.swap(i, w.idx(x, y + 1));
+    else if (w.rng.chance(0.02)) w.setCell(i, M.Empty);
+    return true;
+  }
+  if (w.rng.chance(0.00003)) {
+    w.setCell(i, M.Water);
+    return true;
+  }
+  const algae = neighbourOf(w, x, y, M.Algae, M.Algae);
+  if (algae >= 0 && w.rng.chance(0.02)) {
+    w.setCell(algae, M.Water);
+    if (++w.life[i] >= 5 && w.rng.chance(0.3)) {
+      w.life[i] = 0;
+      breed(w, i, M.Fish, M.Water, M.SaltWater);
+    }
+  }
+  if (w.rng.chance(0.4)) crawl(w, x, y, i, M.Water, M.SaltWater);
+  return true;
+}
+
+/** Firefly: drifts about in open air; water puts it out. (It glows and flickers via the renderer.) */
+export function updateFirefly(w: World, x: number, y: number, i: number): boolean {
+  if (touches(w, x, y, M.Water) && w.rng.chance(0.05)) {
+    w.setCell(i, M.Empty);
+    return true;
+  }
+  if (w.rng.chance(0.3)) crawl(w, x, y, i, M.Empty, M.Empty);
+  return true;
+}
+
+/** Bee: buzzes about in open air, turning any honeydew it touches into honey. */
+export function updateBee(w: World, x: number, y: number, i: number): boolean {
+  const dew = neighbourOf(w, x, y, M.Honeydew, M.Honeydew);
+  if (dew >= 0 && w.rng.chance(0.05)) w.setCell(dew, M.Honey);
+  if (w.rng.chance(0.5)) crawl(w, x, y, i, M.Empty, M.Empty);
+  return true;
+}
+
+/** Snail: creeps along solid surfaces, eating algae and moss and breeding when fed; leaves chalk when it dies. */
+export function updateSnail(w: World, x: number, y: number, i: number): boolean {
+  const food = neighbourOf(w, x, y, M.Algae, M.Moss);
+  if (food >= 0 && w.rng.chance(0.01)) {
+    w.setCell(food, M.Empty);
+    if (++w.life[i] >= 4 && w.rng.chance(0.3)) {
+      w.life[i] = 0;
+      w.setCell(food, M.Snail);
+    }
+  }
+  const grip = w.isSolid(x - 1, y) || w.isSolid(x + 1, y) || w.isSolid(x, y - 1) || w.isSolid(x, y + 1);
+  if (!grip) {
+    if (w.get(x, y + 1) === M.Empty) w.swap(i, w.idx(x, y + 1));
+    return true;
+  }
+  if (!w.rng.chance(0.05)) return true;
+  const k = w.rng.int(0, 3);
+  const nx = dirX(k, x);
+  const ny = dirY(k, y);
+  if (w.get(nx, ny) !== M.Empty) return true;
+  if (w.isSolid(nx - 1, ny) || w.isSolid(nx + 1, ny) || w.isSolid(nx, ny - 1) || w.isSolid(nx, ny + 1)) {
+    w.swap(i, w.idx(nx, ny));
+  }
+  return true;
 }

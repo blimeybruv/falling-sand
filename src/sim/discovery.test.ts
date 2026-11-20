@@ -527,6 +527,43 @@ describe('every recipe works in the simulation', () => {
       fillRect(w, 0, 36, 40, 4, M.Saltpetre);
       fillRect(w, 0, 33, 40, 3, M.Sugar);
     }],
+    ['earthworm: damp loam', M.Earthworm, 2000, (w) => {
+      fillRect(w, 0, 32, 40, 8, M.Loam);
+      fillRect(w, 0, 28, 40, 4, M.Water);
+    }],
+    ['termite: rotting wood', M.Termite, 600, (w) => {
+      fillRect(w, 0, 30, 40, 10, M.Wood);
+      fillRect(w, 0, 29, 40, 1, M.Mushroom);
+    }],
+    ['sawdust: termites in wood', M.Sawdust, 300, (w) => {
+      fillRect(w, 0, 30, 40, 10, M.Wood);
+      w.set(20, 35, M.Termite);
+    }],
+    ['fish: water rich with algae', M.Fish, 1500, (w) => {
+      fillRect(w, 0, 25, 40, 15, M.Water);
+      fillRect(w, 0, 24, 40, 1, M.Algae);
+    }],
+    ['firefly: over the grass', M.Firefly, 8000, (w) => {
+      fillRect(w, 0, 38, 40, 2, M.Earth); // not stone: grass touching stone turns to moss
+      fillRect(w, 0, 37, 40, 1, M.Grass);
+    }],
+    ['bee: drawn by flowers', M.Bee, 600, (w) => fillRect(w, 0, 10, 40, 3, M.Flower)],
+    ['honey: bees on honeydew', M.Honey, 100, (w) => {
+      fillRect(w, 0, 35, 40, 5, M.Honeydew);
+      fillRect(w, 0, 32, 40, 3, M.Bee);
+    }],
+    ['snail: mossy stone by water', M.Snail, 1500, (w) => {
+      fillRect(w, 0, 38, 40, 2, M.Stone);
+      fillRect(w, 0, 37, 40, 1, M.Moss);
+      fillRect(w, 0, 30, 40, 7, M.Water);
+    }],
+    ['chalk: what a snail leaves', M.Chalk, 20, (w) => {
+      fillRect(w, 0, 39, 40, 1, M.Stone);
+      for (let x = 0; x < 40; x += 4) {
+        w.set(x, 38, M.Snail);
+        w.life[w.idx(x, 38)] = 5; // near the end of its life
+      }
+    }],
     ['saltpetre: leaves buried in earth', M.Saltpetre, 600, (w) => {
       fillRect(w, 10, 30, 20, 4, M.Leaf);
       fillRect(w, 0, 34, 40, 6, M.Earth);
@@ -1328,5 +1365,65 @@ describe('red sprites', () => {
       }
     }
     expect(seen).toBeGreaterThan(0);
+  });
+});
+
+describe('creatures', () => {
+  it('earthworms turn earth into loam, and their numbers stay bounded by the earth', () => {
+    const w = new World(40, 40, 130);
+    fillRect(w, 0, 10, 40, 30, M.Earth);
+    for (let x = 5; x < 40; x += 10) w.set(x, 25, M.Earthworm);
+    run(w, 4000);
+    expect(w.count(M.Loam)).toBeGreaterThan(20);
+    expect(w.count(M.Earthworm)).toBeLessThan(150);
+  });
+
+  it('termites eat wood into sawdust, and die out once it is gone', () => {
+    const w = new World(30, 30, 131);
+    fillRect(w, 0, 29, 30, 1, M.Stone);
+    fillRect(w, 10, 20, 6, 9, M.Wood);
+    w.set(12, 24, M.Termite);
+    run(w, 6000);
+    expect(w.count(M.Wood)).toBeLessThan(54);
+    expect(w.count(M.Sawdust)).toBeGreaterThan(0);
+    run(w, 6000);
+    expect(w.count(M.Termite)).toBeLessThan(5);
+  });
+
+  it('fish need water: stranded, they are soon gone; in water, they eat algae', () => {
+    const dry = new World(20, 20, 132);
+    fillRect(dry, 0, 19, 20, 1, M.Stone);
+    dry.set(10, 18, M.Fish);
+    run(dry, 600);
+    expect(dry.count(M.Fish)).toBe(0);
+
+    const pond = new World(30, 30, 133);
+    fillRect(pond, 0, 15, 30, 15, M.Water);
+    fillRect(pond, 0, 14, 30, 1, M.Algae);
+    fillRect(pond, 5, 15, 20, 2, M.Fish);
+    run(pond, 1500);
+    expect(pond.count(M.Algae)).toBeLessThan(30);
+  });
+
+  it('fireflies are put out by water', () => {
+    const w = new World(20, 20, 134);
+    fillRect(w, 0, 10, 20, 10, M.Water);
+    fillRect(w, 0, 9, 20, 1, M.Firefly);
+    run(w, 300);
+    expect(w.count(M.Firefly)).toBeLessThan(20);
+  });
+
+  it('chalk fizzes in acid and burns to quicklime', () => {
+    const acid = new World(20, 20, 135);
+    fillRect(acid, 0, 15, 20, 5, M.Chalk);
+    fillRect(acid, 0, 10, 20, 5, M.Acid);
+    run(acid, 200);
+    expect(acid.created[M.Fizz]).toBeGreaterThan(0);
+
+    const kiln = new World(10, 10, 136);
+    kiln.set(5, 9, M.Chalk);
+    kiln.temp[kiln.idx(5, 9)] = 900;
+    kiln.step();
+    expect(kiln.get(5, 9)).toBe(M.Quicklime);
   });
 });

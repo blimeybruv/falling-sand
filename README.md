@@ -126,6 +126,7 @@ debris start fresh when a scene loads.
 | | Permafrost | Frozen ground; thaws into mud | Earth touching ice |
 | | Graphite | Conducts electricity | Lightning through charcoal |
 | | Diamond | Sparkling, indestructible | Graphite past 1600° |
+| | Chalk | Snail shells: fizzes in acid, burns to quicklime | What a snail leaves |
 | | Cement | Pours like a thick liquid, then sets into stone | Ash, sand and water stirred together |
 | | Pumice | Light, holey rock that floats on water | Lava meets carbon dioxide |
 | | Quicksand | Looks like wet sand, but powders sink slowly into it | Sand meets salt water |
@@ -201,6 +202,14 @@ debris start fresh when a scene loads.
 | | Bamboo | Shoots up fast in tall stalks | A seed on loam right beside water |
 | | Amber | Golden solid | Sap left on sand |
 | | Honeydew | Sweet drops that ferment like sugar | Flowers drip it |
+| | Honey | Thick, golden, very slow | Bees on honeydew |
+| | Sawdust | Light, catches fire easily | Termites eating wood |
+| | Earthworm | Creature: burrows through earth, leaving loam; drowns in water | Damp loam |
+| | Termite | Creature: eats wood into sawdust; dies out in the open | Rotting wood (mushrooms) |
+| | Fish | Creature: swims, eats algae, breeds; can't survive out of water | Water under algae |
+| | Firefly | Creature: drifts over grass, glowing | Grass with open air above |
+| | Bee | Creature: turns honeydew into honey | Flowers draw them |
+| | Snail | Creature: creeps over damp stone eating algae and moss | Moss beside water |
 | R | Moss | Creeps over damp stone and brick | Grass touching stone |
 | Y | Algae | Floats and spreads across water | Weeds reaching the surface |
 | | **Tools** | | |
@@ -216,6 +225,10 @@ Water can put burning cells out, but how easily depends on the material (napalm 
 A pulse warms the wire, sets flammable things beside it alight (so a wire makes a detonator) and
 splits fresh water into hydrogen (salt water gives off chlorine). Draw Lightning on a wire to send a pulse, or build a battery. Big storms strike lightning, and now
 and then throw red sprites, eerie jellyfish of red light, into the clear sky above the clouds.
+
+**Creatures** are single cells with a simple life: each needs its habitat and food, breeds slowly
+once fed and dies into something, so none can overrun a scene. Earthworms make loam, termites eat
+wood, fish keep algae down, bees make honey, snails leave chalk, and fireflies just glow.
 
 Every cell also has a temperature. Heat spreads between neighbours (quickly through stone, slowly
 through air and wood) and fades back to room temperature. Fire, lava and burning cells are hot, and

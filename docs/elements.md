@@ -199,15 +199,18 @@ The more "advanced" ones refine materials.
 
 | | Creature | Habitat and food | What it does | Dies into | Effort |
 |---|---|---|---|---|---|
-| | Earthworm | Burrows through earth and loam | Slowly turns earth into loam behind it; breeds when it has eaten enough | Earth (drowns in water, burns) | F |
-| | Termite | Lives inside wood | Eats wood, leaving sawdust (a new light powder); breeds in large timbers | Ash | F |
+| ✅ | Earthworm | Burrows through earth and loam; hatches in loam beside water | Leaves loam behind it; breeds every few mouthfuls | Earth (drowns in water, burns, or old age) | F |
+| ✅ | Termite | Lives inside wood; drawn by mushrooms rotting it | Eats wood, leaving sawdust; breeds in big timbers | Dies out once there's no wood left | F |
 | | Ant | Digs in sand and earth, needs open air nearby | Carries grains up and drops them, building anthills and tunnels | Earth | F |
-| | Fish | Swims in water (salt or fresh) | Darts about; eats algae and breeds when fed | Empty (it flops about out of water, then is gone) | F |
-| | Bee | Flies between flowers | Turns honeydew into honey (a new thick golden liquid): refining | Smoke near fire, otherwise Empty | F |
-| | Firefly | Drifts in open air near grass | Blinks with a soft green glow (uses the renderer's flicker) | Empty | F |
+| ✅ | Fish | Fresh or salt water; appears under algae | Swims, eats algae, breeds when fed | Gone soon after being stranded | F |
+| ✅ | Bee | Open air; drawn by flowers | Turns honeydew it touches into honey: refining | Empty (lives 3000–5000 frames) | F |
+| ✅ | Firefly | Open air over grass | Glows and flickers as it drifts | Empty (water puts it out) | F |
 | | Yeast | In sugar water | Ferments sugar into alcohol and carbon dioxide, multiplying while there's sugar | Empty when the sugar runs out | F |
-| | Snail | Crawls on stone and plants near water | Eats algae and moss; leaves a shell (chalk) when it dies, which can be burnt to quicklime | Chalk | F |
+| ✅ | Snail | Creeps over solid surfaces; appears on moss beside water | Eats algae and moss, breeds when fed | Chalk (its shell), which fizzes in acid and burns to quicklime | F |
 | | Coral polyp | Fixed in warm salt water | Slowly builds coral rock from the salt water: refining sea into stone | Coral rock | F |
+
+Also built with the creatures: **Sawdust** (termite leavings; light, burns easily), **Honey** (thick
+golden liquid from bees) and **Chalk** (snail shells; fizzes in acid or vinegar, burns to quicklime).
 
 ## Vents (generators, the scientific way)
 

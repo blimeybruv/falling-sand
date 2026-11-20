@@ -130,6 +130,15 @@ export const M = {
   Diamond: 122,
   SmokeBomb: 123,
   Sprite: 124,
+  Earthworm: 125,
+  Termite: 126,
+  Fish: 127,
+  Firefly: 128,
+  Bee: 129,
+  Snail: 130,
+  Sawdust: 131,
+  Honey: 132,
+  Chalk: 133,
 } as const;
 
 export type MaterialId = (typeof M)[keyof typeof M];
