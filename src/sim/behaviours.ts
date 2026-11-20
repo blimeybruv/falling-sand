@@ -603,9 +603,20 @@ export function updateVapour(w: World, x: number, y: number, i: number): boolean
   return false;
 }
 
+/** Frames of charge building (corona) between a cloud deciding to strike and the bolt. */
+const STRIKE_CHARGE: readonly [number, number] = [40, 70];
+
 export function rainCloud(w: World, x: number, y: number, i: number): boolean {
-  // Deep inside a thick cloud, very rarely, lightning strikes.
-  if (w.rng.chance(0.00002) && countAround(w, x, y, M.Cloud, M.Cloud) >= 6) strike(w, x, y);
+  // Deep inside a thick cloud, very rarely, lightning: first the charge builds for a second or so
+  // (the corona crackle you can hear before a close strike), counted down in `vel`, then it strikes.
+  const charging = w.vel[i];
+  if (charging > 0) {
+    w.noise.corona++;
+    w.vel[i] = charging - 1;
+    if (charging === 1) strike(w, x, y);
+  } else if (w.rng.chance(0.00002) && countAround(w, x, y, M.Cloud, M.Cloud) >= 6) {
+    w.vel[i] = w.rng.int(STRIKE_CHARGE[0], STRIKE_CHARGE[1]);
+  }
   // The base of the cloud drizzles, and under a thick cloud it pours. The rain is the cloud itself
   // coming down (no water from nowhere), so a deep bank rains itself thinner from the bottom up.
   if (w.get(x, y + 1) === M.Empty && w.rng.chance(CLOUD_DRIZZLE + CLOUD_POUR * cloudDepth(w, x, y))) {

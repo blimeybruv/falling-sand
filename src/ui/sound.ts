@@ -6,7 +6,8 @@
  *   wind         filtered brown noise, gusting, following the Wind setting
  *   fire         random crackles and pops, and a low roar under a big blaze
  *   explosions   a thump falling in pitch plus a rumbling burst, bigger with the blast
- *   lightning    thunder after the flash: a crack and rumble near, a later, deeper roll far off
+ *   lightning    thunder after the flash: a crack and rumble near, a later, deeper roll far off;
+ *                before a near strike, the corona: a sizzling crackle as the charge builds
  *   steam, acid  a hiss
  *   rain, pours  a patter of drops over a soft wash; pouring powder, a grainy hush
  *   lava         slow, deep bubbles
@@ -31,6 +32,10 @@ const IDLE_SECONDS = 2;
 /** Sample the grid every this many frames, looking at every STRIDE-th cell. */
 const SAMPLE_EVERY = 2;
 const STRIDE = 6;
+/** Seconds between corona episodes, however many charges overlap in a big storm. */
+const CORONA_GAP = 1.5;
+/** A corona swells for at least this long before a strike can end it. */
+const CORONA_MIN = 0.6;
 
 const EMPTY: number = M.Empty;
 const FIRE: number = M.Fire;
@@ -109,6 +114,8 @@ export class Sound {
   private loops: Record<'roar' | 'hiss' | 'wash' | 'hush' | 'hum' | 'buzz', Loop> | null = null;
   private crackleBus: AudioNode | null = null;
   private dripBus: AudioNode | null = null;
+  private coronaBus: AudioNode | null = null;
+  private sizzle: GainNode | null = null;
   /** Wind strength (0..1) the gusts are currently following. */
   private strength = 0;
   private nextGust = 0;
@@ -122,6 +129,13 @@ export class Sound {
   private lastBoom = 0;
   private pendingBoom = 0;
   private lastThunder = 0;
+  /** Charge is building towards a strike (the sim's corona count was non-zero last time). */
+  private charging = false;
+  /** How far off the coming strike is (0 near .. 1 far), chosen as its charge starts. */
+  private strikeFar = 0;
+  /** No new corona episode before this audio time. */
+  private coronaQuietUntil = 0;
+  private coronaStart = 0;
 
   constructor() {
     const unlock = (): void => {
@@ -149,7 +163,7 @@ export class Sound {
     const noise = world.noise;
     const ctx = this.ctx;
     if (!ctx || !this.enabled || document.hidden) {
-      noise.blasts = noise.blastRadius = noise.strikes = noise.fizzes = noise.bursts = 0;
+      noise.blasts = noise.blastRadius = noise.strikes = noise.corona = noise.fizzes = noise.bursts = 0;
       this.lastSteam = world.created[M.Steam];
       return;
     }
@@ -167,8 +181,9 @@ export class Sound {
     const blasts = noise.blasts;
     const blastRadius = noise.blastRadius;
     const strikes = noise.strikes;
+    const corona = noise.corona;
     const bursts = noise.bursts;
-    noise.blasts = noise.blastRadius = noise.strikes = noise.fizzes = noise.bursts = 0;
+    noise.blasts = noise.blastRadius = noise.strikes = noise.corona = noise.fizzes = noise.bursts = 0;
 
     const h = this.heard;
     if (running) this.sample(world);
@@ -191,7 +206,7 @@ export class Sound {
     const busy =
       strength > 0 ||
       crackles + drips + bubbles + pings > 0 ||
-      blasts + strikes + bursts + h.bolts > 0 ||
+      blasts + strikes + bursts + corona + h.bolts > 0 ||
       (loops !== null && Object.values(loops).some((l) => l.target > 0.001));
 
     if (busy) {
@@ -225,9 +240,14 @@ export class Sound {
       this.lastBoom = t;
     }
     if (bursts > 0) this.pop(ahead);
-    // Thunder for a strike from a cloud, or any bolt seen in the grid (lightning drawn with the brush).
-    if ((strikes > 0 || h.bolts > 0) && t - this.lastThunder > 0.8) {
-      this.thunder(ahead);
+    // The strike a corona warned of thunders at the distance chosen for it. Any other strike, or a
+    // bolt seen in the grid (lightning drawn with the brush), thunders from a random distance.
+    const warned = this.updateCorona(t, dt, corona > 0, strikes > 0);
+    if (warned >= 0) {
+      this.thunder(ahead, warned);
+      this.lastThunder = t;
+    } else if ((strikes > 0 || h.bolts > 0) && t - this.lastThunder > 0.8) {
+      this.thunder(ahead, Math.random());
       this.lastThunder = t;
     }
   }
@@ -331,6 +351,8 @@ export class Sound {
     };
     this.crackleBus = this.bus('highpass', 650);
     this.dripBus = this.bus('bandpass', 3400, 1.1);
+    this.coronaBus = this.bus('highpass', 3500);
+    this.sizzle = this.loop(this.white, 'bandpass', 6500, 1.5).gain;
   }
 
   /** A looping noise source through a filter into a gain (starting silent). */
@@ -473,13 +495,45 @@ export class Sound {
   }
 
   /**
-   * Lightning, at a random distance. Light arrives at once and sound about a kilometre every three
-   * seconds, so the thunder comes after the flash: straight away for a near strike, with a sharp
-   * crack; up to two seconds later for a far one, quieter, deeper and longer (the crack's high
-   * notes don't carry that far).
+   * Corona: as charge builds before a strike, things near where it will land hiss and crackle, the
+   * warning sign of a close strike. So it's only heard when the coming strike is near (its distance
+   * is picked as the charge starts); it swells, then cuts off as the bolt lands.
    */
-  private thunder(t: number): void {
-    const far = Math.random();
+  /**
+   * Runs a corona episode: it starts when charge begins building (choosing the coming strike's
+   * distance) and ends with the next strike, whose distance it returns (otherwise -1). In a big
+   * storm many charges overlap, so a new episode waits CORONA_GAP seconds after the last.
+   */
+  private updateCorona(t: number, dt: number, building: boolean, struck: boolean): number {
+    let warned = -1;
+    // A strike in the first moments of an episode is some other bolt (charges overlap in a storm).
+    if (struck && t - this.coronaStart < CORONA_MIN) struck = false;
+    if (this.charging && (struck || !building)) {
+      if (struck) warned = this.strikeFar;
+      this.charging = false;
+      this.coronaQuietUntil = t + CORONA_GAP;
+      this.sizzle?.gain.setTargetAtTime(0, t, 0.015);
+    }
+    if (building && !this.charging && t > this.coronaQuietUntil) {
+      this.charging = true;
+      this.coronaStart = t;
+      this.strikeFar = Math.random();
+      if (this.strikeFar < 0.4) this.sizzle?.gain.setTargetAtTime(0.09, t, 0.35);
+    }
+    if (this.charging && this.strikeFar < 0.4) {
+      for (let k = events(70, dt, 8); k > 0; k--) {
+        this.burst(this.coronaBus!, t + 0.02 + Math.random() * dt, 0.05 + Math.random() * 0.1, 0.003 + Math.random() * 0.004, 1 + Math.random());
+      }
+    }
+    return warned;
+  }
+
+  /**
+   * Lightning, `far` away (0 near .. 1 far). Light arrives at once and sound about a kilometre every three seconds, so the
+   * thunder comes after the flash: straight away for a near strike, with a sharp crack; up to two
+   * seconds later for a far one, quieter, deeper and longer (the crack's high notes don't carry).
+   */
+  private thunder(t: number, far: number): void {
     const delay = far * far * 2;
     if (far < 0.4) this.burst(this.crackleBus!, t + delay, 0.45 * (1 - far), 0.09, 1.2);
     this.rumble(t + delay + 0.05, 0.8 - 0.4 * far, 2.6 + 1.6 * far, 1100 - 700 * far);

@@ -537,6 +537,23 @@ describe('noise (audible events for the UI)', () => {
   });
 });
 
+describe('lightning', () => {
+  it('builds charge (corona) for most of a second before it strikes', () => {
+    const w = new World(60, 120, 12);
+    for (let y = 22; y < 42; y++) for (let x = 0; x < 60; x++) w.set(x, y, M.Cloud);
+    let charging = -1;
+    let struck = -1;
+    for (let f = 0; f < 4000 && struck < 0; f++) {
+      w.step();
+      if (charging < 0 && w.noise.corona > 0) charging = f;
+      if (w.noise.strikes > 0) struck = f;
+      w.noise.corona = w.noise.strikes = 0;
+    }
+    expect(struck).toBeGreaterThan(0);
+    expect(struck - charging).toBeGreaterThanOrEqual(39);
+  });
+});
+
 describe('solar cell', () => {
   const pulses = (sun: number, roof: MaterialId | null): number => {
     const w = new World(40, 30, 9);

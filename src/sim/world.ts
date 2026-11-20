@@ -7,6 +7,7 @@
  *   life  remaining lifetime in frames, for short-lived materials (fire, smoke, steam)
  *   burn  > 0 while the cell is burning: frames left before it burns out (or, for explosives, the fuse)
  *   vel   consecutive frames spent falling; drives acceleration and nitroglycerin's impact trigger
+ *         (clouds never fall: in a cloud cell it counts down to a lightning strike)
  *   temp  temperature (AMBIENT_TEMP is room temperature); spreads between neighbours every frame
  *   vx,vy velocity of a particle in flight (thrown by an explosion), in 1/SUB cells per frame
  *   charge electricity in a conductor: CHARGE_ACTIVE for one frame, then counting down (cooldown)
@@ -128,10 +129,10 @@ export class World {
   wind = 0;
   /**
    * Audible events since the UI last looked (it reads and zeroes these; the simulation itself makes
-   * no sound): explosions and the biggest radius among them, lightning strikes, acid eating
-   * something, fireworks bursting.
+   * no sound): explosions and the biggest radius among them, lightning strikes, frames of charge
+   * building before a strike (corona), acid eating something, fireworks bursting.
    */
-  readonly noise = { blasts: 0, blastRadius: 0, strikes: 0, fizzes: 0, bursts: 0 };
+  readonly noise = { blasts: 0, blastRadius: 0, strikes: 0, corona: 0, fizzes: 0, bursts: 0 };
   /**
    * Sunshine, 0 (none) to 1 (full). Light comes straight down each column and warms the first thing
    * it reaches, which may also change (`sunlit` in the material table): water evaporates, clouds burn off.

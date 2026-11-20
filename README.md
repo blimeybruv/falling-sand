@@ -60,7 +60,7 @@ Discovery progress is kept for when you switch back.
 | `T` | Heat view: colour everything by temperature (or the Heat view button) |
 | Speed menu | 0.25× to 3× simulation speed |
 | Wind menu | Blow smoke, fire, steam and falling particles left or right |
-| Speaker button | Sound on or off. Wind (following the Wind setting, gusting), crackling fire, booming explosions, thunder after lightning, hissing steam and acid, rain and pouring sand, bubbling lava, humming electricity, fireworks, buzzing bees, and a chime for each discovery. All made live with the Web Audio API, no sound files |
+| Speaker button | Sound on or off. Wind (following the Wind setting, gusting), crackling fire, booming explosions, thunder after lightning (with a corona sizzle as the charge builds before a near strike), hissing steam and acid, rain and pouring sand, bubbling lava, humming electricity, fireworks, buzzing bees, and a chime for each discovery. All made live with the Web Audio API, no sound files |
 | Sun menu | Sunlight from above warms whatever it reaches first: it evaporates water (which rises and makes clouds), dries mud and salt water, burns off clouds and melts snow, but not in the shade. Glass lets it through |
 | Scene menu | Save in this browser, load it again, download or open a scene file, or copy a share link |
 | `J` or Journal button | Discovery journal: what you've found, and hints for the rest |
@@ -282,7 +282,7 @@ estimates.
 - [ ] **Line and shape tools**: drag to draw a straight line, a rectangle or a circle (outline or filled) in the selected material, with a preview outline while dragging, plus a "replace" brush that swaps one material for another. Tool buttons beside the brush slider, with keyboard shortcuts. Ideal for building containers and kilns. The sim already has `paintLine`; shapes are a few more `World` helpers plus input handling in `src/ui/input.ts`.
 - [ ] **Pan and zoom on touch**: pinch to zoom into part of the grid, and drag with two fingers to pan (two fingers erase today).
 - [ ] **Run the simulation in a Web Worker**: move `World.step()` off the main thread and pass the arrays across, so bigger grids stay smooth.
-- [ ] **More sound**: a volume slider; ice cracking, glass shattering, the corona crackle just before a close lightning strike.
+- [ ] **More sound**: a volume slider; ice cracking, glass shattering.
 - [ ] **Smarter liquids**: pressure, so water rises to the same level in connected containers (a U-bend).
 - [ ] **Heat view legend**: a small temperature scale in the corner while heat view is on.
 - [ ] **Accessibility**: a high-contrast palette option, and keyboard control of the brush position.
