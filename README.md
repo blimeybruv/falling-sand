@@ -116,6 +116,14 @@ debris start fresh when a scene loads.
 | | Slag | Glassy waste powder | Molten iron meets sand |
 | | Basalt | Dark volcanic rock | Lava cooling in open air |
 | | Geyser rock | When hot, now and then blasts water and steam upward | Basalt meets water |
+| | Spring | A vent: trickles water up through the rock (and through its own pond) until the aquifer runs dry, then turns to stone | Water in gravel under stone |
+| | Brine spring | A vent of salt water | Salt water in gravel under stone |
+| | Gas vent | A vent of swamp gas; light it for a long-burning flame | Swamp gas trapped under stone |
+| | Gusher | A vent that blows oil high into the air in bursts | Oil reaching a gas vent |
+| | Fumarole | A hot vent breathing steam and now and then sulfur | Steam on hot basalt |
+| | Mud pot | A warm vent blooping up mud | Mud over a fumarole |
+| | Volcanic vent | Erupts lava in bursts, then cools to basalt when spent | Lava sealed under stone |
+| | Sinkhole | Liquids that reach it drain away underground | Acid eating through chalk |
 | | Salt crystal | Clear pink shards that keep growing | Salt water touching ice |
 | | Glass fibre | Light strands that hardly let heat through | Molten glass in the wind |
 | | Quartz | Clear crystal; melts into glass at 900° | Sand buried deep under heat |
@@ -283,7 +291,7 @@ chains (neon, toffee, popcorn, icicles, fertiliser, compost...), with recipes an
 estimates.
 
 - [ ] **A primordial wilderness map**: a pre-generated starting world (from a seed, so it can be shared and regenerated) that looks like untouched prehistoric land: layered rock with ore veins and a buried oil pocket, a smouldering volcano with a lava chamber, a salt-water sea with sandy shores and seaweed, caves with stalactites, loam hills with grass and trees, a peat bog, and storm clouds over it all. Offered from the Scene menu. Loading it shouldn't count as discoveries (scenes already don't), so it doubles as a sandbox for Discovery mode.
-- [ ] **Vents and load-bearing materials**: see the design notes in [`docs/elements.md`](docs/elements.md).
+- [ ] **Load-bearing materials**: see the design note in [`docs/elements.md`](docs/elements.md). (Vents are built.)
 - [ ] **More materials**: pick one from [`docs/elements.md`](docs/elements.md). Each is a table entry, usually a `Reaction`, and a line in `RECIPES`; the tests check every one can be discovered.
 - [ ] **Discovery goals**: small challenges once everything is unlocked ("grow a forest of 5 trees", "boil a whole pond").
 - [ ] **Metal and electricity**: a conductive solid, plus a spark that travels through connected metal and ignites or explodes what it reaches.

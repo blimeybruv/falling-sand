@@ -50,6 +50,9 @@ import {
   spinDynamo,
   growIcicle,
   spinCandyFloss,
+  vent,
+  swallow,
+  aquifer,
   electromagnet,
   spreadAlgae,
   formLoam,
@@ -208,6 +211,21 @@ export interface MaterialDef {
   fadeFrames?: number;
   /** Renderer: brightness flickers frame to frame. */
   flicker?: boolean;
+  /**
+   * Vents: a reservoir under pressure finding a way out. Now and then (on average every `every`
+   * frames) it releases a burst of `what` (sometimes something else) into open air, up through any
+   * pool of fluid above it, optionally launched upward at `launch` cells a frame. It holds
+   * `reservoir` cells in all, then dies into `spent`, so no vent can flood the grid.
+   */
+  emits?: {
+    what: MaterialId;
+    sometimes?: { what: MaterialId; chance: number };
+    every: number;
+    burst: readonly [number, number];
+    reservoir: number;
+    spent: MaterialId;
+    launch?: number;
+  };
   /** Renderer: the colour it glows while carrying a pulse (instead of the usual spark), e.g. neon. */
   chargeColour?: readonly [number, number, number];
   /** Two-material reactions; see Reaction. */
@@ -372,6 +390,8 @@ const defs: Record<MaterialId, Def> = {
     reactions: [
       { with: M.Gunpowder, chance: 0.03, into: M.Napalm, otherInto: M.Napalm },
       { with: M.Lye, chance: 0.05, into: M.Foam, otherInto: M.Foam },
+      // Oil reaching a gas vent: the gas pressure behind it blows the oil out in a gusher.
+      { with: M.GasVent, chance: 0.01, otherInto: M.Gusher },
     ],
     extinguishChance: 0.1,
     description: 'Liquid, floats on water; burns fast.',
@@ -469,6 +489,9 @@ const defs: Record<MaterialId, Def> = {
     update: updateSteam,
     above: { temp: 2000, into: M.Plasma },
     reactions: [
+      // Hot steam rising through volcanic rock (water seeping onto basalt near lava) opens a fumarole.
+      // (Volcanic rock, not just heat: steam off a pot boiled over a wood fire is nearly as hot.)
+      { with: M.Basalt, minTemp: 100, chance: 0.003, otherInto: M.Fumarole },
       { with: M.Snow, chance: 0.05, into: M.Fog },
       { with: M.Ice, chance: 0.05, into: M.Fog },
       // On something as cold as dry ice it freezes straight to frost.
@@ -508,6 +531,8 @@ const defs: Record<MaterialId, Def> = {
     heat: { temp: 1100, rate: 0.15 },
     glow: true,
     update: updateLava,
+    // Lava sealed under stone breaks through as a volcanic vent.
+    reactions: [{ with: M.Stone, side: 'above', chance: 0.001, otherInto: M.VolcanicVent }],
     description: 'Slow, glowing liquid; sets things alight, boils water and cools to stone where they meet.',
   },
   [M.Ice]: {
@@ -689,6 +714,8 @@ const defs: Record<MaterialId, Def> = {
     sunlit: { chance: 0.004, into: M.Earth },
     reactions: [
       { with: M.Water, chance: 0.003, into: M.Clay },
+      // Mud over a fumarole clogs it into a mud pot, bubbling up mud instead of steam.
+      { with: M.Fumarole, chance: 0.01, otherInto: M.MudPot },
       // With grass (straw) mixed in, it sets into adobe.
       { with: M.Grass, chance: 0.01, into: M.Adobe, otherInto: M.Empty },
     ],
@@ -903,6 +930,8 @@ const defs: Record<MaterialId, Def> = {
     key: '',
     category: 'fire',
     kind: 'gas',
+    // Trapped against a stone ceiling, it seeps through as a gas vent.
+    reactions: [{ with: M.Stone, side: 'above', chance: 0.002, otherInto: M.GasVent }],
     density: 0.4,
     colour: [128, 146, 96],
     colourJitter: 0.1,
@@ -1566,6 +1595,113 @@ const defs: Record<MaterialId, Def> = {
     conductivity: 0.05,
     chargeColour: [255, 80, 190],
     description: 'A rare gas from plasma meeting glass. Glows bright pink while electricity passes through it: keep it in a glass tube.',
+  },
+  [M.Spring]: {
+    ...base,
+    name: 'Spring',
+    key: '',
+    kind: 'static',
+    density: 100,
+    colour: [96, 112, 126],
+    colourEnd: [128, 150, 168],
+    colourJitter: 0.08,
+    update: vent,
+    emits: { what: M.Water, every: 25, burst: [1, 2], reservoir: 800, spent: M.Stone },
+    description: 'Water under pressure in the rock finding a way up: a steady trickle until the aquifer runs dry.',
+  },
+  [M.BrineSpring]: {
+    ...base,
+    name: 'Brine spring',
+    key: '',
+    kind: 'static',
+    density: 100,
+    colour: [124, 122, 112],
+    colourEnd: [210, 206, 190],
+    colourJitter: 0.1,
+    update: vent,
+    emits: { what: M.SaltWater, every: 25, burst: [1, 2], reservoir: 800, spent: M.Stone },
+    description: 'A salt spring: salt water rising through the rock until it runs dry.',
+  },
+  [M.Gusher]: {
+    ...base,
+    name: 'Gusher',
+    key: '',
+    kind: 'static',
+    density: 100,
+    colour: [40, 34, 30],
+    colourEnd: [76, 62, 48],
+    colourJitter: 0.1,
+    update: vent,
+    emits: { what: M.Oil, every: 200, burst: [12, 24], reservoir: 500, spent: M.TarSand, launch: 4 },
+    description: 'Hot oil under pressure blowing out of the rock in bursts, shot high into the air.',
+  },
+  [M.GasVent]: {
+    ...base,
+    name: 'Gas vent',
+    key: '',
+    kind: 'static',
+    density: 100,
+    colour: [92, 98, 80],
+    colourEnd: [120, 128, 100],
+    colourJitter: 0.08,
+    update: vent,
+    emits: { what: M.SwampGas, every: 12, burst: [1, 2], reservoir: 1000, spent: M.Stone },
+    description: 'A seep of natural gas. Light it and it burns for as long as the gas lasts.',
+  },
+  [M.Fumarole]: {
+    ...base,
+    name: 'Fumarole',
+    key: '',
+    kind: 'static',
+    density: 100,
+    colour: [150, 140, 110],
+    colourEnd: [206, 192, 92],
+    colourJitter: 0.1,
+    heat: { temp: 250, rate: 0.05 },
+    update: vent,
+    emits: { what: M.Steam, sometimes: { what: M.Sulfur, chance: 0.05 }, every: 20, burst: [2, 3], reservoir: 1200, spent: M.Stone },
+    description: 'A hot volcanic vent breathing steam, crusted yellow with the sulfur it now and then coughs up.',
+  },
+  [M.MudPot]: {
+    ...base,
+    name: 'Mud pot',
+    key: '',
+    kind: 'static',
+    density: 100,
+    colour: [104, 80, 56],
+    colourEnd: [140, 110, 78],
+    colourJitter: 0.1,
+    heat: { temp: 90, rate: 0.05 },
+    update: vent,
+    emits: { what: M.Mud, every: 50, burst: [1, 3], reservoir: 400, spent: M.Earth, launch: 1.5 },
+    description: 'Warm ground bubbling and blooping up mud.',
+  },
+  [M.VolcanicVent]: {
+    ...base,
+    name: 'Volcanic vent',
+    key: '',
+    kind: 'static',
+    density: 100,
+    colour: [64, 30, 22],
+    colourEnd: [196, 72, 24],
+    colourJitter: 0.12,
+    glow: true,
+    heat: { temp: 1100, rate: 0.1 },
+    update: vent,
+    emits: { what: M.Lava, every: 300, burst: [15, 30], reservoir: 700, spent: M.Basalt, launch: 3 },
+    description: 'Lava under pressure breaking through the rock: it erupts in bursts, then cools to basalt when spent.',
+  },
+  [M.Sinkhole]: {
+    ...base,
+    name: 'Sinkhole',
+    key: '',
+    kind: 'static',
+    density: 100,
+    colour: [22, 20, 18],
+    colourEnd: [40, 36, 32],
+    colourJitter: 0.1,
+    update: swallow,
+    description: 'A hole eaten down through chalk by acid: liquids that reach it drain away underground.',
   },
   [M.Sap]: {
     ...base,
@@ -2234,6 +2370,8 @@ const defs: Record<MaterialId, Def> = {
     name: 'Gravel',
     key: '',
     kind: 'powder',
+    // Soaked with water under a stone lid, it's an aquifer: the stone above becomes a spring.
+    update: aquifer,
     density: 24,
     colour: [128, 124, 120],
     colourEnd: [96, 92, 90],
@@ -2637,6 +2775,8 @@ const defs: Record<MaterialId, Def> = {
     colourJitter: 0.05,
     above: { temp: 800, into: M.Quicklime },
     reactions: [
+      // Acid eating down through chalk now and then opens a sinkhole.
+      { with: M.Acid, chance: 0.003, into: M.Sinkhole },
       { with: M.Acid, chance: 0.05, into: M.Fizz, otherInto: M.Fizz },
       { with: M.Vinegar, chance: 0.05, into: M.Fizz, otherInto: M.Fizz },
     ],
@@ -2669,7 +2809,7 @@ export const MATERIALS: readonly MaterialDef[] = Object.values(M).map((id) => ({
 export const PALETTE: readonly MaterialDef[] = [
   // ground
   M.Sand, M.Earth, M.Mud, M.Clay, M.Loam, M.Compost, M.Fertiliser, M.Stone, M.Brick, M.Glass, M.Obsidian, M.Ice, M.Icicle, M.Snow,
-  M.Salt, M.IronOre, M.Iron, M.Rust, M.CopperOre, M.Copper, M.Verdigris, M.Gold, M.IronFilings, M.Magnet, M.Steel, M.Tin, M.Bronze, M.Slag, M.Basalt, M.GeyserRock,
+  M.Salt, M.IronOre, M.Iron, M.Rust, M.CopperOre, M.Copper, M.Verdigris, M.Gold, M.IronFilings, M.Magnet, M.Steel, M.Tin, M.Bronze, M.Slag, M.Basalt, M.GeyserRock, M.Spring, M.BrineSpring, M.Gusher, M.GasVent, M.Fumarole, M.MudPot, M.VolcanicVent, M.Sinkhole,
   M.SaltCrystal, M.GlassFibre, M.Quartz, M.TarSand, M.Gravel, M.Concrete, M.Terracotta,
   M.Porcelain, M.Adobe, M.Quicklime, M.SlakedLime, M.Mortar, M.Frost, M.Permafrost, M.Graphite, M.Fulgurite, M.Diamond, M.Chalk, M.Cement, M.Stalactite, M.Rubber, M.Wax, M.Glaze, M.Pumice, M.Quicksand, M.Hail, M.DryIce, M.StainedGlass,
   // liquids and gases
@@ -2697,3 +2837,5 @@ export const SUN_HEAT = 6;
 export const MAX_BLAST_RADIUS = 12;
 /** At most this many explosions are processed per frame; the rest wait for the next frame. */
 export const MAX_EXPLOSIONS_PER_FRAME = 16;
+/** All the vents together release at most this many cells a frame. */
+export const MAX_VENT_CELLS_PER_FRAME = 48;

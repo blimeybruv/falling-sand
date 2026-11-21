@@ -24,6 +24,7 @@ import {
   MATERIALS,
   MAX_BLAST_RADIUS,
   MAX_EXPLOSIONS_PER_FRAME,
+  MAX_VENT_CELLS_PER_FRAME,
   type MaterialDef,
   type Reaction,
 } from './materials';
@@ -142,6 +143,8 @@ export class World {
   /** Frame number in which each cell last moved or was created; such cells are skipped. */
   private readonly stamp: Uint32Array;
   private explosionsThisFrame = 0;
+  /** How many more cells vents may release this frame (refilled by step(); see MAX_VENT_CELLS_PER_FRAME). */
+  ventBudget = 0;
   /**
    * How many cells of each material the simulation itself has created (in step(), not by the brush
    * or by loading a scene). Discovery mode watches this to unlock materials.
@@ -444,6 +447,7 @@ export class World {
   step(): void {
     this.frame++;
     this.explosionsThisFrame = 0;
+    this.ventBudget = MAX_VENT_CELLS_PER_FRAME;
     this.stepping = true;
     this.updateTemperature();
     this.updateElectricity();

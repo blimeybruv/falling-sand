@@ -519,6 +519,43 @@ describe('every recipe works in the simulation', () => {
       fillRect(w, 0, 32, 40, 8, M.Charcoal);
       fillRect(w, 0, 31, 40, 1, M.Lightning);
     }],
+    ['spring: water in gravel under stone', M.Spring, 2000, (w) => {
+      fillRect(w, 0, 36, 20, 4, M.Gravel);
+      fillRect(w, 20, 36, 20, 4, M.Water);
+      fillRect(w, 0, 35, 40, 1, M.Stone);
+    }],
+    ['brine spring: salt water in gravel under stone', M.BrineSpring, 2000, (w) => {
+      fillRect(w, 0, 36, 20, 4, M.Gravel);
+      fillRect(w, 20, 36, 20, 4, M.SaltWater);
+      fillRect(w, 0, 35, 40, 1, M.Stone);
+    }],
+    ['gusher: oil reaching a gas vent', M.Gusher, 300, (w) => {
+      fillRect(w, 0, 36, 40, 4, M.Stone);
+      fillRect(w, 10, 36, 20, 1, M.GasVent);
+      fillRect(w, 0, 32, 40, 4, M.Oil);
+    }],
+    ['gas vent: swamp gas under stone', M.GasVent, 300, (w) => {
+      fillRect(w, 0, 10, 40, 1, M.Stone);
+      fillRect(w, 0, 11, 40, 6, M.SwampGas);
+    }],
+    ['fumarole: water on hot basalt', M.Fumarole, 600, (w) => {
+      fillRect(w, 0, 34, 40, 6, M.Lava);
+      fillRect(w, 0, 33, 40, 1, M.Basalt);
+      fillRect(w, 0, 29, 40, 4, M.Water);
+    }],
+    ['mud pot: mud over a fumarole', M.MudPot, 300, (w) => {
+      fillRect(w, 0, 36, 40, 4, M.Stone);
+      fillRect(w, 10, 36, 20, 1, M.Fumarole);
+      fillRect(w, 0, 32, 40, 4, M.Mud);
+    }],
+    ['volcanic vent: lava sealed under stone', M.VolcanicVent, 300, (w) => {
+      fillRect(w, 0, 30, 40, 1, M.Stone);
+      fillRect(w, 0, 31, 40, 9, M.Lava);
+    }],
+    ['sinkhole: acid eating through chalk', M.Sinkhole, 300, (w) => {
+      fillRect(w, 0, 34, 40, 6, M.Chalk);
+      fillRect(w, 0, 30, 40, 4, M.Acid);
+    }],
     ['toffee: caramel left to cool', M.Toffee, 1500, (w) => fillRect(w, 0, 30, 40, 10, M.Caramel)],
     ['candy floss: hot caramel in the wind', M.CandyFloss, 300, (w) => {
       fillRect(w, 0, 34, 40, 6, M.Caramel);

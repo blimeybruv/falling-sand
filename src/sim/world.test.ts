@@ -827,6 +827,100 @@ describe('paint and neon', () => {
   });
 });
 
+describe('vents', () => {
+  const count = (w: World, m: number): number => w.mat.reduce((n, v) => n + (v === m ? 1 : 0), 0);
+
+  it('a spring trickles water until its reservoir is spent, then turns to stone', () => {
+    const w = new World(30, 30, 25);
+    for (let x = 0; x < 30; x++) w.set(x, 29, M.Stone);
+    w.set(15, 28, M.Spring);
+    w.step();
+    const i = w.idx(15, 28);
+    w.life[i] = 21; // twenty cells left in the aquifer
+    for (let f = 0; f < 3000; f++) w.step();
+    expect(w.mat[i]).toBe(M.Stone);
+    expect(w.created[M.Water]).toBe(20);
+  });
+
+  it('only release into open air: a vent sealed in rock is silent', () => {
+    const w = new World(10, 10, 26);
+    for (let y = 0; y < 10; y++) for (let x = 0; x < 10; x++) w.set(x, y, M.Stone);
+    w.set(5, 5, M.GasVent);
+    for (let f = 0; f < 1000; f++) w.step();
+    expect(w.created[M.SwampGas]).toBe(0);
+    expect(w.mat[w.idx(5, 5)]).toBe(M.GasVent);
+  });
+
+  it('a gusher shoots oil high into the air', () => {
+    const w = new World(40, 60, 27);
+    for (let x = 0; x < 40; x++) w.set(x, 59, M.Stone);
+    w.set(20, 58, M.Gusher);
+    let highest = 60;
+    for (let f = 0; f < 1500; f++) {
+      w.step();
+      for (let k = 0; k < w.size; k++) if (w.mat[k] === M.Oil) highest = Math.min(highest, Math.floor(k / 40));
+    }
+    expect(highest).toBeLessThan(45);
+  });
+
+  it('a spring fills its own pond: it keeps flowing up through the water above it', () => {
+    const w = new World(20, 30, 28);
+    for (let y = 0; y < 30; y++) {
+      w.set(0, y, M.Stone);
+      w.set(19, y, M.Stone);
+    }
+    for (let x = 0; x < 20; x++) w.set(x, 29, M.Stone);
+    w.set(10, 28, M.Spring);
+    for (let f = 0; f < 4000; f++) w.step();
+    expect(count(w, M.Water)).toBeGreaterThan(80); // several rows deep over the spring
+  });
+
+  it('all together release no more than the per-frame budget', () => {
+    const w = new World(100, 40, 29);
+    for (let x = 0; x < 100; x++) {
+      w.set(x, 39, M.Stone);
+      w.set(x, 38, M.VolcanicVent);
+    }
+    let worst = 0;
+    let last = 0;
+    for (let f = 0; f < 200; f++) {
+      w.step();
+      worst = Math.max(worst, w.created[M.Lava] - last);
+      last = w.created[M.Lava];
+    }
+    expect(worst).toBeLessThanOrEqual(48);
+    expect(last).toBeGreaterThan(48);
+  });
+
+  it('a pot boiled over a wood fire does not open a fumarole', () => {
+    const w = new World(40, 40, 3);
+    for (let x = 10; x < 30; x++) w.set(x, 30, M.Stone);
+    for (let y = 20; y < 30; y++) {
+      w.set(10, y, M.Stone);
+      w.set(29, y, M.Stone);
+    }
+    for (let y = 22; y < 30; y++) for (let x = 11; x < 29; x++) w.set(x, y, M.Water);
+    for (let y = 31; y < 40; y++) for (let x = 8; x < 32; x++) w.set(x, y, M.Wood);
+    for (let x = 8; x < 32; x++) w.ignite(w.idx(x, 39));
+    for (let f = 0; f < 3000; f++) w.step();
+    expect(w.created[M.Steam]).toBeGreaterThan(100);
+    expect(w.created[M.Fumarole]).toBe(0);
+  });
+
+  it('a sinkhole drains a pool', () => {
+    const w = new World(20, 20, 30);
+    for (let y = 0; y < 20; y++) {
+      w.set(0, y, M.Stone);
+      w.set(19, y, M.Stone);
+    }
+    for (let x = 0; x < 20; x++) w.set(x, 19, M.Stone);
+    w.set(10, 19, M.Sinkhole);
+    for (let y = 14; y < 19; y++) for (let x = 1; x < 19; x++) w.set(x, y, M.Water);
+    for (let f = 0; f < 3000; f++) w.step();
+    expect(count(w, M.Water)).toBe(0);
+  });
+});
+
 describe('rain', () => {
   it('is the cloud itself coming down, never water from nowhere', () => {
     const w = new World(60, 60, 7);

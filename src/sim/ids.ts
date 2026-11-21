@@ -152,6 +152,14 @@ export const M = {
   RedPaint: 144,
   DriedPaint: 145,
   Neon: 146,
+  Spring: 147,
+  BrineSpring: 148,
+  Gusher: 149,
+  GasVent: 150,
+  Fumarole: 151,
+  MudPot: 152,
+  VolcanicVent: 153,
+  Sinkhole: 154,
 } as const;
 
 export type MaterialId = (typeof M)[keyof typeof M];

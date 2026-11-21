@@ -1257,3 +1257,81 @@ export function updateSnail(w: World, x: number, y: number, i: number): boolean 
   }
   return true;
 }
+
+/**
+ * Where a vent at (x, y) releases into: up through any pool of liquid or gas above it to the first
+ * open cell (so a spring fills its own pond), otherwise open air beside it or diagonally above.
+ * Returns the cell's index, or -1 if it's sealed in.
+ */
+function ventOutlet(w: World, x: number, y: number): number {
+  for (let k = 1; k <= 8; k++) {
+    const t = w.get(x, y - k);
+    if (t === M.Empty) return w.idx(x, y - k);
+    const kind = w.defAt(x, y - k).kind;
+    if (kind !== 'liquid' && kind !== 'gas') break;
+  }
+  const d = w.rng.sign();
+  for (let k = 0; k < 4; k++) {
+    const nx = x + (k & 1 ? -d : d);
+    const ny = k < 2 ? y - 1 : y;
+    if (w.get(nx, ny) === M.Empty) return w.idx(nx, ny);
+  }
+  return -1;
+}
+
+/**
+ * Vent (its `emits` entry says what, how often, how much): now and then releases a burst into open
+ * air, counting its reservoir down in `life` (0 means freshly made: it fills up first), and dies into
+ * its spent rock when that's empty. All vents together share a per-frame budget.
+ */
+export function vent(w: World, x: number, y: number, i: number): boolean {
+  const e = w.defAt(x, y).emits;
+  if (!e) return true;
+  if (w.life[i] === 0) w.life[i] = e.reservoir + 1;
+  if (w.life[i] <= 1) {
+    w.transform(i, e.spent);
+    return true;
+  }
+  if (!w.rng.chance(1 / e.every)) return true;
+  const n0 = w.rng.int(e.burst[0], e.burst[1]);
+  // A big eruption (a volcano, a gusher) thumps like a small blast.
+  if (e.launch !== undefined && e.launch >= 3 && n0 >= 8) {
+    w.noise.blasts++;
+    if (w.noise.blastRadius < 4) w.noise.blastRadius = 4;
+  }
+  for (let n = n0; n > 0 && w.ventBudget > 0 && w.life[i] > 1; n--) {
+    const t = ventOutlet(w, x, y);
+    if (t < 0) break;
+    const other = e.sometimes;
+    w.setCell(t, other && w.rng.chance(other.chance) ? other.what : e.what);
+    if (e.launch) w.launch(t, w.rng.next() - 0.5, -e.launch * (0.7 + w.rng.next() * 0.6));
+    w.life[i]--;
+    w.ventBudget--;
+  }
+  return true;
+}
+
+/**
+ * Sinkhole: liquid that reaches it drains away underground, one cell at a time, from beside it or
+ * anywhere in the funnel above it (up to two cells either side: liquid flowing across a flat floor
+ * jumps to the far side of a gap, so a narrower funnel would be stepped over).
+ */
+export function swallow(w: World, x: number, y: number, _i: number): boolean {
+  const k = w.rng.int(0, 6);
+  const nx = k === 0 ? x - 1 : k === 1 ? x + 1 : x + k - 4;
+  const ny = k < 2 ? y : y - 1;
+  if (w.inBounds(nx, ny) && w.defAt(nx, ny).kind === 'liquid') w.setCell(w.idx(nx, ny), M.Empty);
+  return true;
+}
+
+/**
+ * Gravel: soaked with water (or salt water) under a stone lid, it's an aquifer under pressure, and now
+ * and then the stone above becomes a spring (or a brine spring) where the water finds its way up.
+ */
+export function aquifer(w: World, x: number, y: number, _i: number): boolean {
+  if (!w.rng.chance(0.002) || w.get(x, y - 1) !== M.Stone) return false;
+  const wet = touches(w, x, y, M.Water) ? M.Spring : touches(w, x, y, M.SaltWater) ? M.BrineSpring : -1;
+  if (wet >= 0) w.transform(w.idx(x, y - 1), wet as MaterialId);
+  return false;
+}
+

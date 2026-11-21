@@ -57,7 +57,8 @@ src/main.ts  creates World + Renderer + UI and runs the requestAnimationFrame lo
    burn time, residue, burnTemp, flames, fumes, lifetime, decay, dispersion, viscosity, rise, explosive,
    acidProof, extinguishes, conducts, shattersInto, conductivity, heat, startTemp, above (phase change,
    optionally `sometimes` leaving something else), below (setting solid again when cold), ignitesAt,
-   transparent and sunlit (what sunshine does), wind and drifts (powders blown along the ground) apply, plus its palette
+   transparent and sunlit (what sunshine does), wind and drifts (powders blown along the ground) and
+   emits (a vent, with the shared `vent` behaviour) apply, plus its palette
    `category` (the tab it appears under). `key` may be '' for no shortcut. The comments on `MaterialDef` explain each field. The
    "has sane values" test checks the ranges.
 3. Add the id to `PALETTE` at the bottom of `materials.ts` so it can be drawn. For ideas, see
@@ -114,6 +115,8 @@ does not melt sand into glass").
   no `Math.random` in the renderer loop.
 - Explosions are bounded: `MAX_BLAST_RADIUS` and `MAX_EXPLOSIONS_PER_FRAME` in `materials.ts`. Chains
   must go through fuses (the `burn` timer), never recursion.
+- Vents are bounded too: each holds a finite reservoir (counted down in `life`) and releases only into
+  open air, and all of them together at most `MAX_VENT_CELLS_PER_FRAME` cells a frame.
 - The main loop runs at most `MAX_STEPS_PER_FRAME` sim steps per animation frame.
 - `step()` skips cells of inert materials (static with no behaviour, reactions, phase changes,
   lifetime or flammability, e.g. stone) unless they're burning: see `INERT` in `world.ts`. Giving a

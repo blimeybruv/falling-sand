@@ -223,14 +223,14 @@ already.
 
 | | Vent | Real thing | Releases | Discovered by | Effort |
 |---|---|---|---|---|---|
-| | Spring | Artesian spring | A steady trickle of water | Water trapped in loam or clay under stone | T* |
-| | Gusher | Oil well blowout | Oil shot upward in bursts | Oil buried under stone and kept hot | T* |
-| | Gas vent | Natural gas seep ("eternal flame") | Swamp gas; lit, it burns as long as the vent lasts | Swamp gas trapped under stone | T* |
-| | Fumarole | Volcanic steam vent | Steam, now and then sulfur | Water seeping onto rock near lava | T* |
-| | Mud pot | Mud volcano | Bubbling mud | Earth and water over heat | T* |
-| | Volcanic vent | Volcano | Lava in eruptions | Lava sealed under stone and kept hot | T* |
-| | Brine spring | Salt spring | Salt water | Salt water trapped under stone | T* |
-| | Sinkhole | Karst drain | Nothing: swallows liquids that reach it | Acid or vinegar eating down through chalk (once snails make chalk) | F |
+| ✅ | Spring | Artesian spring | A steady trickle of water | Water in gravel under stone (an aquifer) | T* |
+| ✅ | Gusher | Oil well blowout | Oil shot upward in bursts | Oil reaching a gas vent (the gas pressure behind it) | T* |
+| ✅ | Gas vent | Natural gas seep ("eternal flame") | Swamp gas; lit, it burns as long as the vent lasts | Swamp gas trapped under stone | T* |
+| ✅ | Fumarole | Volcanic steam vent | Steam, now and then sulfur | Steam off water on hot basalt | T* |
+| ✅ | Mud pot | Mud volcano | Bubbling mud | Mud over a fumarole | T* |
+| ✅ | Volcanic vent | Volcano | Lava in eruptions | Lava sealed under stone and kept hot | T* |
+| ✅ | Brine spring | Salt spring | Salt water | Salt water in gravel under stone | T* |
+| ✅ | Sinkhole | Karst drain | Nothing: swallows liquids that reach it | Acid or vinegar eating down through chalk (once snails make chalk) | F |
 
 \* once the `emits` field exists (that first one is F).
 
