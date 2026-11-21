@@ -175,14 +175,14 @@ Also built in round 4: **Slag** (molten iron meets sand: glassy waste powder).
 
 | | Material | How it's made | What it does | Leads to | Effort |
 |---|---|---|---|---|---|
-| | Neon | Plasma touching glass | A gas that glows bright pink while electricity passes through it | Signs | F |
-| | Candy floss | Caramel or molten sugar caught in the wind | Pink fluff that floats a little and dissolves in water | | T |
-| | Toffee | Caramel cooled below 60° (`below`) | Hard brown solid that melts back above 100° | | T |
-| | Popcorn | Seeds heated past 180° | They pop: jump upward and turn into light white puffs | Snacks (materials only) | F |
-| | Icicle | Water dripping beside a cold ceiling (ice or frost above) | Grows downward in points; melts when warm | Ice caves | F |
-| | Fertiliser | Ash meets saltpetre | Seeds touching it sprout without water; grass beside it spreads faster | Farms | F |
-| | Compost | Grass or leaves with mushroom in them | Dark crumbly soil that slowly turns into loam | Gardens | T |
-| | Red paint | Rust meets oil | A red liquid that dries into a red static coat | Murals | T |
+| ✅ | Neon | Plasma touching glass | A gas that glows bright pink while electricity passes through it | Signs | F |
+| ✅ | Candy floss | Caramel or molten sugar caught in the wind | Pink fluff that floats a little and dissolves in water | | T |
+| ✅ | Toffee | Caramel cooled below 60° (`below`) | Hard brown solid that melts back above 100° | | T |
+| ✅ | Popcorn | Seeds heated past 180° | They pop: jump upward and turn into light white puffs | Snacks (materials only) | F |
+| ✅ | Icicle | Water dripping beside a cold ceiling (ice or frost above) | Grows downward in points; melts when warm | Ice caves | F |
+| ✅ | Fertiliser | Ash meets saltpetre | Seeds touching it sprout without water; grass beside it spreads faster | Farms | F |
+| ✅ | Compost | Grass or leaves with mushroom in them | Dark crumbly soil that slowly turns into loam | Gardens | T |
+| ✅ | Red paint | Rust meets oil | A red liquid that dries into a red static coat | Murals | T |
 | ✅ | Electromagnet (behaviour) | Iron carrying a pulse briefly pulls iron filings like a magnet | No new material: wires become magnets while live | Motors | F |
 
 ## Built outside the rounds

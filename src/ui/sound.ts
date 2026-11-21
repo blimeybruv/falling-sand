@@ -13,6 +13,7 @@
  *   lava         slow, deep bubbles
  *   electricity  a mains hum
  *   fireworks    a pop, then tinkling sparks
+ *   popcorn      little pops as seeds burst in the heat
  *   bees         a faint wavering buzz
  *   discovery    a bright chime (a longer one for the reward)
  *
@@ -163,7 +164,7 @@ export class Sound {
     const noise = world.noise;
     const ctx = this.ctx;
     if (!ctx || !this.enabled || document.hidden) {
-      noise.blasts = noise.blastRadius = noise.strikes = noise.corona = noise.fizzes = noise.bursts = 0;
+      noise.blasts = noise.blastRadius = noise.strikes = noise.corona = noise.fizzes = noise.bursts = noise.pops = 0;
       this.lastSteam = world.created[M.Steam];
       return;
     }
@@ -183,7 +184,8 @@ export class Sound {
     const strikes = noise.strikes;
     const corona = noise.corona;
     const bursts = noise.bursts;
-    noise.blasts = noise.blastRadius = noise.strikes = noise.corona = noise.fizzes = noise.bursts = 0;
+    const pops = noise.pops;
+    noise.blasts = noise.blastRadius = noise.strikes = noise.corona = noise.fizzes = noise.bursts = noise.pops = 0;
 
     const h = this.heard;
     if (running) this.sample(world);
@@ -206,7 +208,7 @@ export class Sound {
     const busy =
       strength > 0 ||
       crackles + drips + bubbles + pings > 0 ||
-      blasts + strikes + bursts + corona + h.bolts > 0 ||
+      blasts + strikes + bursts + pops + corona + h.bolts > 0 ||
       (loops !== null && Object.values(loops).some((l) => l.target > 0.001));
 
     if (busy) {
@@ -240,6 +242,7 @@ export class Sound {
       this.lastBoom = t;
     }
     if (bursts > 0) this.pop(ahead);
+    for (let k = Math.min(6, pops); k > 0; k--) this.kernel(ahead + Math.random() * dt);
     // The strike a corona warned of thunders at the distance chosen for it. Any other strike, or a
     // bolt seen in the grid (lightning drawn with the brush), thunders from a random distance.
     const warned = this.updateCorona(t, dt, corona > 0, strikes > 0);
@@ -528,10 +531,27 @@ export class Sound {
     return warned;
   }
 
+  /** A kernel of popcorn bursting: a small, sharp pop. */
+  private kernel(t: number): void {
+    const ctx = this.ctx!;
+    const osc = ctx.createOscillator();
+    const f = 320 + Math.random() * 200;
+    osc.frequency.setValueAtTime(f, t);
+    osc.frequency.exponentialRampToValueAtTime(f * 0.4, t + 0.04);
+    const env = ctx.createGain();
+    env.gain.setValueAtTime(0.18, t);
+    env.gain.exponentialRampToValueAtTime(0.0005, t + 0.06);
+    osc.connect(env).connect(this.out!);
+    osc.start(t);
+    osc.stop(t + 0.07);
+    this.burst(this.crackleBus!, t, 0.25, 0.015, 1.3);
+  }
+
   /**
-   * Lightning, `far` away (0 near .. 1 far). Light arrives at once and sound about a kilometre every three seconds, so the
-   * thunder comes after the flash: straight away for a near strike, with a sharp crack; up to two
-   * seconds later for a far one, quieter, deeper and longer (the crack's high notes don't carry).
+   * Lightning, `far` away (0 near .. 1 far). Light arrives at once and sound about a kilometre every
+   * three seconds, so the thunder comes after the flash: straight away for a near strike, with a
+   * sharp crack; up to two seconds later for a far one, quieter, deeper and longer (the crack's high
+   * notes don't carry).
    */
   private thunder(t: number, far: number): void {
     const delay = far * far * 2;

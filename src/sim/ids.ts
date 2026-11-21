@@ -143,6 +143,15 @@ export const M = {
   SolarCell: 135,
   Fulgurite: 136,
   Dynamo: 137,
+  Toffee: 138,
+  CandyFloss: 139,
+  Popcorn: 140,
+  Icicle: 141,
+  Fertiliser: 142,
+  Compost: 143,
+  RedPaint: 144,
+  DriedPaint: 145,
+  Neon: 146,
 } as const;
 
 export type MaterialId = (typeof M)[keyof typeof M];

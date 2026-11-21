@@ -45,6 +45,9 @@ export class Renderer {
   private readonly fadeFrames: Uint8Array;
   private readonly flickers: Uint8Array;
   private readonly isGlow: Uint8Array;
+  /** Colour while carrying a pulse: the bright head, and the fading tail behind it (per material). */
+  private readonly chargeHead: Uint32Array;
+  private readonly chargeTail: Uint32Array;
   /** Material colours at 30% brightness, the backdrop for the heat view. */
   private readonly dimLut: Uint32Array;
   /** 256 colours from cold (blue) through ambient (dark) to hot (red, yellow, white). */
@@ -91,6 +94,12 @@ export class Renderer {
     this.fadeFrames = Uint8Array.from(MATERIALS, (d) => d.fadeFrames ?? (d.kind === 'gas' ? FADE_FRAMES : 0));
     this.flickers = Uint8Array.from(MATERIALS, (d) => (d.flicker ? 1 : 0));
     this.isGlow = Uint8Array.from(MATERIALS, (d) => (d.glow ? 1 : 0));
+    // Electricity: a bright head where the pulse is, a warm glow fading behind it, unless the
+    // material glows its own colour (neon).
+    this.chargeHead = Uint32Array.from(MATERIALS, (d) => (d.chargeColour ? pack(...d.chargeColour) : pack(255, 252, 200)));
+    this.chargeTail = Uint32Array.from(MATERIALS, (d) =>
+      d.chargeColour ? pack(d.chargeColour[0] * 0.8, d.chargeColour[1] * 0.8, d.chargeColour[2] * 0.8) : pack(240, 200, 90),
+    );
     this.dimLut = this.lut.map((_, j) => pack(this.lutR[j] * 0.3, this.lutG[j] * 0.3, this.lutB[j] * 0.3));
     this.heatLut = new Uint32Array(256);
     for (let k = 0; k < 256; k++) {
@@ -128,13 +137,10 @@ export class Renderer {
 
   private renderMaterials(world: World): void {
     const { mat, shade, life, burn, charge, size, width } = world;
-    const { pixels, lut, lutR, lutG, lutB, fadeFrames, flickers, isGlow, cloudLut, cloudRow, cloudDepth } = this;
+    const { pixels, lut, lutR, lutG, lutB, fadeFrames, flickers, isGlow, cloudLut, cloudRow, cloudDepth, chargeHead, chargeTail } = this;
     // Thick clouds are lit from above: they darken the deeper a cell is below the cloud's top.
     cloudRow.fill(-100);
     const glowShift = this.frame >> 3;
-    // Electricity: a bright head where the pulse is, a warm glow fading behind it.
-    const sparkHead = pack(255, 252, 200);
-    const sparkTail = pack(240, 200, 90);
     const [bgR, bgG, bgB] = this.background;
     const bg = pack(bgR, bgG, bgB);
     const fireBase = M.Fire * SHADES;
@@ -147,7 +153,7 @@ export class Renderer {
         continue;
       }
       if (charge[i] !== 0) {
-        pixels[i] = charge[i] >= CHARGE_ACTIVE ? sparkHead : sparkTail;
+        pixels[i] = charge[i] >= CHARGE_ACTIVE ? chargeHead[m] : chargeTail[m];
         continue;
       }
       // Cheap xorshift for flicker; no Math.random in the hot loop.

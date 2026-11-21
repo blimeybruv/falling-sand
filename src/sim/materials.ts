@@ -48,6 +48,8 @@ import {
   updateVapour,
   solarCell,
   spinDynamo,
+  growIcicle,
+  spinCandyFloss,
   electromagnet,
   spreadAlgae,
   formLoam,
@@ -206,6 +208,8 @@ export interface MaterialDef {
   fadeFrames?: number;
   /** Renderer: brightness flickers frame to frame. */
   flicker?: boolean;
+  /** Renderer: the colour it glows while carrying a pulse (instead of the usual spark), e.g. neon. */
+  chargeColour?: readonly [number, number, number];
   /** Two-material reactions; see Reaction. */
   reactions?: readonly Reaction[];
   /** Optional extra behaviour; runs before the generic movement for its kind. */
@@ -665,6 +669,8 @@ const defs: Record<MaterialId, Def> = {
       // Potash meets acid: it fizzes.
       { with: M.Acid, chance: 0.05, into: M.Fizz, otherInto: M.Fizz },
       { with: M.Vinegar, chance: 0.05, into: M.Fizz, otherInto: M.Fizz },
+      // Ash and saltpetre (potash and nitrate) make plant food.
+      { with: M.Saltpetre, chance: 0.01, into: M.Fertiliser, otherInto: M.Fertiliser },
     ],
     update: formCement,
     description: 'Light grey powder left by fires. Floats on water and blows in the wind.',
@@ -949,7 +955,11 @@ const defs: Record<MaterialId, Def> = {
     density: 22,
     colour: [168, 82, 40],
     colourJitter: 0.2,
-    reactions: [{ with: M.Charcoal, chance: 0.01, into: M.Thermite, otherInto: M.Thermite }],
+    reactions: [
+      { with: M.Charcoal, chance: 0.01, into: M.Thermite, otherInto: M.Thermite },
+      // Ground into oil it makes red paint (red oxide, the oldest pigment there is).
+      { with: M.Oil, chance: 0.01, into: M.RedPaint, otherInto: M.RedPaint },
+    ],
     description: 'Crumbly orange powder: what iron becomes in the wet.',
   },
   [M.Coal]: {
@@ -1094,7 +1104,12 @@ const defs: Record<MaterialId, Def> = {
     residue: { into: M.Ash, chance: 0.2 },
     update: spreadMushroom,
     // Rotting wood draws termites.
-    reactions: [{ with: M.Wood, chance: 0.001, otherInto: M.Termite }],
+    reactions: [
+      { with: M.Wood, chance: 0.001, otherInto: M.Termite },
+      // It rots grass and leaves down into compost.
+      { with: M.Grass, chance: 0.002, otherInto: M.Compost },
+      { with: M.Leaf, chance: 0.004, otherInto: M.Compost },
+    ],
     description: 'Grows in wood shut away in the damp dark, slowly eating through it.',
   },
   [M.Flower]: {
@@ -1404,6 +1419,154 @@ const defs: Record<MaterialId, Def> = {
     update: spinDynamo,
     description: 'A magnet in a copper coil. Turned by the wind or by water pouring onto it, it sends pulses into touching metal.',
   },
+  [M.Toffee]: {
+    ...base,
+    name: 'Toffee',
+    key: '',
+    category: 'life',
+    kind: 'static',
+    density: 100,
+    colour: [112, 58, 24],
+    colourEnd: [164, 96, 38],
+    colourJitter: 0.08,
+    flammability: 0.1,
+    burnTime: [40, 80],
+    burnsInto: M.Smoke,
+    // Melts back into caramel before it's hot enough to burn.
+    above: { temp: 100, into: M.Caramel },
+    description: 'Caramel set hard as it cooled. Melts back into caramel above 100°.',
+  },
+  [M.CandyFloss]: {
+    ...base,
+    name: 'Candy floss',
+    key: '',
+    category: 'life',
+    kind: 'powder',
+    density: 1.5,
+    colour: [250, 178, 212],
+    colourEnd: [255, 214, 232],
+    colourJitter: 0.05,
+    flammability: 0.6,
+    burnTime: [3, 8],
+    burnsInto: M.Smoke,
+    wind: 0.8,
+    drifts: 0.05,
+    // Sugar spun into threads: it melts away at a touch of water.
+    reactions: [{ with: M.Water, chance: 0.2, into: M.Empty }],
+    description: 'Hot caramel spun into fluff by the wind. Light as air, and gone at a touch of water.',
+  },
+  [M.Popcorn]: {
+    ...base,
+    name: 'Popcorn',
+    key: '',
+    category: 'life',
+    kind: 'powder',
+    density: 3,
+    colour: [252, 246, 228],
+    colourEnd: [238, 214, 160],
+    colourJitter: 0.06,
+    flammability: 0.3,
+    burnTime: [4, 10],
+    ignitesAt: 260,
+    burnsInto: M.Smoke,
+    wind: 0.4,
+    description: 'Seeds that popped in the heat: light white puffs.',
+  },
+  [M.Icicle]: {
+    ...base,
+    name: 'Icicle',
+    key: '',
+    kind: 'static',
+    density: 100,
+    colour: [206, 228, 248],
+    colourEnd: [240, 250, 255],
+    colourJitter: 0.05,
+    conductivity: 0.1,
+    // A drop freezing solid: it starts below freezing (a transformed cell would otherwise keep the
+    // water's warmth and melt straight away).
+    startTemp: -5,
+    heat: { temp: -10, rate: 0.05 },
+    above: { temp: 2, into: M.Water },
+    update: growIcicle,
+    description: 'Drips of water frozen as they fell beside ice. Grows downward in points; melts when warm.',
+  },
+  [M.Fertiliser]: {
+    ...base,
+    name: 'Fertiliser',
+    key: '',
+    kind: 'powder',
+    density: 14,
+    colour: [196, 190, 160],
+    colourEnd: [150, 140, 110],
+    colourJitter: 0.1,
+    // Dug into earth it slowly enriches it into loam.
+    reactions: [{ with: M.Earth, chance: 0.002, into: M.Loam, otherInto: M.Loam }],
+    description: 'Ash and saltpetre: plant food. Seeds on it sprout without water, grass beside it spreads faster, and it enriches earth into loam.',
+  },
+  [M.Compost]: {
+    ...base,
+    name: 'Compost',
+    key: '',
+    kind: 'powder',
+    density: 12,
+    colour: [58, 42, 28],
+    colourEnd: [86, 64, 40],
+    colourJitter: 0.1,
+    lifetime: [1500, 3000],
+    decay: { into: M.Loam, chance: 1 },
+    description: 'Grass and leaves rotted down by mushroom. Dark and crumbly; slowly turns into loam.',
+  },
+  [M.RedPaint]: {
+    ...base,
+    name: 'Red paint',
+    key: '',
+    category: 'fluid',
+    kind: 'liquid',
+    density: 12,
+    colour: [176, 30, 30],
+    colourEnd: [204, 44, 40],
+    colourJitter: 0.05,
+    dispersion: 1,
+    viscosity: 0.9,
+    flammability: 0.3,
+    burnTime: [20, 40],
+    burnsInto: M.Smoke,
+    // Exposed to the air, it dries where it lies into a red coat.
+    lifetime: [400, 900],
+    decay: { into: M.DriedPaint, chance: 1 },
+    description: 'Rust ground into oil: a thick red paint that dries where it lies.',
+  },
+  [M.DriedPaint]: {
+    ...base,
+    name: 'Dried paint',
+    key: '',
+    kind: 'static',
+    density: 100,
+    colour: [164, 28, 28],
+    colourEnd: [190, 40, 36],
+    colourJitter: 0.05,
+    flammability: 0.1,
+    burnTime: [20, 40],
+    burnsInto: M.Smoke,
+    description: 'A coat of red paint, dried hard.',
+  },
+  [M.Neon]: {
+    ...base,
+    name: 'Neon',
+    key: '',
+    category: 'fluid',
+    kind: 'gas',
+    density: 0.7,
+    // Hardly visible until electricity runs through it.
+    colour: [46, 32, 44],
+    colourJitter: 0.05,
+    rise: 0.02,
+    startTemp: 20,
+    conducts: true,
+    conductivity: 0.05,
+    chargeColour: [255, 80, 190],
+    description: 'A rare gas from plasma meeting glass. Glows bright pink while electricity passes through it: keep it in a glass tube.',
+  },
   [M.Sap]: {
     ...base,
     name: 'Sap',
@@ -1455,6 +1618,11 @@ const defs: Record<MaterialId, Def> = {
     burnTime: [40, 80],
     ignitesAt: 300,
     burnsInto: M.Smoke,
+    // Fresh caramel is hot and runny; cooled below 60° it sets into toffee. Hot, in the wind, it spins
+    // into candy floss.
+    startTemp: 120,
+    below: { temp: 60, into: M.Toffee },
+    update: spinCandyFloss,
     description: 'Cooked sugar: sticky, brown and very slow. Burns.',
   },
   [M.Alcohol]: {
@@ -1590,6 +1758,8 @@ const defs: Record<MaterialId, Def> = {
     rise: 0.6,
     glow: true,
     update: updateFire,
+    // A wisp of plasma caught against glass leaves neon behind.
+    reactions: [{ with: M.Glass, chance: 0.05, into: M.Neon }],
     description: 'Glowing gas hotter than anything: from lightning through hydrogen, or any gas past 2000°.',
   },
   [M.Fog]: {
@@ -2498,18 +2668,18 @@ export const MATERIALS: readonly MaterialDef[] = Object.values(M).map((id) => ({
 /** Palette order (also the order of the number-key shortcuts). */
 export const PALETTE: readonly MaterialDef[] = [
   // ground
-  M.Sand, M.Earth, M.Mud, M.Clay, M.Loam, M.Stone, M.Brick, M.Glass, M.Obsidian, M.Ice, M.Snow,
+  M.Sand, M.Earth, M.Mud, M.Clay, M.Loam, M.Compost, M.Fertiliser, M.Stone, M.Brick, M.Glass, M.Obsidian, M.Ice, M.Icicle, M.Snow,
   M.Salt, M.IronOre, M.Iron, M.Rust, M.CopperOre, M.Copper, M.Verdigris, M.Gold, M.IronFilings, M.Magnet, M.Steel, M.Tin, M.Bronze, M.Slag, M.Basalt, M.GeyserRock,
   M.SaltCrystal, M.GlassFibre, M.Quartz, M.TarSand, M.Gravel, M.Concrete, M.Terracotta,
   M.Porcelain, M.Adobe, M.Quicklime, M.SlakedLime, M.Mortar, M.Frost, M.Permafrost, M.Graphite, M.Fulgurite, M.Diamond, M.Chalk, M.Cement, M.Stalactite, M.Rubber, M.Wax, M.Glaze, M.Pumice, M.Quicksand, M.Hail, M.DryIce, M.StainedGlass,
   // liquids and gases
   M.Water, M.SaltWater, M.Oil, M.Tar, M.Lye, M.Foam, M.Fizz, M.Acid, M.Lava, M.Smoke, M.Steam, M.Cloud,
-  M.CarbonDioxide, M.Hydrogen, M.Mercury, M.Alcohol, M.Vinegar, M.Chlorine, M.Bleach, M.SulfurDioxide, M.Fog, M.Ink, M.Ozone, M.MoltenGlass, M.MoltenIron, M.MoltenCopper, M.Brimstone, M.Bubble,
+  M.CarbonDioxide, M.Hydrogen, M.Mercury, M.Alcohol, M.Vinegar, M.Chlorine, M.Bleach, M.SulfurDioxide, M.Fog, M.Ink, M.Ozone, M.Neon, M.RedPaint, M.MoltenGlass, M.MoltenIron, M.MoltenCopper, M.Brimstone, M.Bubble,
   // fire and blasts
   M.Fire, M.Charcoal, M.Coal, M.Ash, M.Sulfur, M.Saltpetre, M.Gunpowder, M.Fireworks, M.Thermite,
   M.Napalm, M.Nitro, M.Dynamite, M.SwampGas, M.Soot, M.Lightning, M.Battery, M.SolarCell, M.Dynamo, M.Plasma, M.Briquette, M.Peat, M.SmokeBomb, M.Sprite,
   // life
-  M.Seed, M.Grass, M.Wood, M.Flower, M.Mushroom, M.Moss, M.Algae, M.Vine, M.Seaweed, M.Cactus, M.Sap, M.Sugar, M.Caramel, M.Fruit, M.Pulp, M.Paper, M.Bamboo, M.Amber, M.Honeydew, M.Honey, M.Sawdust,
+  M.Seed, M.Grass, M.Wood, M.Flower, M.Mushroom, M.Moss, M.Algae, M.Vine, M.Seaweed, M.Cactus, M.Sap, M.Sugar, M.Caramel, M.Toffee, M.CandyFloss, M.Popcorn, M.Fruit, M.Pulp, M.Paper, M.Bamboo, M.Amber, M.Honeydew, M.Honey, M.Sawdust,
   // creatures
   M.Earthworm, M.Termite, M.Fish, M.Firefly, M.Bee, M.Snail,
 ].map((id) => MATERIALS[id]);

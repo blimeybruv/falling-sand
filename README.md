@@ -87,11 +87,14 @@ debris start fresh when a scene loads.
 | M | Mud | Thick, slow liquid; dries back to earth when heated; settles into clay in water | Earth meets water |
 | C | Clay | Sticky powder that stands in steep piles; fired in a kiln it becomes brick | Mud left in water |
 | O | Loam | Rich soil: seeds grow tall trees on it without water, and grass spreads over it | Earth with sand and clay around it |
+| | Fertiliser | Seeds on it sprout without water, grass beside it spreads faster; enriches earth into loam | Ash meets saltpetre |
+| | Compost | Rots down into loam | Mushroom in grass or leaves |
 | 3 | Stone | Static and indestructible (only burning thermite melts it); conducts heat well | Starter |
 | B | Brick | Static; insulates, never burns, and acid can't eat it | Fire clay in a kiln |
 | Q | Glass | Static; acid can't eat it | Melt sand with lava or a charcoal fire |
 | N | Obsidian | Black volcanic glass; indestructible | Lava meets ice |
 | I | Ice | Static and cold; melts near heat, slowly freezes neighbouring water | Steam reaching the top |
+| | Icicle | Grows downward where water drips past ice; melts when warm | Water dripping past ice |
 | F | Snow | Light, cold powder; melts near warmth | A cloud near ice |
 | Z | Salt | Dissolves in water (salt water) and melts ice | Boiling water leaves some behind |
 | | Iron ore | Rusty-speckled rock | Lava meets water (rarely) |
@@ -161,6 +164,8 @@ debris start fresh when a scene loads.
 | | Fog | Thin mist that lingers low and drifts | Steam meets snow or ice |
 | | Ink | Deep blue-black liquid that burns | Soot meets oil |
 | | Ozone | Faint gas left by lightning; bleaches | Lightning fades |
+| | Neon | Glows bright pink while electricity passes through it (keep it in a glass tube) | Plasma touching glass |
+| | Red paint | Thick red paint that dries where it lies | Rust meets oil |
 | | Molten glass | Glowing slow liquid that sets back into glass | Glass past 1200° |
 | | Molten iron | White-hot liquid metal that sets back into iron | Iron past 1500°, or burning thermite |
 | | Molten copper | Liquid copper that sets back; with tin, bronze | Copper past 1100° |
@@ -201,7 +206,10 @@ debris start fresh when a scene loads.
 | | Cactus | Grows in the desert; burning releases water | A seed on dry sand far from water |
 | | Sap | Slow, sticky amber liquid | Wood tapped with iron |
 | | Sugar | Sweet white powder | Sap heated past 120° |
-| | Caramel | Sticky, very slow brown liquid; burns | Sugar heated past 160° |
+| | Caramel | Sticky, very slow brown liquid, fresh from the heat; sets into toffee as it cools; burns | Sugar heated past 160° |
+| | Toffee | Caramel set hard; melts back above 100° | Caramel left to cool |
+| | Candy floss | Pink fluff, light as air; gone at a touch of water | Hot caramel caught by the wind |
+| | Popcorn | Seeds that pop and jump in the heat, with a little pop you can hear | Seeds heated past 180° |
 | | Fruit | Ripens from flowers and falls; rots into a seed | Flowers ripen |
 | | Pulp | Thick slurry of broken-down wood | Wood meets lye |
 | | Paper | Catches fire very easily | Pulp dried past 100° |

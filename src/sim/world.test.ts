@@ -722,6 +722,111 @@ describe('sunny plants', () => {
   });
 });
 
+describe('sweets', () => {
+  it('caramel sets into toffee as it cools, and toffee melts back above 100°', () => {
+    const w = new World(20, 20, 18);
+    for (let y = 15; y < 20; y++) for (let x = 0; x < 20; x++) w.set(x, y, M.Caramel);
+    for (let f = 0; f < 1500; f++) w.step();
+    let toffee = 0;
+    for (let i = 0; i < w.size; i++) if (w.mat[i] === M.Toffee) toffee++;
+    expect(toffee).toBe(100);
+    const i = w.idx(10, 17);
+    w.temp[i] = 150;
+    w.step();
+    expect(w.mat[i]).toBe(M.Caramel);
+  });
+
+  it('seeds pop into popcorn that jumps into the air, and you can hear it', () => {
+    const w = new World(40, 40, 19);
+    for (let y = 31; y < 40; y++) for (let x = 0; x < 40; x++) w.set(x, y, M.Lava);
+    for (let x = 0; x < 40; x++) w.set(x, 30, M.Stone);
+    for (let x = 10; x < 30; x++) w.set(x, 29, M.Seed);
+    let pops = 0;
+    let highest = 40;
+    for (let f = 0; f < 600; f++) {
+      w.step();
+      pops += w.noise.pops;
+      w.noise.pops = 0;
+      for (let k = 0; k < w.size; k++) if (w.mat[k] === M.Popcorn) highest = Math.min(highest, Math.floor(k / 40));
+    }
+    expect(pops).toBeGreaterThan(10);
+    expect(highest).toBeLessThan(26); // well up above the plate it popped on
+  });
+});
+
+describe('icicles', () => {
+  it('grow where water drips past ice, but not under the ice of a frozen pond', () => {
+    const drip = new World(40, 40, 20);
+    for (let x = 0; x < 40; x++) if (x < 18 || x > 22) drip.set(x, 10, M.Ice);
+    for (let y = 5; y < 10; y++) for (let x = 0; x < 40; x++) drip.set(x, y, M.Water);
+    const pond = new World(40, 40, 20);
+    for (let y = 20; y < 40; y++) for (let x = 0; x < 40; x++) pond.set(x, y, M.Water);
+    for (let x = 0; x < 40; x++) pond.set(x, 19, M.Ice);
+    for (let f = 0; f < 600; f++) {
+      drip.step();
+      pond.step();
+    }
+    const count = (w: World): number => w.mat.reduce((n, m) => n + (m === M.Icicle ? 1 : 0), 0);
+    expect(count(drip)).toBeGreaterThan(2);
+    expect(count(pond)).toBe(0);
+  });
+});
+
+describe('garden', () => {
+  it('a seed on fertiliser grows into a tree with no water anywhere; on dry earth it waits', () => {
+    const grow = (ground: MaterialId): number => {
+      const w = new World(40, 60, 21);
+      for (let x = 0; x < 40; x++) w.set(x, 59, ground);
+      w.set(20, 58, M.Seed);
+      for (let f = 0; f < 2000; f++) w.step();
+      return w.created[M.Wood];
+    };
+    expect(grow(M.Fertiliser)).toBeGreaterThan(5);
+    expect(grow(M.Earth)).toBe(0);
+  });
+
+  it('compost rots down into loam', () => {
+    const w = new World(20, 20, 22);
+    for (let y = 16; y < 20; y++) for (let x = 0; x < 20; x++) w.set(x, y, M.Compost);
+    for (let f = 0; f < 3200; f++) w.step();
+    let loam = 0;
+    let compost = 0;
+    for (let i = 0; i < w.size; i++) {
+      if (w.mat[i] === M.Loam) loam++;
+      else if (w.mat[i] === M.Compost) compost++;
+    }
+    expect(compost).toBe(0);
+    expect(loam).toBe(80);
+  });
+});
+
+describe('paint and neon', () => {
+  it('red paint dries where it lies', () => {
+    const w = new World(20, 20, 23);
+    for (let x = 0; x < 20; x++) w.set(x, 19, M.RedPaint);
+    for (let f = 0; f < 1000; f++) w.step();
+    let dried = 0;
+    for (let i = 0; i < w.size; i++) if (w.mat[i] === M.DriedPaint) dried++;
+    expect(dried).toBe(20);
+  });
+
+  it('neon in a glass tube carries pulses from a battery', () => {
+    const w = new World(30, 10, 24);
+    for (let x = 0; x < 30; x++) {
+      w.set(x, 3, M.Glass);
+      w.set(x, 5, M.Glass);
+      w.set(x, 4, M.Neon);
+    }
+    w.set(0, 4, M.Battery);
+    let lit = 0;
+    for (let f = 0; f < 600; f++) {
+      w.step();
+      if (w.charge[w.idx(15, 4)] > 0 && w.mat[w.idx(15, 4)] === M.Neon) lit++;
+    }
+    expect(lit).toBeGreaterThan(5);
+  });
+});
+
 describe('rain', () => {
   it('is the cloud itself coming down, never water from nowhere', () => {
     const w = new World(60, 60, 7);

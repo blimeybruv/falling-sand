@@ -519,6 +519,37 @@ describe('every recipe works in the simulation', () => {
       fillRect(w, 0, 32, 40, 8, M.Charcoal);
       fillRect(w, 0, 31, 40, 1, M.Lightning);
     }],
+    ['toffee: caramel left to cool', M.Toffee, 1500, (w) => fillRect(w, 0, 30, 40, 10, M.Caramel)],
+    ['candy floss: hot caramel in the wind', M.CandyFloss, 300, (w) => {
+      fillRect(w, 0, 34, 40, 6, M.Caramel);
+      w.wind = 1;
+    }],
+    ['popcorn: seeds on a hot plate', M.Popcorn, 600, (w) => {
+      fillRect(w, 0, 31, 40, 9, M.Lava);
+      fillRect(w, 0, 30, 40, 1, M.Stone);
+      fillRect(w, 10, 27, 20, 3, M.Seed);
+    }],
+    ['icicle: water dripping past ice', M.Icicle, 300, (w) => {
+      fillRect(w, 0, 10, 19, 1, M.Ice);
+      fillRect(w, 22, 10, 18, 1, M.Ice);
+      fillRect(w, 0, 5, 40, 5, M.Water);
+    }],
+    ['fertiliser: ash meets saltpetre', M.Fertiliser, 300, (w) => {
+      fillRect(w, 0, 37, 40, 3, M.Saltpetre);
+      fillRect(w, 0, 34, 40, 3, M.Ash);
+    }],
+    ['compost: mushroom in grass', M.Compost, 1500, (w) => {
+      fillRect(w, 0, 36, 40, 4, M.Grass);
+      fillRect(w, 0, 35, 40, 1, M.Mushroom);
+    }],
+    ['red paint: rust meets oil', M.RedPaint, 300, (w) => {
+      fillRect(w, 0, 37, 40, 3, M.Rust);
+      fillRect(w, 0, 33, 40, 4, M.Oil);
+    }],
+    ['neon: plasma touching glass', M.Neon, 60, (w) => {
+      fillRect(w, 0, 10, 40, 1, M.Glass);
+      fillRect(w, 0, 11, 40, 4, M.Plasma);
+    }],
     ['dynamo: a magnet touching copper, out in the wind', M.Dynamo, 1500, (w) => {
       fillRect(w, 0, 38, 40, 2, M.Copper);
       fillRect(w, 0, 37, 40, 1, M.Magnet);

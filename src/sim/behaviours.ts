@@ -79,16 +79,17 @@ function thrives(w: World, x: number, y: number, base: number, shadeLoving = fal
 
 /** Grass: now and then spreads into neighbouring water, or over neighbouring open ground (see below). */
 export function growGrass(w: World, x: number, y: number, _i: number): boolean {
-  if (!thrives(w, x, y, 0.03)) return true;
+  // Fed by fertiliser beside or beneath it, grass spreads twice as fast.
+  if (!thrives(w, x, y, 0.03) && !(thrives(w, x, y, 0.03) && touches(w, x, y, M.Fertiliser))) return true;
   const nx = x + w.rng.int(-1, 1);
   const ny = y + w.rng.int(-1, 1);
   const t = w.get(nx, ny);
   if (t === M.Water) {
     // Weeds that reach the surface spread across it as algae.
     w.set(nx, ny, w.get(nx, ny - 1) === M.Empty ? M.Algae : M.Grass);
-  } else if ((t === M.Sand || t === M.Earth || t === M.Loam) && w.get(nx, ny - 1) === M.Empty) {
-    // Creeps over open ground: loam always, sand and earth only where it's damp.
-    if (t === M.Loam || w.near(nx, ny, DAMP_RANGE, M.Water)) w.set(nx, ny, M.Grass);
+  } else if ((t === M.Sand || t === M.Earth || t === M.Loam || t === M.Fertiliser) && w.get(nx, ny - 1) === M.Empty) {
+    // Creeps over open ground: loam and fertiliser always, sand and earth only where it's damp.
+    if (t === M.Loam || t === M.Fertiliser || w.near(nx, ny, DAMP_RANGE, M.Water)) w.set(nx, ny, M.Grass);
   }
   return true;
 }
@@ -121,6 +122,8 @@ const LOAM_TREE = 1000;
 const CACTUS_TIP = 2000;
 /** ...or of a bamboo stalk. */
 const BAMBOO_TIP = 3000;
+/** A seed heated past this pops into popcorn. */
+const POP_TEMP = 180;
 /** Ground with no water this near counts as desert. */
 const DRY_RANGE = 10;
 
@@ -129,6 +132,13 @@ export function updateSeed(w: World, x: number, y: number, i: number): boolean {
   if (height >= BAMBOO_TIP) return growBamboo(w, x, y, i, height - BAMBOO_TIP);
   if (height >= CACTUS_TIP) return growCactus(w, x, y, i, height - CACTUS_TIP);
   if (height > 0) return growTree(w, x, y, i, height);
+  // Heated past 180° (short of catching fire at 220°), a seed pops.
+  if (w.temp[i] > POP_TEMP) {
+    w.transform(i, M.Popcorn);
+    w.launch(i, w.rng.next() * 2 - 1, -2 - w.rng.next() * 1.5);
+    w.noise.pops++;
+    return true;
+  }
   if (!thrives(w, x, y, 0.02)) return false;
   if (w.get(x, y - 1) !== M.Empty) return false;
   const below = w.get(x, y + 1);
@@ -137,7 +147,8 @@ export function updateSeed(w: World, x: number, y: number, i: number): boolean {
     w.life[i] = w.near(x, y, 2, M.Water) ? BAMBOO_TIP + w.rng.int(20, 40) : w.rng.int(28, 46) + LOAM_TREE;
     return true;
   }
-  if ((below === M.Sand || below === M.Earth || below === M.Grass) && w.near(x, y, DAMP_RANGE, M.Water)) {
+  // On fertiliser, or damp ground, it grows into a tree.
+  if (below === M.Fertiliser || ((below === M.Sand || below === M.Earth || below === M.Grass) && w.near(x, y, DAMP_RANGE, M.Water))) {
     w.life[i] = w.rng.int(18, 34);
     return true;
   }
@@ -521,8 +532,29 @@ export function updateLava(w: World, x: number, y: number, i: number): boolean {
 }
 
 /** Ice: while it is below freezing, now and then turns a neighbouring water cell to ice. */
+/**
+ * A drop of water just under or beside something icy (x, y), with open air below the drop, freezes
+ * onto it as an icicle, so icicles grow down where water drips past ice. (Water under the ice of a
+ * frozen pond has more water below it, not air, so ponds don't sprout icicles.)
+ */
+function freezeDrip(w: World, x: number, y: number): void {
+  for (let k = 0; k < 3; k++) {
+    const nx = k === 0 ? x : k === 1 ? x - 1 : x + 1;
+    const ny = k === 0 ? y + 1 : y;
+    if (w.get(nx, ny) === M.Water && w.get(nx, ny + 1) === M.Empty && w.rng.chance(0.3)) w.transform(w.idx(nx, ny), M.Icicle);
+  }
+}
+
+/** Icicle: while it's below freezing, drips of water passing it freeze on, and it grows. */
+export function growIcicle(w: World, x: number, y: number, i: number): boolean {
+  if (w.temp[i] < 0) freezeDrip(w, x, y);
+  return true;
+}
+
 export function freezeWater(w: World, x: number, y: number, i: number): boolean {
-  if (w.temp[i] >= 0 || !w.rng.chance(0.01)) return true;
+  if (w.temp[i] >= 0) return true;
+  freezeDrip(w, x, y);
+  if (!w.rng.chance(0.01)) return true;
   const nx = x + w.rng.int(-1, 1);
   const ny = y + w.rng.int(-1, 1);
   if (w.get(nx, ny) === M.Water) w.set(nx, ny, M.Ice);
@@ -940,6 +972,13 @@ export function spinDynamo(w: World, x: number, y: number, _i: number): boolean 
 }
 
 /** Molten glass: caught by the wind at its surface, it now and then spins out into glass fibre. */
+/** Caramel: hot and runny, caught by the wind at its surface, it now and then spins out into candy floss. */
+export function spinCandyFloss(w: World, x: number, y: number, i: number): boolean {
+  if (w.wind === 0 || w.temp[i] < 80 || w.get(x, y - 1) !== M.Empty || !w.rng.chance(Math.abs(w.wind) * 0.02)) return false;
+  w.transform(i, M.CandyFloss);
+  return true;
+}
+
 export function spinFibre(w: World, x: number, y: number, i: number): boolean {
   if (w.wind === 0 || w.get(x, y - 1) !== M.Empty || !w.rng.chance(Math.abs(w.wind) * 0.02)) return false;
   w.transform(i, M.GlassFibre);

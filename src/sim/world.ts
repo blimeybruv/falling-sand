@@ -131,9 +131,9 @@ export class World {
   /**
    * Audible events since the UI last looked (it reads and zeroes these; the simulation itself makes
    * no sound): explosions and the biggest radius among them, lightning strikes, frames of charge
-   * building before a strike (corona), acid eating something, fireworks bursting.
+   * building before a strike (corona), acid eating something, fireworks bursting, popcorn popping.
    */
-  readonly noise = { blasts: 0, blastRadius: 0, strikes: 0, corona: 0, fizzes: 0, bursts: 0 };
+  readonly noise = { blasts: 0, blastRadius: 0, strikes: 0, corona: 0, fizzes: 0, bursts: 0, pops: 0 };
   /**
    * Sunshine, 0 (none) to 1 (full). Light comes straight down each column and warms the first thing
    * it reaches, which may also change (`sunlit` in the material table): water evaporates, clouds burn off.
