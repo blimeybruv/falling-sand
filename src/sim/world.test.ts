@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { AMBIENT_TEMP, M, MATERIALS, MAX_BLAST_RADIUS, MAX_EXPLOSIONS_PER_FRAME, PALETTE, World, type MaterialId } from './index';
+import { AMBIENT_TEMP, CHARGE_ACTIVE, M, MATERIALS, MAX_BLAST_RADIUS, MAX_EXPLOSIONS_PER_FRAME, PALETTE, World, type MaterialId } from './index';
 
 function run(world: World, frames: number): void {
   for (let f = 0; f < frames; f++) world.step();
@@ -50,6 +50,7 @@ describe('material table', () => {
       expect(def.conductivity, where).toBeLessThanOrEqual(0.25); // higher makes diffusion unstable
       expect(inRange(def.cooling), where).toBe(true);
       expect(inRange(def.wind), where).toBe(true);
+      if (def.drifts !== undefined) expect(inRange(def.drifts) && def.kind === 'powder', where).toBe(true);
       if (def.heat) expect(inRange(def.heat.rate), where).toBe(true);
       if (def.ignitesAt !== undefined) expect(def.flammability, where).toBeGreaterThan(0);
       // Something that sets solid when cold must not also be produced by melting below that point.
@@ -403,6 +404,26 @@ describe('gunpowder', () => {
   });
 });
 
+describe('dunes and drifts', () => {
+  const pileCentre = (wind: number, m: MaterialId): number => {
+    const w = new World(120, 40, 13);
+    for (let x = 0; x < 120; x++) w.set(x, 39, M.Stone);
+    for (let y = 30; y < 39; y++) for (let x = 30; x < 50; x++) w.set(x, y, m);
+    w.wind = wind;
+    for (let f = 0; f < 1500; f++) w.step();
+    let n = 0;
+    let sx = 0;
+    for (let i = 0; i < w.size; i++) if (w.mat[i] === m) { n++; sx += i % 120; }
+    return sx / n;
+  };
+
+  it('creep downwind in a strong wind, grain by grain; snow drifts faster than sand', () => {
+    const still = pileCentre(0, M.Sand);
+    expect(pileCentre(1, M.Sand) - still).toBeGreaterThan(3);
+    expect(pileCentre(1, M.Snow) - pileCentre(0, M.Snow)).toBeGreaterThan(pileCentre(1, M.Sand) - still);
+  });
+});
+
 describe('wind', () => {
   it('pushes smoke and falling sand downwind', () => {
     const w = new World(100, 60, 31);
@@ -554,6 +575,92 @@ describe('lightning', () => {
   });
 });
 
+describe('lightning rods', () => {
+  it('draw strikes from a storm to themselves', () => {
+    const w = new World(60, 120, 16);
+    for (let y = 22; y < 42; y++) for (let x = 0; x < 60; x++) w.set(x, y, M.Cloud);
+    for (let y = 100; y < 120; y++) for (let x = 0; x < 60; x++) w.set(x, y, M.Stone);
+    for (let y = 60; y < 100; y++) w.set(30, y, M.Copper); // a copper spire
+    let strikes = 0;
+    let hits = 0;
+    for (let f = 0; f < 3000; f++) {
+      w.step();
+      if (w.noise.strikes > 0) {
+        strikes += w.noise.strikes;
+        // Did this one land on the spire (a copper cell freshly charged)?
+        for (let y = 50; y < 100; y++) if (w.mat[y * 60 + 30] === M.Copper && w.charge[y * 60 + 30] === CHARGE_ACTIVE) { hits++; break; }
+      }
+      w.noise.strikes = 0;
+    }
+    expect(strikes).toBeGreaterThan(4);
+    // The rod reaches about 25 of the 60 columns, so roughly 40% of strikes: well over a fifth.
+    expect(hits).toBeGreaterThan(strikes * 0.2);
+    // And it survives them: lightning doesn't melt it away.
+    let copper = 0;
+    for (let i = 0; i < w.size; i++) if (w.mat[i] === M.Copper) copper++;
+    expect(copper).toBeGreaterThanOrEqual(38);
+  });
+});
+
+describe('dynamo', () => {
+  // A dynamo at the end of a copper wire; counts frames the middle of the wire is live.
+  const pulses = (setup: (w: World) => void): number => {
+    const w = new World(40, 30, 16);
+    for (let x = 0; x < 40; x++) w.set(x, 29, M.Stone);
+    w.set(5, 20, M.Dynamo);
+    for (let x = 6; x < 30; x++) w.set(x, 20, M.Copper);
+    setup(w);
+    let n = 0;
+    for (let f = 0; f < 600; f++) {
+      w.step();
+      if (w.charge[20 * 40 + 18] > 0) n++;
+    }
+    return n;
+  };
+
+  it('pulses a wire while the wind turns it, or water pours onto it', () => {
+    expect(pulses((w) => (w.wind = 1))).toBeGreaterThan(10);
+    // A water wheel, in still air: a tank on a shelf, draining through a hole above the dynamo.
+    expect(
+      pulses((w) => {
+        for (let x = 0; x < 40; x++) w.set(x, 6, x === 5 ? M.Empty : M.Stone);
+        for (let y = 0; y < 6; y++) for (let x = 0; x < 40; x++) w.set(x, y, M.Water);
+      }),
+    ).toBeGreaterThan(5);
+  });
+
+  it('stays still in still air, or walled in out of the wind', () => {
+    expect(pulses(() => {})).toBe(0);
+    expect(
+      pulses((w) => {
+        w.wind = 1;
+        w.set(4, 20, M.Stone);
+        w.set(5, 19, M.Stone);
+      }),
+    ).toBe(0);
+  });
+});
+
+describe('electromagnet', () => {
+  // A standing iron wire with iron filings lying beside it; returns how far the filings are from it.
+  const spread = (powered: boolean): number => {
+    const w = new World(40, 40, 17);
+    for (let x = 0; x < 40; x++) w.set(x, 39, M.Stone);
+    for (let y = 10; y < 39; y++) w.set(10, y, M.Iron);
+    if (powered) w.set(9, 38, M.Battery);
+    for (let x = 13; x < 20; x++) w.set(x, 38, M.IronFilings);
+    for (let f = 0; f < 2000; f++) w.step();
+    let n = 0;
+    let d = 0;
+    for (let i = 0; i < w.size; i++) if (w.mat[i] === M.IronFilings) { n++; d += Math.abs((i % 40) - 10); }
+    return d / n;
+  };
+
+  it('a live iron wire pulls iron filings towards it; a dead one does not', () => {
+    expect(spread(true)).toBeLessThan(spread(false) - 1);
+  });
+});
+
 describe('solar cell', () => {
   const pulses = (sun: number, roof: MaterialId | null): number => {
     const w = new World(40, 30, 9);
@@ -578,6 +685,40 @@ describe('solar cell', () => {
   it('does nothing in the shade or with the sun off', () => {
     expect(pulses(1, M.Stone)).toBe(0);
     expect(pulses(0, null)).toBe(0);
+  });
+});
+
+describe('sunny plants', () => {
+  // Grass on loam, the right half under a stone roof; returns grass grown in the open and in the shade.
+  const grow = (sun: number): [number, number] => {
+    const w = new World(80, 40, 14);
+    for (let x = 0; x < 80; x++) {
+      w.set(x, 39, M.Loam);
+      w.set(x, 38, M.Loam);
+    }
+    for (let x = 40; x < 80; x++) w.set(x, 20, M.Stone);
+    w.set(10, 37, M.Grass);
+    w.set(60, 37, M.Grass);
+    w.sun = sun;
+    for (let f = 0; f < 1500; f++) w.step();
+    let open = 0;
+    let shade = 0;
+    for (let i = 0; i < w.size; i++) {
+      if (w.mat[i] !== M.Grass) continue;
+      if (i % 80 < 40) open++;
+      else shade++;
+    }
+    return [open, shade];
+  };
+
+  it('with the sun out, grow faster in sunlight than in shade', () => {
+    const [open, shade] = grow(1);
+    expect(open).toBeGreaterThan(shade * 1.5);
+  });
+
+  it('grow the same in sun and shade when the sun is off', () => {
+    const [open, shade] = grow(0);
+    expect(Math.abs(open - shade)).toBeLessThan(Math.max(open, shade) * 0.4);
   });
 });
 

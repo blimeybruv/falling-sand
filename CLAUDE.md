@@ -57,7 +57,7 @@ src/main.ts  creates World + Renderer + UI and runs the requestAnimationFrame lo
    burn time, residue, burnTemp, flames, fumes, lifetime, decay, dispersion, viscosity, rise, explosive,
    acidProof, extinguishes, conducts, shattersInto, conductivity, heat, startTemp, above (phase change,
    optionally `sometimes` leaving something else), below (setting solid again when cold), ignitesAt,
-   transparent and sunlit (what sunshine does) and wind apply, plus its palette
+   transparent and sunlit (what sunshine does), wind and drifts (powders blown along the ground) apply, plus its palette
    `category` (the tab it appears under). `key` may be '' for no shortcut. The comments on `MaterialDef` explain each field. The
    "has sane values" test checks the ranges.
 3. Add the id to `PALETTE` at the bottom of `materials.ts` so it can be drawn. For ideas, see
@@ -95,7 +95,9 @@ Movement is density-based: a mover can swap with an empty, liquid or gas cell th
 
 Heat thresholds (`above`, `ignitesAt`) must be reachable by the heat sources you expect. Measure, don't
 guess: sand under a lava pool levels off near 680°, clay beside a burning wood fire peaks near 275°,
-burning wood holds 500°, burning charcoal 950°, fire cells 700°, a brick layer over lava about 520°. Strong sun warms a
+burning wood holds 500°, burning charcoal 950°, fire cells 700°, a brick layer over lava about 520°,
+lightning bolts 1200° (cooler than real ones, which last microseconds, so a copper lightning rod
+survives). Strong sun warms a
 surface to 33–48° (weak sun about half that above ambient): it thaws snow, frost and permafrost but
 shouldn't cook fish (50°) or melt wax (60°). Add a test that the recipe works and,
 where it matters, one that an ordinary situation does *not* trigger it (see "an ordinary wood fire

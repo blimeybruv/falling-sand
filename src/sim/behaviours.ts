@@ -62,9 +62,24 @@ export function updateSteam(w: World, x: number, y: number, i: number): boolean 
 /** How far (in cells) water can be for ground to count as damp, for seeds and grass. */
 const DAMP_RANGE = 6;
 
+/** With the sun out, a plant in shade grows at this fraction of its old pace (in sun, up to twice). */
+const SHADE_GROWTH = 0.35;
+
+/**
+ * Whether a plant at (x, y) grows this frame, `base` being its chance with no sun. With the sun
+ * out it grows faster in sunlight (up to twice as often in full sun) and slower in shade; with
+ * `shadeLoving` (moss) the other way round. The sunlight check only runs once the roll succeeds.
+ */
+function thrives(w: World, x: number, y: number, base: number, shadeLoving = false): boolean {
+  const sun = w.sun;
+  if (sun === 0) return w.rng.chance(base);
+  if (!w.rng.chance(base * (1 + sun))) return false;
+  return w.inSunlight(x, y) !== shadeLoving || w.rng.chance(SHADE_GROWTH / (1 + sun));
+}
+
 /** Grass: now and then spreads into neighbouring water, or over neighbouring open ground (see below). */
 export function growGrass(w: World, x: number, y: number, _i: number): boolean {
-  if (!w.rng.chance(0.03)) return true;
+  if (!thrives(w, x, y, 0.03)) return true;
   const nx = x + w.rng.int(-1, 1);
   const ny = y + w.rng.int(-1, 1);
   const t = w.get(nx, ny);
@@ -114,7 +129,7 @@ export function updateSeed(w: World, x: number, y: number, i: number): boolean {
   if (height >= BAMBOO_TIP) return growBamboo(w, x, y, i, height - BAMBOO_TIP);
   if (height >= CACTUS_TIP) return growCactus(w, x, y, i, height - CACTUS_TIP);
   if (height > 0) return growTree(w, x, y, i, height);
-  if (!w.rng.chance(0.02)) return false;
+  if (!thrives(w, x, y, 0.02)) return false;
   if (w.get(x, y - 1) !== M.Empty) return false;
   const below = w.get(x, y + 1);
   if (below === M.Loam) {
@@ -136,7 +151,7 @@ export function updateSeed(w: World, x: number, y: number, i: number): boolean {
 
 /** Bamboo shoots straight up, fast, and tops out with a few leaves. */
 function growBamboo(w: World, x: number, y: number, i: number, height: number): boolean {
-  if (!w.rng.chance(0.5)) return true;
+  if (!thrives(w, x, y, 0.5)) return true;
   w.setCell(i, M.Bamboo);
   if (height > 1 && w.get(x, y - 1) === M.Empty) {
     w.set(x, y - 1, M.Seed);
@@ -149,7 +164,7 @@ function growBamboo(w: World, x: number, y: number, i: number, height: number): 
 
 /** A cactus climbs a cell at a time, now and then putting out an arm that turns upward. */
 function growCactus(w: World, x: number, y: number, i: number, height: number): boolean {
-  if (!w.rng.chance(0.15)) return true;
+  if (!thrives(w, x, y, 0.15)) return true;
   w.setCell(i, M.Cactus);
   if (height > 1 && w.get(x, y - 1) === M.Empty) {
     w.set(x, y - 1, M.Seed);
@@ -172,7 +187,7 @@ function growCactus(w: World, x: number, y: number, i: number, height: number): 
 }
 
 function growTree(w: World, x: number, y: number, i: number, tip: number): boolean {
-  if (!w.rng.chance(0.2)) return true; // grows slowly, and stays put while it does
+  if (!thrives(w, x, y, 0.2)) return true; // grows slowly, and stays put while it does
   const loam = tip >= LOAM_TREE;
   const height = loam ? tip - LOAM_TREE : tip;
   const nx = w.rng.chance(0.15) ? x + w.rng.sign() : x; // a slight lean now and then
@@ -714,7 +729,8 @@ function isMasonry(t: number): boolean {
 
 /** Moss: now and then creeps into an open cell that sits against stone or brick, if it's damp. */
 export function growMoss(w: World, x: number, y: number, _i: number): boolean {
-  if (!w.rng.chance(0.01)) return true;
+  // Moss is the other way round: with the sun out, it thrives in shade and dries back in the open.
+  if (!thrives(w, x, y, 0.01, true)) return true;
   const nx = x + w.rng.int(-1, 1);
   const ny = y + w.rng.int(-1, 1);
   if (w.get(nx, ny) !== M.Empty) return true;
@@ -739,21 +755,65 @@ export function spreadAlgae(w: World, x: number, y: number, _i: number): boolean
  * which it electrifies if it conducts, or else sets alight. Now and then the same discharge throws
  * red sprites up into the clear sky above the cloud.
  */
+/** How far to either side a strike will bend to reach a lightning rod. */
+const ROD_REACH = 12;
+
+/**
+ * The lightning rod a strike from (x, y) heads for: the highest solid conductor standing within
+ * ROD_REACH columns, where there's height enough to bend over to it. Returns its column, or -1.
+ */
+function findRod(w: World, x: number, y: number): number {
+  let best = -1;
+  let bestY = w.height;
+  for (let dx = -ROD_REACH; dx <= ROD_REACH; dx++) {
+    const rx = x + dx;
+    if (rx < 0 || rx >= w.width) continue;
+    for (let ry = y + 1; ry < bestY; ry++) {
+      const def = w.defAt(rx, ry);
+      if (def.id === M.Cloud || def.kind === 'empty' || def.kind === 'gas') continue;
+      if (def.kind === 'liquid') continue; // rain, or a film of water lying on the rod
+      // The first solid thing below the cloud in this column: is it a conductor, high enough?
+      if (def.conducts && def.kind === 'static' && ry - y > Math.abs(dx) && (ry < bestY || Math.abs(dx) < Math.abs(best - x))) {
+        best = rx;
+        bestY = ry;
+      }
+      break;
+    }
+  }
+  return best;
+}
+
+/** A strike ending in sand fuses a branching tube of fulgurite down into it. */
+function fuseSand(w: World, x: number, y: number): void {
+  let fx = x;
+  for (let fy = y, k = w.rng.int(3, 8); k > 0 && w.get(fx, fy) === M.Sand; k--) {
+    w.transform(w.idx(fx, fy), M.Fulgurite);
+    if (w.rng.chance(0.3) && w.get(fx + 1, fy) === M.Sand) w.transform(w.idx(fx + 1, fy), M.Fulgurite);
+    fy++;
+    fx += w.rng.int(-1, 1);
+  }
+}
+
 function strike(w: World, x: number, y: number): void {
   w.noise.strikes++;
   if (w.rng.chance(0.35)) spawnSprites(w, x, y);
+  // A lightning rod nearby draws the bolt: it bends towards it as it comes down.
+  const rod = findRod(w, x, y);
   let bx = x;
   for (let by = y + 1; by < w.height; by++) {
-    bx += w.rng.int(-1, 1);
+    bx += rod >= 0 && bx !== rod && w.rng.chance(0.8) ? Math.sign(rod - bx) : w.rng.int(-1, 1);
     const def = w.defAt(bx, by);
     if (def.id === M.Cloud) continue;
     if (def.kind === 'empty' || def.kind === 'gas') {
       w.set(bx, by, M.Lightning);
       continue;
     }
+    // Straight through the falling rain (and any water lying on the rod it's heading for).
+    if (def.kind === 'liquid' && (w.vel[w.idx(bx, by)] > 0 || bx === rod)) continue;
     if (w.inBounds(bx, by)) {
       const n = w.idx(bx, by);
-      if (!w.electrify(n)) w.ignite(n);
+      if (def.id === M.Sand) fuseSand(w, bx, by);
+      else if (!w.electrify(n)) w.ignite(n);
     }
     return;
   }
@@ -772,6 +832,8 @@ export function updateBolt(w: World, x: number, y: number, _i: number): boolean 
     else if (t === M.Iron && w.rng.chance(0.05)) w.transform(n, M.Magnet);
     // An arc through charcoal or coal turns it to graphite.
     else if ((t === M.Charcoal || t === M.Coal) && w.rng.chance(0.2)) w.transform(n, M.Graphite);
+    // A bolt drawn into sand fuses it into fulgurite.
+    else if (t === M.Sand && w.rng.chance(0.05)) w.transform(n, M.Fulgurite);
     // An arc through quartz against carbon makes silicon, as in a real arc furnace: a solar cell.
     else if (t === M.Quartz && w.rng.chance(0.2) && countAround(w, nx, ny, M.Graphite, M.Graphite) > 0) {
       w.transform(n, M.SolarCell);
@@ -814,19 +876,68 @@ export function formAlcohol(w: World, x: number, y: number, i: number): boolean 
   return mixThree(w, x, y, i, M.Water, M.Mushroom, M.Alcohol);
 }
 
-/** Magnet: now and then reaches to a random cell nearby and, if it's iron filings or rust, pulls it a step closer. */
-export function pullIron(w: World, x: number, y: number, _i: number): boolean {
-  if (!w.rng.chance(0.3)) return true;
-  const tx = x + w.rng.int(-MAGNET_REACH, MAGNET_REACH);
-  const ty = y + w.rng.int(-MAGNET_REACH, MAGNET_REACH);
+/** Reach to a random cell within `reach` of (x, y) and, if it's iron filings or rust, pull it a step closer. */
+function attract(w: World, x: number, y: number, reach: number): void {
+  const tx = x + w.rng.int(-reach, reach);
+  const ty = y + w.rng.int(-reach, reach);
   const t = w.get(tx, ty);
-  if (t !== M.IronFilings && t !== M.Rust) return true;
+  if (t !== M.IronFilings && t !== M.Rust) return;
   const sx = tx + Math.sign(x - tx);
   const sy = ty + Math.sign(y - ty);
   if (w.get(sx, sy) === M.Empty) w.swap(w.idx(tx, ty), w.idx(sx, sy));
-  return true;
 }
 const MAGNET_REACH = 8;
+const ELECTROMAGNET_REACH = 6;
+
+/** Is there open air beside or above (x, y), for the wind to catch? */
+function inTheOpen(w: World, x: number, y: number): boolean {
+  return w.get(x - 1, y) === M.Empty || w.get(x + 1, y) === M.Empty || w.get(x, y - 1) === M.Empty;
+}
+
+/**
+ * Magnet: now and then pulls iron filings or rust a step closer. A magnet touching copper, out in
+ * the wind, now and then becomes a dynamo (the wind turning a magnet in a copper coil).
+ */
+export function pullIron(w: World, x: number, y: number, i: number): boolean {
+  if (w.wind !== 0 && w.rng.chance(0.002 * Math.abs(w.wind)) && touches(w, x, y, M.Copper) && inTheOpen(w, x, y)) {
+    w.transform(i, M.Dynamo);
+    return true;
+  }
+  if (w.rng.chance(0.3)) attract(w, x, y, MAGNET_REACH);
+  return true;
+}
+
+/** Iron carrying a pulse is an electromagnet: while it's live, it pulls iron filings towards it. */
+export function electromagnet(w: World, x: number, y: number, i: number): boolean {
+  if (w.charge[i] === 0) return false;
+  attract(w, x, y, ELECTROMAGNET_REACH);
+  attract(w, x, y, ELECTROMAGNET_REACH);
+  return false;
+}
+
+/** Is liquid pouring onto (x, y) from above (falling, just above it)? */
+function pouredOn(w: World, x: number, y: number): boolean {
+  for (let k = 1; k <= 2; k++) {
+    if (!w.inBounds(x, y - k)) return false;
+    if (w.defAt(x, y - k).kind === 'liquid' && w.vel[w.idx(x, y - k)] > 0) return true;
+  }
+  return false;
+}
+
+/**
+ * Dynamo: turned by the wind (with open air beside it) or by liquid pouring onto it (a water
+ * wheel), it pulses touching conductors: as often as a battery at full turn.
+ */
+export function spinDynamo(w: World, x: number, y: number, _i: number): boolean {
+  const turn = pouredOn(w, x, y) ? 1 : w.wind !== 0 && inTheOpen(w, x, y) ? Math.abs(w.wind) : 0;
+  if (turn === 0 || !w.rng.chance(0.02 * turn)) return true;
+  for (let k = 0; k < 4; k++) {
+    const nx = k === 0 ? x - 1 : k === 1 ? x + 1 : x;
+    const ny = k === 2 ? y - 1 : k === 3 ? y + 1 : y;
+    if (w.inBounds(nx, ny)) w.electrify(w.idx(nx, ny));
+  }
+  return true;
+}
 
 /** Molten glass: caught by the wind at its surface, it now and then spins out into glass fibre. */
 export function spinFibre(w: World, x: number, y: number, i: number): boolean {

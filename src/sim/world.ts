@@ -75,6 +75,7 @@ const HOLD_TEMP = Float32Array.from(MATERIALS, (d) => (d.heat ? d.heat.temp : AM
 const HOLD_RATE = Float32Array.from(MATERIALS, (d) => (d.heat ? d.heat.rate : d.cooling));
 const BURN_TEMP = Float32Array.from(MATERIALS, (d) => d.burnTemp ?? BURNING_TEMP);
 const WIND = Float32Array.from(MATERIALS, (d) => d.wind);
+const DRIFTS = Float32Array.from(MATERIALS, (d) => d.drifts ?? 0);
 /** Sunlight shines through these (air, gases, glass) and stops at the first thing that isn't. */
 const TRANSPARENT = Uint8Array.from(MATERIALS, (d) => ((d.transparent ?? (d.kind === 'gas' || d.kind === 'empty')) ? 1 : 0));
 const SUNLIT_CHANCE = Float32Array.from(MATERIALS, (d) => d.sunlit?.chance ?? 0);
@@ -765,6 +766,14 @@ export class World {
 
   private movePowder(x: number, y: number, i: number, def: MaterialDef): void {
     if (this.fall(x, y, i, def)) return;
+    // In the wind, an exposed grain is now and then lifted a cell downwind: dunes creep, snow drifts.
+    if (this.wind !== 0 && DRIFTS[def.id] > 0 && this.rng.chance(DRIFTS[def.id] * Math.abs(this.wind))) {
+      const d = this.wind > 0 ? 1 : -1;
+      if (this.get(x, y - 1) === EMPTY && this.get(x + d, y - 1) === EMPTY) {
+        this.swap(i, this.idx(x + d, y - 1));
+        return;
+      }
+    }
     // Sticky powders (clay) hold on to their own kind at either side, and otherwise rarely slide.
     if (def.viscosity > 0) {
       if (this.get(x - 1, y) === def.id || this.get(x + 1, y) === def.id || this.rng.chance(def.viscosity)) return;

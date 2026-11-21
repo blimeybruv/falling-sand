@@ -183,7 +183,7 @@ Also built in round 4: **Slag** (molten iron meets sand: glassy waste powder).
 | | Fertiliser | Ash meets saltpetre | Seeds touching it sprout without water; grass beside it spreads faster | Farms | F |
 | | Compost | Grass or leaves with mushroom in them | Dark crumbly soil that slowly turns into loam | Gardens | T |
 | | Red paint | Rust meets oil | A red liquid that dries into a red static coat | Murals | T |
-| | Electromagnet (behaviour) | Iron carrying a pulse briefly pulls iron filings like a magnet | No new material: wires become magnets while live | Motors | F |
+| ✅ | Electromagnet (behaviour) | Iron carrying a pulse briefly pulls iron filings like a magnet | No new material: wires become magnets while live | Motors | F |
 
 ## Built outside the rounds
 
@@ -255,11 +255,35 @@ cloud itself coming down, so weather can't make water from nothing.
 | ✅ | Solar cell | Sends electric pulses while sunlit; silicon from lightning through quartz touching graphite (an arc furnace) | `update` checks `inSunlight` | F |
 | | Heat lamp | A placeable lamp that heats in a straight line (dissipates a cloud locally, warms a greenhouse) | `update` with a ray | F |
 | | Burning glass | Sunlight through a glass lens focuses to a hot spot that lights tinder | sunlight pass bends at glass | S |
-| | Sunny plants | Grass and trees grow faster in sunlight, seeds struggle in deep shade | growth reads a "lit" flag | F |
+| ✅ | Sunny plants | Grass and trees grow faster in sunlight, seeds struggle in deep shade | growth reads a "lit" flag | F |
 | | Rainbow | Sun plus falling rain draws a faint arc (render-only easter egg) | renderer | F |
 | | Gusty wind | A Wind option that varies in strength and sometimes turns | main loop varies `world.wind` | F |
 | | Day and night | The sun rises and sets, the sky colour shifts, clear nights cool things (frost) | `world.sun` over time + renderer | S |
 | | Seasons | Ambient temperature changes: winter freezes ponds, rain becomes snow | ambient is a constant today | S |
+
+## Interplay ideas, round 8 (brainstormed 21 Nov)
+
+Features that come from systems the game already has meeting each other, rather than new materials
+standing alone.
+
+| | Idea | Mechanics that meet | What it does | Discovered by | Effort |
+|---|---|---|---|---|---|
+| ✅ | Dynamo | wind or falling water + magnet + electricity | A generator: sends pulses into touching metal while the wind blows across it, or water pours onto it | A magnet touching copper, turned by the wind | F |
+| ✅ | Electromagnet | electricity + magnet | Iron carrying a pulse pulls iron filings towards it while it's live | (behaviour, no material) | F |
+| ✅ | Lightning rod | lightning + conductors | A strike bends towards the highest metal within reach, so a copper or iron spire protects what's around it | (behaviour) | F |
+| ✅ | Fulgurite | lightning + sand + glass | Lightning striking sand fuses a branching tube of glassy rock down into it | Lightning hitting sand | T |
+| ✅ | Dunes and snowdrifts | wind + powders | In a strong wind, exposed grains of sand, snow and ash hop downwind, so dunes creep and snow piles into drifts behind walls | (behaviour) | F |
+| ✅ | Sunny plants | sunlight + shade + growth | With the sun out, grass and trees grow faster in sunlight and slower in shade | (behaviour) | F |
+| | Night frost | day and night + sunlight + temperature | On clear nights, exposed surfaces cool and dew freezes into frost; cloud cover keeps the ground warm | (needs day and night) | F |
+| | Accumulator | solar cell + battery + day and night | A battery that stores pulses (from a solar cell by day) and gives them back later, so a lamp can run at night | Battery touching lead or tin in acid | F |
+| | Thermocouple | temperature + electricity | Copper joined to iron sends pulses while one side is much hotter than the other: fire powering a circuit | Molten copper cooling against iron | F |
+| | Bellows effect | wind + fire | Fire spreads faster downwind and struggles upwind, so a blaze races before the wind | (behaviour) | F |
+| | Seed drift | wind + plants | Flowers in the wind release seeds that blow downwind and sprout where they land on loam | (behaviour) | F |
+| | Rain wakes the soil | rain + creatures + plants | Earthworms come to the surface in rain; mushrooms sprout in damp shade after a storm | (behaviour) | F |
+| | Snails in the sun | sunlight + creatures | Snails withdraw into their shells (stop moving) in strong sun and come out when it's wet | (behaviour) | F |
+| | Solar still | sunlight + glass + water vapour | Salt water under a glass roof in the sun: vapour condenses under the glass and drips back fresh, leaving salt (already works: worth a scene and a hint) | (emergent) | T |
+| | Stunned fish | explosions + creatures | Fish caught at the edge of a blast float up, stunned, and may recover | (behaviour) | F |
+| | Lightning feeds the soil | lightning + earth + plants | A strike on loam leaves a little saltpetre (nitrates), so grass flourishes after a storm | (behaviour) | F |
 
 ## Load-bearing materials (design note)
 

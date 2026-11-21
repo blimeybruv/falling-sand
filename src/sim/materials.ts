@@ -47,6 +47,8 @@ import {
   rainCloud,
   updateVapour,
   solarCell,
+  spinDynamo,
+  electromagnet,
   spreadAlgae,
   formLoam,
   fossilise,
@@ -193,6 +195,11 @@ export interface MaterialDef {
   // ---- other
   /** 0..1: how strongly wind pushes it sideways. */
   wind: number;
+  /**
+   * Powders: 0..1, the chance per frame (in a full wind) that a grain lying exposed is lifted a cell
+   * downwind, so dunes creep and snow piles into drifts.
+   */
+  drifts?: number;
   /** Renderer: the colour shimmers over time (lava). */
   glow?: boolean;
   /** Renderer: fade out over this many final frames of its lifetime (gases default to 40). */
@@ -248,6 +255,7 @@ const defs: Record<MaterialId, Def> = {
     name: 'Sand',
     conductivity: 0.06,
     wind: 0.1,
+    drifts: 0.015,
     key: '1',
     kind: 'powder',
     density: 20,
@@ -651,6 +659,7 @@ const defs: Record<MaterialId, Def> = {
     colour: [176, 172, 166],
     colourJitter: 0.12,
     wind: 0.4,
+    drifts: 0.05,
     reactions: [
       { with: M.Water, chance: 0.003, into: M.Lye },
       // Potash meets acid: it fizzes.
@@ -839,6 +848,7 @@ const defs: Record<MaterialId, Def> = {
     heat: { temp: -10, rate: 0.08 },
     above: { temp: 2, into: M.Water },
     wind: 0.5,
+    drifts: 0.04,
     description: 'Light, cold powder. Melts into water near anything warm.',
   },
   [M.Moss]: {
@@ -928,6 +938,8 @@ const defs: Record<MaterialId, Def> = {
       { with: M.SaltWater, chance: 0.004, into: M.Rust },
     ],
     description: 'Metal. Conducts heat fast. Rusts in water, much faster in salt water.',
+    // Carrying a pulse, it's an electromagnet.
+    update: electromagnet,
   },
   [M.Rust]: {
     ...base,
@@ -1325,7 +1337,10 @@ const defs: Record<MaterialId, Def> = {
     colourJitter: 0.1,
     lifetime: [4, 8],
     decay: { into: M.Ozone, chance: 0.15 },
-    heat: { temp: 3000, rate: 1 },
+    // A real bolt is hotter than the sun's surface for a few millionths of a second; drawn for 4-8
+    // frames, that much heat would melt a copper lightning rod at every strike. This is enough to
+    // boil water and scorch, while a rod survives.
+    heat: { temp: 1200, rate: 1 },
     glow: true,
     update: updateBolt,
     description: 'A bolt of electricity: sparks metal and salt water, sets things alight. Draw it on a wire.',
@@ -1375,6 +1390,19 @@ const defs: Record<MaterialId, Def> = {
     colourJitter: 0.12,
     update: solarCell,
     description: 'Silicon, made in an arc furnace. While the sun shines on it, it sends pulses of electricity into touching metal.',
+  },
+  [M.Dynamo]: {
+    ...base,
+    name: 'Dynamo',
+    key: '',
+    category: 'fire',
+    kind: 'static',
+    density: 100,
+    colour: [84, 78, 74],
+    colourEnd: [196, 120, 70],
+    colourJitter: 0.1,
+    update: spinDynamo,
+    description: 'A magnet in a copper coil. Turned by the wind or by water pouring onto it, it sends pulses into touching metal.',
   },
   [M.Sap]: {
     ...base,
@@ -2239,6 +2267,20 @@ const defs: Record<MaterialId, Def> = {
     above: { temp: 1600, into: M.Diamond },
     description: 'Charcoal or coal struck by lightning (an arc furnace). Conducts; baked past 1600°, it becomes diamond.',
   },
+  [M.Fulgurite]: {
+    ...base,
+    name: 'Fulgurite',
+    key: '',
+    kind: 'static',
+    density: 100,
+    colour: [176, 164, 140],
+    colourEnd: [222, 214, 192],
+    colourJitter: 0.1,
+    acidProof: true,
+    shattersInto: M.Sand,
+    above: { temp: 640, into: M.MoltenGlass },
+    description: 'Glassy tubes of sand fused where lightning struck it, branching down into the ground.',
+  },
   [M.Diamond]: {
     ...base,
     name: 'Diamond',
@@ -2398,6 +2440,7 @@ const defs: Record<MaterialId, Def> = {
     ignitesAt: 230,
     residue: { into: M.Ash, chance: 0.3 },
     wind: 0.3,
+    drifts: 0.03,
     description: 'What termites leave of wood. Light, and catches fire easily.',
   },
   [M.Honey]: {
@@ -2458,13 +2501,13 @@ export const PALETTE: readonly MaterialDef[] = [
   M.Sand, M.Earth, M.Mud, M.Clay, M.Loam, M.Stone, M.Brick, M.Glass, M.Obsidian, M.Ice, M.Snow,
   M.Salt, M.IronOre, M.Iron, M.Rust, M.CopperOre, M.Copper, M.Verdigris, M.Gold, M.IronFilings, M.Magnet, M.Steel, M.Tin, M.Bronze, M.Slag, M.Basalt, M.GeyserRock,
   M.SaltCrystal, M.GlassFibre, M.Quartz, M.TarSand, M.Gravel, M.Concrete, M.Terracotta,
-  M.Porcelain, M.Adobe, M.Quicklime, M.SlakedLime, M.Mortar, M.Frost, M.Permafrost, M.Graphite, M.Diamond, M.Chalk, M.Cement, M.Stalactite, M.Rubber, M.Wax, M.Glaze, M.Pumice, M.Quicksand, M.Hail, M.DryIce, M.StainedGlass,
+  M.Porcelain, M.Adobe, M.Quicklime, M.SlakedLime, M.Mortar, M.Frost, M.Permafrost, M.Graphite, M.Fulgurite, M.Diamond, M.Chalk, M.Cement, M.Stalactite, M.Rubber, M.Wax, M.Glaze, M.Pumice, M.Quicksand, M.Hail, M.DryIce, M.StainedGlass,
   // liquids and gases
   M.Water, M.SaltWater, M.Oil, M.Tar, M.Lye, M.Foam, M.Fizz, M.Acid, M.Lava, M.Smoke, M.Steam, M.Cloud,
   M.CarbonDioxide, M.Hydrogen, M.Mercury, M.Alcohol, M.Vinegar, M.Chlorine, M.Bleach, M.SulfurDioxide, M.Fog, M.Ink, M.Ozone, M.MoltenGlass, M.MoltenIron, M.MoltenCopper, M.Brimstone, M.Bubble,
   // fire and blasts
   M.Fire, M.Charcoal, M.Coal, M.Ash, M.Sulfur, M.Saltpetre, M.Gunpowder, M.Fireworks, M.Thermite,
-  M.Napalm, M.Nitro, M.Dynamite, M.SwampGas, M.Soot, M.Lightning, M.Battery, M.SolarCell, M.Plasma, M.Briquette, M.Peat, M.SmokeBomb, M.Sprite,
+  M.Napalm, M.Nitro, M.Dynamite, M.SwampGas, M.Soot, M.Lightning, M.Battery, M.SolarCell, M.Dynamo, M.Plasma, M.Briquette, M.Peat, M.SmokeBomb, M.Sprite,
   // life
   M.Seed, M.Grass, M.Wood, M.Flower, M.Mushroom, M.Moss, M.Algae, M.Vine, M.Seaweed, M.Cactus, M.Sap, M.Sugar, M.Caramel, M.Fruit, M.Pulp, M.Paper, M.Bamboo, M.Amber, M.Honeydew, M.Honey, M.Sawdust,
   // creatures

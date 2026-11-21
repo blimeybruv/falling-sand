@@ -162,6 +162,8 @@ export const RECIPES: Readonly<Partial<Record<MaterialId, Recipe>>> = {
   [M.Frost]: { hint: 'Steam on something far colder than ice.', recipe: 'Steam meets dry ice.' },
   [M.Permafrost]: { hint: 'Freeze the ground.', recipe: 'Earth touching ice or dry ice.' },
   [M.Graphite]: { hint: 'Run lightning through charcoal.', recipe: 'Lightning touching charcoal or coal (an arc furnace).' },
+  [M.Fulgurite]: { hint: 'Where lightning meets the beach.', recipe: 'Lightning striking sand.' },
+  [M.Dynamo]: { hint: 'Spin a magnet inside a coil of copper. What could do the spinning?', recipe: 'A magnet touching copper, out in the wind.' },
   [M.SolarCell]: { hint: 'An arc furnace again: this time through the clear crystal, with carbon beside it.', recipe: 'Lightning through quartz touching graphite (how real silicon is made).' },
   [M.Diamond]: { hint: 'Bake graphite fiercely hot.', recipe: 'Graphite past 1600° (burning thermite will do).' },
   [M.SmokeBomb]: { hint: 'Saltpetre and something sweet.', recipe: 'Saltpetre meets sugar.' },

@@ -141,6 +141,8 @@ export const M = {
   Chalk: 133,
   Vapour: 134,
   SolarCell: 135,
+  Fulgurite: 136,
+  Dynamo: 137,
 } as const;
 
 export type MaterialId = (typeof M)[keyof typeof M];

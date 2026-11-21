@@ -59,9 +59,9 @@ Discovery progress is kept for when you switch back.
 | `.` | Step one frame while paused (or the Step button) |
 | `T` | Heat view: colour everything by temperature (or the Heat view button) |
 | Speed menu | 0.25× to 3× simulation speed |
-| Wind menu | Blow smoke, fire, steam and falling particles left or right |
+| Wind menu | Blow smoke, fire, steam and falling particles left or right. Clouds sail along; in a strong wind, dunes creep and snow piles into drifts |
 | Speaker button | Sound on or off. Wind (following the Wind setting, gusting), crackling fire, booming explosions, thunder after lightning (with a corona sizzle as the charge builds before a near strike), hissing steam and acid, rain and pouring sand, bubbling lava, humming electricity, fireworks, buzzing bees, and a chime for each discovery. All made live with the Web Audio API, no sound files |
-| Sun menu | Sunlight from above warms whatever it reaches first: it evaporates water (which rises and makes clouds), dries mud and salt water, burns off clouds and melts snow, but not in the shade. Glass lets it through |
+| Sun menu | Sunlight from above warms whatever it reaches first: it evaporates water (which rises and makes clouds), dries mud and salt water, burns off clouds and melts snow, but not in the shade. Glass lets it through. Plants grow faster in sunlight and slower in shade (moss the other way round) |
 | Scene menu | Save in this browser, load it again, download or open a scene file, or copy a share link |
 | `J` or Journal button | Discovery journal: what you've found, and hints for the rest |
 | Mode menu | Discovery or Sandbox |
@@ -95,7 +95,7 @@ debris start fresh when a scene loads.
 | F | Snow | Light, cold powder; melts near warmth | A cloud near ice |
 | Z | Salt | Dissolves in water (salt water) and melts ice | Boiling water leaves some behind |
 | | Iron ore | Rusty-speckled rock | Lava meets water (rarely) |
-| | Iron | Metal; conducts heat fast; rusts in water, much faster in salt water | Burning charcoal against iron ore |
+| | Iron | Metal; conducts heat fast; rusts in water, much faster in salt water; carrying a pulse, it's an electromagnet that pulls iron filings | Burning charcoal against iron ore |
 | | Rust | Crumbly orange powder | Iron in water |
 | | Copper ore | Green-speckled rock | Lava meets salt water (rarely) |
 | | Copper | Conducts electricity and heat; never rusts | Burning charcoal against copper ore |
@@ -128,6 +128,7 @@ debris start fresh when a scene loads.
 | | Frost | Thin white coat; melts when warm | Steam meets dry ice |
 | | Permafrost | Frozen ground; thaws into mud | Earth touching ice |
 | | Graphite | Conducts electricity | Lightning through charcoal |
+| | Fulgurite | Glassy tubes of fused sand where lightning struck | Lightning striking sand |
 | | Diamond | Sparkling, indestructible | Graphite past 1600° |
 | | Chalk | Snail shells: fizzes in acid, burns to quicklime | What a snail leaves |
 | | Cement | Pours like a thick liquid, then sets into stone | Ash, sand and water stirred together |
@@ -180,10 +181,11 @@ debris start fresh when a scene loads.
 | | Dynamite | Stable explosive: ignores knocks, needs a flame, big blast | Nitroglycerin soaked into clay |
 | | Swamp gas | Bubbles up from rotting weeds; flashes into fire | Drowned grass |
 | | Soot | Black powder smoke leaves on cold surfaces; burns | Smoke meets cold stone, iron or ice |
-| | Lightning | A short, very hot bolt: sparks wires, sets things alight; draw it on a wire | A thick cloud strikes |
+| | Lightning | A short, hot bolt: sparks wires, sets things alight; draw it on a wire. Strikes bend to the highest metal nearby, so a copper or iron spire is a lightning rod | A thick cloud strikes |
 | | Red sprite | Eerie red jellyfish of light flashing high above a storm | Lightning from a thick cloud with open sky above |
 | | Battery | Sends pulses of electricity into touching metal or salt water | Iron and charcoal in salt water |
 | | Solar cell | Silicon: sends pulses into touching metal while the sun shines on it (works under glass, not in shade) | Lightning through quartz touching graphite |
+| | Dynamo | A magnet in a copper coil: sends pulses into touching metal while the wind turns it (out in the open) or water pours onto it | A magnet touching copper, out in the wind |
 | | Plasma | Glowing gas at 4000° | Lightning through hydrogen, or gas past 2000° |
 | | Briquette | Burns for ages at a steady heat | Charcoal meets clay |
 | | Peat | Slow-burning fuel | Grass or moss buried under earth |
