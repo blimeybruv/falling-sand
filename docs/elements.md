@@ -285,6 +285,28 @@ standing alone.
 | | Stunned fish | explosions + creatures | Fish caught at the edge of a blast float up, stunned, and may recover | (behaviour) | F |
 | | Lightning feeds the soil | lightning + earth + plants | A strike on loam leaves a little saltpetre (nitrates), so grass flourishes after a storm | (behaviour) | F |
 
+## Anomalies (design note, 21 Nov)
+
+Suggested by the user: rare cells where one law of physics goes wrong, in the spirit of anomaly
+zones in fiction, but our own designs (names, looks and rules), in the game's pseudo-scientific
+style. Each is a single static cell with a bounded reach (a radius of a few cells, scanned a few
+cells a frame, so it costs little), breaks exactly one rule, and leaves the rest of the physics to
+react to it. They should be rare and found rather than given: made by extreme events (lightning
+striking a magnet inside plasma, a red sprite touching the ground, a diamond hit by a blast), and
+perhaps a late Discovery tab of their own. Each could have a sound (a hum, a hiss, a low throb).
+A larger feature: best built after the cloud redesign.
+
+| | Anomaly | The rule it breaks | What it does | How it might form | Effort |
+|---|---|---|---|---|---|
+| | Lift field | Gravity | Loose particles nearby fall upwards, so sand and water fountain into the sky and rain down outside it | Lightning striking a magnet in plasma | F |
+| | Gravity knot | Gravity | Pulls loose particles in from all sides and crushes them: sand into stone, coal into diamond | A diamond caught in a blast | F |
+| | Cold sun | Heat flows downhill | Draws heat out of everything around it, so it freezes water and puts out fire, and glows brighter the more it drinks | Dry ice touching plasma | F |
+| | Stasis pocket | Time | Cells within reach update only now and then, so fire, water and creatures move in slow motion | A red sprite touching the ground | F |
+| | Arc node | Insulation | Throws arcs of electricity to anything nearby, conductor or not, setting things alight | Lightning striking graphite under salt water | F |
+| | Phase fault | Phase changes | Things passing through swap state (solid to liquid, liquid to gas) and back again a little way off | Plasma meeting mercury | F |
+| | Linked gates | Distance | A pair: what falls into one comes out of the other (single cells linked by a shared colour, not one multi-cell entity) | Two arc nodes struck at once | S |
+| | Transmuter | Conservation | Slowly turns its neighbours one step along a chain (lead to gold, stone to quartz) and burns out after a while | The reward for finding every anomaly | F |
+
 ## Load-bearing materials (design note)
 
 Feasible in its simple form; a session's work.
