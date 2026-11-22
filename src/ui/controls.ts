@@ -41,6 +41,7 @@ export function setupControls(state: GameState, world: World, discovery: Discove
   const sunSel = byId<HTMLSelectElement>('sun');
   const soundBtn = byId<HTMLButtonElement>('sound');
   const heatBtn = byId<HTMLButtonElement>('heat');
+  const edgesBtn = byId<HTMLButtonElement>('edges');
   const brush = byId<HTMLInputElement>('brush');
   const brushValue = byId<HTMLElement>('brush-value');
   const moreBtn = byId<HTMLButtonElement>('more');
@@ -179,6 +180,19 @@ export function setupControls(state: GameState, world: World, discovery: Discove
       world.sun = value;
     }
   });
+
+  // Edges: walls (the default) or open, so things fall and flow out of the grid.
+  const syncEdges = (): void => {
+    edgesBtn.setAttribute('aria-pressed', String(world.openEdges));
+    edgesBtn.title = world.openEdges
+      ? 'Edges: open (things fall off the bottom and flow out of the sides). Click to make them walls again'
+      : 'Edges: walls. Click to open them, so things fall off the bottom and flow out of the sides';
+  };
+  edgesBtn.addEventListener('click', () => {
+    world.openEdges = !world.openEdges;
+    syncEdges();
+  });
+  syncEdges();
 
   const syncSound = (): void => soundBtn.setAttribute('aria-pressed', String(sound.enabled));
   soundBtn.addEventListener('click', () => {

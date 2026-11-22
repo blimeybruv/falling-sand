@@ -122,7 +122,9 @@ input:focus-visible {
 }
 
 #sound[aria-pressed='false'] .icon-on,
-#sound[aria-pressed='true'] .icon-off {
+#sound[aria-pressed='true'] .icon-off,
+#edges[aria-pressed='false'] .icon-open,
+#edges[aria-pressed='true'] .icon-walls {
   display: none;
 }
 
@@ -446,7 +448,7 @@ button.quiet {
 /* ---- medium screens: drop the title so the toolbar stays on one row */
 @media (max-width: 1400px) {
   .toolbar {
-    gap: 8px 10px;
+    gap: 8px 8px;
   }
   .toolbar h1 {
     display: none;

@@ -83,6 +83,17 @@ const DRIFTS = Float32Array.from(MATERIALS, (d) => d.drifts ?? 0);
 const TRANSPARENT = Uint8Array.from(MATERIALS, (d) => ((d.transparent ?? (d.kind === 'gas' || d.kind === 'empty')) ? 1 : 0));
 const SUNLIT_CHANCE = Float32Array.from(MATERIALS, (d) => d.sunlit?.chance ?? 0);
 const NIGHT_CHANCE = Float32Array.from(MATERIALS, (d) => d.night?.chance ?? 0);
+/** Each material's kind as a small number, for the open-edges pass. */
+const KIND_EMPTY = 0;
+const KIND_STATIC = 1;
+const KIND_POWDER = 2;
+const KIND_LIQUID = 3;
+const KIND_GAS = 4;
+const KIND = Uint8Array.from(MATERIALS, (d) =>
+  d.kind === 'static' ? KIND_STATIC : d.kind === 'powder' ? KIND_POWDER : d.kind === 'liquid' ? KIND_LIQUID : d.kind === 'gas' ? KIND_GAS : KIND_EMPTY,
+);
+/** Clouds that move as a body: they leave by open edges only with the wind. */
+const IS_CLOUD = Uint8Array.from(MATERIALS, (d) => (d.id === M.Cloud || d.id === M.StormCloud ? 1 : 0));
 /** Under the night sky, cells colder than this take their `night.cold` change (-Infinity: none). */
 const NIGHT_COLD_TEMP = Float32Array.from(MATERIALS, (d) => d.night?.cold?.temp ?? -Infinity);
 
@@ -153,6 +164,14 @@ export class World {
   dayClock = 0;
   /** Gusty wind: while set, step() varies `wind` smoothly, in strength and now and then in direction. */
   gusty = false;
+  /**
+   * Open edges: instead of walls, the grid's edges let things leave. Sand, liquids and creatures
+   * fall out of the bottom, liquids and gases flow out of the sides, gases rise out of the top,
+   * clouds sail off a side the wind is blowing towards, and anything flying off the grid is gone.
+   * Solid things (stone, wood, walls you draw) stay put, so you can build a floor. (`get` still
+   * reports Stone outside the grid either way: things reaching an open edge drain away instead.)
+   */
+  openEdges = false;
   /** Frame number in which each cell last moved or was created; such cells are skipped. */
   private readonly stamp: Uint32Array;
   private explosionsThisFrame = 0;
@@ -486,6 +505,7 @@ export class World {
     if (this.dayLength > 0) this.sun = sunAt(this.dayClock++, this.dayLength);
     if (this.gusty) this.wind = gustAt(this.frame);
     if (this.sun !== 0) this.updateSunlight();
+    if (this.openEdges) this.drainEdges();
     const { width: w, height: h, mat, stamp } = this;
     const f = this.frame;
     const leftToRight = (f & 1) === 0;
@@ -500,6 +520,32 @@ export class World {
       }
     }
     this.stepping = false;
+  }
+
+  /**
+   * With open edges, whatever has reached an edge it can leave by is gone (see `openEdges`): the
+   * bottom row loses its sand, liquids and creatures, the side columns anything that isn't solid,
+   * and the top row its gases. Clouds only leave by a side the wind blows towards, and never by
+   * the top (they sink back down from there).
+   */
+  private drainEdges(): void {
+    const { width: w, height: h, mat } = this;
+    const bottom = (h - 1) * w;
+    for (let x = 0; x < w; x++) {
+      const kind = KIND[mat[bottom + x]];
+      if (kind === KIND_POWDER || kind === KIND_LIQUID) this.setCell(bottom + x, M.Empty);
+      if (KIND[mat[x]] === KIND_GAS && !IS_CLOUD[mat[x]]) this.setCell(x, M.Empty);
+    }
+    for (let y = 0; y < h; y++) {
+      for (let side = 0; side < 2; side++) {
+        const i = y * w + (side === 0 ? 0 : w - 1);
+        const m = mat[i];
+        const kind = KIND[m];
+        if (kind === KIND_STATIC || kind === KIND_EMPTY) continue;
+        if (IS_CLOUD[m] && (this.wind === 0 || (this.wind < 0) !== (side === 0))) continue;
+        this.setCell(i, M.Empty);
+      }
+    }
   }
 
   /**
@@ -897,6 +943,11 @@ export class World {
       const nx = x + Math.round((mx * s) / steps);
       const ny = y + Math.round((my * s) / steps);
       if (!this.inBounds(nx, ny)) {
+        if (this.openEdges) {
+          // Flown off the grid through an open edge: gone.
+          this.setCell(ci, M.Empty);
+          return true;
+        }
         blocked = true;
         break;
       }

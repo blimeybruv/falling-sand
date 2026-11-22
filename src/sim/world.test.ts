@@ -1344,3 +1344,57 @@ describe('day and night', () => {
     expect(w.wind).toBeCloseTo(gustAt(700), 5);
   });
 });
+
+describe('open edges', () => {
+  function fill(w: World, x0: number, y0: number, wd: number, ht: number, m: MaterialId): void {
+    for (let y = y0; y < y0 + ht; y++) for (let x = x0; x < x0 + wd; x++) w.set(x, y, m);
+  }
+
+  it('with walls (the default) sand piles up on the bottom; with open edges it falls out', () => {
+    for (const open of [false, true]) {
+      const w = new World(40, 40, 1);
+      w.openEdges = open;
+      fill(w, 15, 5, 10, 10, M.Sand);
+      run(w, 300);
+      if (open) expect(w.count(M.Sand)).toBe(0);
+      else expect(w.count(M.Sand)).toBe(100);
+    }
+  });
+
+  it('a floor you draw still holds things up with open edges', () => {
+    const w = new World(40, 40, 1);
+    w.openEdges = true;
+    fill(w, 5, 30, 30, 2, M.Stone);
+    fill(w, 15, 10, 10, 5, M.Sand);
+    run(w, 400);
+    expect(w.count(M.Sand)).toBe(50);
+    expect(w.count(M.Stone)).toBe(60);
+  });
+
+  it('water flows out of an open side; smoke rises out of the top', () => {
+    const w = new World(40, 40, 1);
+    w.openEdges = true;
+    fill(w, 0, 35, 40, 5, M.Stone);
+    fill(w, 0, 30, 20, 5, M.Water);
+    fill(w, 25, 5, 5, 5, M.Smoke);
+    run(w, 600);
+    expect(w.count(M.Water)).toBeLessThan(20);
+    expect(w.count(M.Smoke)).toBe(0);
+  });
+
+  it('clouds leave only by the side the wind blows them towards', () => {
+    const calm = new World(80, 80, 1);
+    calm.openEdges = true;
+    fill(calm, 0, 14, 80, 6, M.Cloud);
+    run(calm, 600);
+    expect(calm.count(M.Cloud)).toBeGreaterThan(400);
+    const windy = new World(80, 80, 1);
+    windy.openEdges = true;
+    windy.wind = 1;
+    fill(windy, 0, 14, 80, 6, M.Cloud);
+    run(windy, 1200);
+    expect(windy.count(M.Cloud)).toBeLessThan(40);
+    // Blown off the edge, not rained out against it.
+    expect(windy.created[M.Water]).toBeLessThan(100);
+  });
+});
