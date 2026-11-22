@@ -10,6 +10,8 @@ import { downloadScene, loadFromBrowser, loadFromFile, saveToBrowser, shareLink 
 import { heatColour } from '../render/renderer';
 import { DAY_LENGTH, MAX_BRUSH, MIN_BRUSH, SPEEDS, SUNS, WINDS, type GameState } from './state';
 import type { Sound } from './sound';
+import type { History } from './history';
+import type { DrawTool } from './state';
 
 function byId<T extends HTMLElement>(id: string): T {
   const el = document.getElementById(id);
@@ -32,7 +34,7 @@ export interface Controls {
   checkDiscoveries(): void;
 }
 
-export function setupControls(state: GameState, world: World, discovery: Discovery, sound: Sound): Controls {
+export function setupControls(state: GameState, world: World, discovery: Discovery, sound: Sound, history: History): Controls {
   const toolbar = byId<HTMLElement>('toolbar');
   const playBtn = byId<HTMLButtonElement>('play');
   const stepBtn = byId<HTMLButtonElement>('step');
@@ -56,6 +58,48 @@ export function setupControls(state: GameState, world: World, discovery: Discove
 
   const palette = new Palette(byId<HTMLElement>('palette'), state, discovery, toast);
   const selectTool = (id: MaterialId): void => void palette.select(id);
+
+  // --- drawing tools, beside the material tabs
+  const svg = (body: string): string =>
+    `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${body}</svg>`;
+  const drawTools: readonly (readonly [DrawTool, string, string, string])[] = [
+    ['brush', 'B', 'Brush: draw freehand', svg('<path d="M4 18c3-1 3-6 6-6s2 5 5 4 3-7 5-9" />')],
+    ['line', 'L', 'Line: drag a straight line', svg('<path d="M5 19 19 5" />')],
+    ['box', 'R', 'Box: drag out a rectangle', svg('<rect x="4.5" y="6" width="15" height="12" rx="1" />')],
+    ['circle', 'O', 'Circle: drag out from the centre', svg('<circle cx="12" cy="12" r="7.5" />')],
+    ['replace', 'X', 'Replace: swap the material you start on for the selected one', svg('<path d="M5 8h12l-3-3M19 16H7l3 3" />')],
+  ];
+  const toolRow = byId<HTMLDivElement>('draw-tools');
+  const toolButtons = new Map<DrawTool, HTMLButtonElement>();
+  for (const [id, key, label, icon] of drawTools) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.innerHTML = icon;
+    b.title = `${label} (Shift+${key})`;
+    b.setAttribute('aria-label', label);
+    b.addEventListener('click', () => setDrawTool(id));
+    toolRow.append(b);
+    toolButtons.set(id, b);
+  }
+  const gap = document.createElement('span');
+  gap.className = 'tool-gap';
+  const fillBtn = document.createElement('button');
+  fillBtn.type = 'button';
+  fillBtn.innerHTML = svg('<rect x="5" y="5" width="14" height="14" rx="1" fill="currentColor" stroke="none" opacity="0.85" />');
+  fillBtn.title = 'Filled boxes and circles, or just outlines (Shift+F)';
+  fillBtn.setAttribute('aria-label', 'Filled shapes');
+  fillBtn.addEventListener('click', () => setFill(!state.fill));
+  toolRow.append(gap, fillBtn);
+  const setDrawTool = (tool: DrawTool): void => {
+    state.drawTool = tool;
+    for (const [id, b] of toolButtons) b.setAttribute('aria-pressed', String(id === tool));
+  };
+  const setFill = (fill: boolean): void => {
+    state.fill = fill;
+    fillBtn.setAttribute('aria-pressed', String(fill));
+  };
+  setDrawTool(state.drawTool);
+  setFill(state.fill);
 
   // --- discovery
   const modeSel = byId<HTMLSelectElement>('mode');
@@ -144,7 +188,10 @@ export function setupControls(state: GameState, world: World, discovery: Discove
 
   playBtn.addEventListener('click', togglePause);
   stepBtn.addEventListener('click', step);
-  clearBtn.addEventListener('click', () => world.clear());
+  clearBtn.addEventListener('click', () => {
+    history.push();
+    world.clear();
+  });
   heatBtn.addEventListener('click', toggleHeat);
   // Phones: the downward chevron opens the extra controls, the upward one folds them away again.
   const setExpanded = (open: boolean): void => {
@@ -255,7 +302,12 @@ export function setupControls(state: GameState, world: World, discovery: Discove
       await saveToBrowser(world);
       return 'Scene saved in this browser';
     },
-    load: async () => ((await loadFromBrowser(world)) ? 'Scene loaded' : 'No saved scene yet'),
+    undo: async () => (history.undo() ? undefined : 'Nothing to undo'),
+    redo: async () => (history.redo() ? undefined : 'Nothing to redo'),
+    load: async () => {
+      history.push();
+      return (await loadFromBrowser(world)) ? 'Scene loaded' : 'No saved scene yet';
+    },
     download: async () => downloadScene(world),
     open: async () => sceneFile.click(),
     share: async () => {
@@ -276,6 +328,7 @@ export function setupControls(state: GameState, world: World, discovery: Discove
     const file = sceneFile.files?.[0];
     sceneFile.value = '';
     if (file) void run(async () => {
+      history.push();
       await loadFromFile(world, file);
       return 'Scene loaded';
     });
@@ -297,14 +350,30 @@ export function setupControls(state: GameState, world: World, discovery: Discove
   const keyToTool = new Map<string, MaterialId>(PALETTE.filter((d) => d.key).map((d) => [d.key, d.id]));
   keyToTool.set(ERASER_KEY, M.Empty);
 
+  const shiftKeys: Record<string, DrawTool> = { b: 'brush', l: 'line', r: 'box', o: 'circle', x: 'replace' };
+
   window.addEventListener('keydown', (e) => {
-    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    // Undo and redo: Ctrl+Z, and Ctrl+Y or Ctrl+Shift+Z (Cmd on a Mac).
+    if ((e.ctrlKey || e.metaKey) && !e.altKey && !(e.target instanceof HTMLInputElement && e.target.type === 'text')) {
+      const k = e.key.toLowerCase();
+      if (k === 'z' || k === 'y') {
+        e.preventDefault();
+        if (k === 'y' || e.shiftKey) history.redo();
+        else history.undo();
+      }
+      return;
+    }
+    if (e.altKey) return;
     if (e.target instanceof HTMLSelectElement || e.target instanceof HTMLInputElement) {
       if (e.key !== ' ' && e.key !== 'Escape') return;
     }
     const key = e.key.toLowerCase();
     const tool = keyToTool.get(key);
-    if (tool !== undefined) {
+    if (e.shiftKey && shiftKeys[key]) {
+      setDrawTool(shiftKeys[key]);
+    } else if (e.shiftKey && key === 'f') {
+      setFill(!state.fill);
+    } else if (tool !== undefined) {
       selectTool(tool);
     } else if (key === ' ') {
       togglePause();

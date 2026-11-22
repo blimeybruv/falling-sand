@@ -24,10 +24,21 @@ export const DAY_LENGTH = 3 * 60 * 60;
 export const MIN_BRUSH = 0;
 export const MAX_BRUSH = 30;
 
+/**
+ * How the pointer draws: freehand with the brush, a straight line, a box or a circle (dragged out
+ * with a preview, drawn when let go), or the replace brush (swaps the material under it for the
+ * selected one).
+ */
+export type DrawTool = 'brush' | 'line' | 'box' | 'circle' | 'replace';
+
 /** Everything the controls change and the main loop reads. (Wind and sun live on the World.) */
 export interface GameState {
   /** Selected material; M.Empty means the eraser. */
   tool: MaterialId;
+  /** How the pointer draws with it. */
+  drawTool: DrawTool;
+  /** Boxes and circles are filled, not just outlined. */
+  fill: boolean;
   brush: number;
   paused: boolean;
   speed: number;
@@ -40,5 +51,5 @@ export interface GameState {
 }
 
 export function createState(mode: Mode): GameState {
-  return { tool: M.Sand, brush: 4, paused: false, speed: 1, pendingSteps: 0, heatView: false, mode };
+  return { tool: M.Sand, drawTool: 'brush', fill: false, brush: 4, paused: false, speed: 1, pendingSteps: 0, heatView: false, mode };
 }

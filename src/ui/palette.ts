@@ -26,7 +26,16 @@ export class Palette {
     tabRow.setAttribute('role', 'tablist');
     this.tools = document.createElement('div');
     this.tools.className = 'palette-tools';
-    el.append(tabRow, this.tools);
+    // The tab row shares its line with the drawing tools (brush, line, box...), filled in by the controls.
+    const head = document.createElement('div');
+    head.className = 'palette-head';
+    const drawTools = document.createElement('div');
+    drawTools.id = 'draw-tools';
+    drawTools.className = 'draw-tools';
+    drawTools.setAttribute('role', 'toolbar');
+    drawTools.setAttribute('aria-label', 'Drawing tools');
+    head.append(tabRow, drawTools);
+    el.append(head, this.tools);
     for (const [id, label] of [['all', 'All'], ...CATEGORIES] as const) {
       const t = document.createElement('button');
       t.type = 'button';

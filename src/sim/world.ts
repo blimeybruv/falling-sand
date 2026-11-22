@@ -365,6 +365,58 @@ export class World {
     }
   }
 
+  /**
+   * Draw material m into each of the first `count` cells listed (from rasterShape), by the brush's
+   * rules but solid, with no scattering: the shape tools.
+   */
+  paintCells(cells: Int32Array, count: number, m: MaterialId): void {
+    for (let k = 0; k < count; k++) {
+      const i = cells[k];
+      const t = this.mat[i];
+      if (m === M.Empty) {
+        if (t !== M.Empty) this.setCell(i, M.Empty);
+      } else if (t === M.Empty) {
+        this.setCell(i, m);
+      } else if (m === M.Fire) {
+        this.ignite(i);
+      } else if (m === M.Lightning) {
+        this.electrify(i);
+      }
+    }
+  }
+
+  /**
+   * The replace brush: within the disc, turn every cell of material `from` into `to` (or, if `from`
+   * is Empty, every cell that isn't empty). Empty space stays empty.
+   */
+  replace(cx: number, cy: number, radius: number, from: MaterialId, to: MaterialId): void {
+    const r = Math.max(0, Math.floor(radius));
+    const r2 = r * r + r;
+    for (let dy = -r; dy <= r; dy++) {
+      const y = cy + dy;
+      if (y < 0 || y >= this.height) continue;
+      for (let dx = -r; dx <= r; dx++) {
+        const x = cx + dx;
+        if (x < 0 || x >= this.width || dx * dx + dy * dy > r2) continue;
+        const i = y * this.width + x;
+        const t = this.mat[i];
+        if (t === M.Empty || t === to || (from !== M.Empty && t !== from)) continue;
+        this.setCell(i, to);
+      }
+    }
+  }
+
+  /** The replace brush along a line, for smooth strokes when the pointer moves fast. */
+  replaceLine(x0: number, y0: number, x1: number, y1: number, radius: number, from: MaterialId, to: MaterialId): void {
+    const dist = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0));
+    const stride = Math.max(1, Math.floor(radius / 2));
+    const steps = Math.max(1, Math.ceil(dist / stride));
+    for (let s = 0; s <= steps; s++) {
+      const t = s / steps;
+      this.replace(Math.round(x0 + (x1 - x0) * t), Math.round(y0 + (y1 - y0) * t), radius, from, to);
+    }
+  }
+
   /** Paint along a line, for smooth strokes when the pointer moves fast. */
   paintLine(x0: number, y0: number, x1: number, y1: number, radius: number, m: MaterialId): void {
     const dist = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0));

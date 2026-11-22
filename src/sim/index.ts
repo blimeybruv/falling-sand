@@ -15,3 +15,4 @@ export { World, SHADES, SUB, CHARGE_ACTIVE, sunAt, gustAt } from './world';
 export { captureScene, encodeScene, decodeScene, applyScene, type Scene } from './scene';
 export { Rng } from './rng';
 export { Discovery, RECIPES, REWARD, STARTERS, type Recipe } from './discovery';
+export { rasterShape, type Shape } from './shapes';

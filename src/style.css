@@ -268,11 +268,45 @@ input:focus-visible {
   border-top: 1px solid var(--border);
 }
 
+.palette-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .palette-tabs {
   display: flex;
+  flex: 1;
+  min-width: 0;
   gap: 4px;
   overflow-x: auto;
   scrollbar-width: none;
+}
+
+.draw-tools {
+  display: flex;
+  flex: none;
+  gap: 3px;
+}
+
+.draw-tools button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  min-height: 26px;
+  padding: 0;
+  color: var(--muted);
+}
+
+.draw-tools button[aria-pressed='true'] {
+  color: var(--text);
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.draw-tools .tool-gap {
+  width: 6px;
 }
 
 .tab {

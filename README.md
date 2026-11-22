@@ -55,6 +55,8 @@ Discovery progress is kept for when you switch back.
 | Number and letter keys | Pick a material (the key is shown on its palette button; a few have none) |
 | `E` | Eraser |
 | `[` and `]` | Smaller / bigger brush (or the Brush slider) |
+| Drawing tools (beside the material tabs) | Brush (`Shift+B`), line (`Shift+L`), box (`Shift+R`), circle (`Shift+O`) and replace (`Shift+X`). Drag a line, box or circle out, with a preview, and let go to draw it; the brush size sets how thick it is, and the square button (`Shift+F`) fills boxes and circles. A circle is centred where you start. Replace swaps the material you start on for the selected one (water for oil, say, leaving the tank alone). Right-drag erases with any tool |
+| `Ctrl+Z` / `Ctrl+Y` | Undo / redo your last changes (strokes, shapes, Clear, loading a scene), up to 30 back; also in the Scene menu |
 | `Space` | Pause / play |
 | `.` | Step one frame while paused (or the Step button) |
 | `T` | Heat view: colour everything by temperature, with a scale in the corner (or the Heat view button) |
@@ -305,9 +307,7 @@ estimates.
 - [ ] **More materials**: pick one from [`docs/elements.md`](docs/elements.md). Each is a table entry, usually a `Reaction`, and a line in `RECIPES`; the tests check every one can be discovered.
 - [ ] **Discovery goals**: small challenges once everything is unlocked ("grow a forest of 5 trees", "boil a whole pond").
 - [ ] **Metal and electricity**: a conductive solid, plus a spark that travels through connected metal and ignites or explodes what it reaches.
-- [ ] **Undo**: keep the last few scenes in memory (the scene format is small) and restore one with `Ctrl+Z`.
 - [ ] **Example scenes**: a handful of built-in scenes (a volcano, a fuse and charges, a pond with plants) in a menu, stored as share-link text.
-- [ ] **Line and shape tools**: drag to draw a straight line, a rectangle or a circle (outline or filled) in the selected material, with a preview outline while dragging, plus a "replace" brush that swaps one material for another. Tool buttons beside the brush slider, with keyboard shortcuts. Ideal for building containers and kilns. The sim already has `paintLine`; shapes are a few more `World` helpers plus input handling in `src/ui/input.ts`.
 - [ ] **Zoom and pan**: zoom into part of the grid (mouse wheel or keys on a desktop, pinch on touch) and pan around it (drag with the middle button, or two fingers, which erase today). The grid stays the same size; only the view changes, so the simulation cost doesn't.
 - [ ] **Run the simulation in a Web Worker**: move `World.step()` off the main thread and pass the arrays across, so bigger grids stay smooth.
 - [ ] **More sound**: a volume slider; ice cracking, glass shattering.

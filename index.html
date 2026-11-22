@@ -49,6 +49,8 @@
           <div class="menu-wrap">
             <button id="scene-button" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="scene-menu">Scene ▾</button>
             <div id="scene-menu" class="menu" hidden>
+              <button type="button" data-action="undo">Undo (Ctrl+Z)</button>
+              <button type="button" data-action="redo">Redo (Ctrl+Y)</button>
               <button type="button" data-action="save">Save in this browser</button>
               <button type="button" data-action="load">Load saved scene</button>
               <button type="button" data-action="download">Download file</button>
@@ -83,6 +85,9 @@
             <tr><th>Number and letter keys</th><td>Pick a material (the key is shown on each button)</td></tr>
             <tr><th>E</th><td>Eraser</td></tr>
             <tr><th>[ and ]</th><td>Smaller / bigger brush</td></tr>
+            <tr><th>Shift+B, L, R, O, X</th><td>Draw with the brush, a line, a box, a circle, or the replace brush (the buttons beside the material tabs). Drag a line, box or circle out and let go; the brush size sets how thick it is. Replace swaps the material you start on for the selected one</td></tr>
+            <tr><th>Shift+F</th><td>Filled or outlined boxes and circles</td></tr>
+            <tr><th>Ctrl+Z / Ctrl+Y</th><td>Undo / redo (also in the Scene menu)</td></tr>
             <tr><th>Space</th><td>Pause / play</td></tr>
             <tr><th>.</th><td>Step one frame while paused</td></tr>
             <tr><th>T</th><td>Heat view: show temperatures</td></tr>

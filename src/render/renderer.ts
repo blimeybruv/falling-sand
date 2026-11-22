@@ -10,6 +10,8 @@ export interface RenderOptions {
   heatView: boolean;
   /** Brush outline to draw, in grid cells, or null for none. */
   cursor: { x: number; y: number; radius: number } | null;
+  /** A shape being dragged out: the cells it will cover, lightened as a preview. */
+  preview?: { cells: Int32Array; count: number } | null;
 }
 
 /** Gases fade out over their last FADE_FRAMES frames of life. */
@@ -195,7 +197,8 @@ export class Renderer {
     this.frame++;
     if (options.heatView) this.renderHeat(world);
     else this.renderMaterials(world);
-    if (options.cursor) this.drawCursor(world, options.cursor);
+    if (options.preview) this.drawPreview(options.preview);
+    else if (options.cursor) this.drawCursor(world, options.cursor);
     this.ctx.putImageData(this.image, 0, 0);
   }
 
@@ -326,6 +329,17 @@ export class Renderer {
       } else {
         pixels[i] = heatLut[heatLevel(t)];
       }
+    }
+  }
+
+  /** Lighten the cells a shape will cover, so you can see it before letting go. */
+  private drawPreview(p: { cells: Int32Array; count: number }): void {
+    const data = this.image.data;
+    for (let k = 0; k < p.count; k++) {
+      const o = p.cells[k] * 4;
+      data[o] = data[o] * 0.45 + 140;
+      data[o + 1] = data[o + 1] * 0.45 + 140;
+      data[o + 2] = data[o + 2] * 0.45 + 140;
     }
   }
 
