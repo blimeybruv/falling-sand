@@ -201,13 +201,13 @@ The more "advanced" ones refine materials.
 |---|---|---|---|---|---|
 | ✅ | Earthworm | Burrows through earth and loam; hatches in loam beside water | Leaves loam behind it; breeds every few mouthfuls | Earth (drowns in water, burns, or old age) | F |
 | ✅ | Termite | Lives inside wood; drawn by mushrooms rotting it | Eats wood, leaving sawdust; breeds in big timbers | Dies out once there's no wood left | F |
-| | Ant | Digs in sand and earth, needs open air nearby | Carries grains up and drops them, building anthills and tunnels | Earth | F |
+| ✅ | Ant | Digs in sand and earth; drawn by sugar on earth; eats sweet things | Carries grains up and tosses them beside its hole, building anthills (tunnels in loose soil fall in behind it) | Earth (drowns, or old age) | F |
 | ✅ | Fish | Fresh or salt water; appears under algae | Swims, eats algae, breeds when fed | Gone soon after being stranded | F |
 | ✅ | Bee | Open air; drawn by flowers | Turns honeydew it touches into honey: refining | Empty (lives 3000–5000 frames) | F |
 | ✅ | Firefly | Open air over grass | Glows and flickers as it drifts | Empty (water puts it out) | F |
-| | Yeast | In sugar water | Ferments sugar into alcohol and carbon dioxide, multiplying while there's sugar | Empty when the sugar runs out | F |
+| ✅ | Yeast | In water, from fruit soaking in it; feeds on sugar | Ferments sugar into alcohol and carbon dioxide, multiplying while there's sugar; settles to the bottom | Water when the sugar runs out, or in heat | F |
 | ✅ | Snail | Creeps over solid surfaces; appears on moss beside water | Eats algae and moss, breeds when fed | Chalk (its shell), which fizzes in acid and burns to quicklime | F |
-| | Coral polyp | Fixed in warm salt water | Slowly builds coral rock from the salt water: refining sea into stone | Coral rock | F |
+| ✅ | Coral polyp | Fixed in salt water, from algae on sun-warmed salt water | Slowly builds coral rock from the salt water (faster from 25°): refining sea into stone | Coral rock (bleaches over 40°, or out of salt water) | F |
 
 Also built with the creatures: **Sawdust** (termite leavings; light, burns easily), **Honey** (thick
 golden liquid from bees) and **Chalk** (snail shells; fizzes in acid or vinegar, burns to quicklime).
@@ -277,8 +277,8 @@ standing alone.
 | | Night frost | day and night + sunlight + temperature | On clear nights, exposed surfaces cool and dew freezes into frost; cloud cover keeps the ground warm | (needs day and night) | F |
 | | Accumulator | solar cell + battery + day and night | A battery that stores pulses (from a solar cell by day) and gives them back later, so a lamp can run at night | Battery touching lead or tin in acid | F |
 | | Thermocouple | temperature + electricity | Copper joined to iron sends pulses while one side is much hotter than the other: fire powering a circuit | Molten copper cooling against iron | F |
-| | Bellows effect | wind + fire | Fire spreads faster downwind and struggles upwind, so a blaze races before the wind | (behaviour) | F |
-| | Seed drift | wind + plants | Flowers in the wind release seeds that blow downwind and sprout where they land on loam | (behaviour) | F |
+| ✅ | Bellows effect | wind + fire | Fire spreads faster downwind and struggles upwind, so a blaze races before the wind | (behaviour) | F |
+| ✅ | Seed drift | wind + plants | Flowers in the wind release seeds that blow downwind and sprout where they land on loam | (behaviour) | F |
 | | Rain wakes the soil | rain + creatures + plants | Earthworms come to the surface in rain; mushrooms sprout in damp shade after a storm | (behaviour) | F |
 | | Snails in the sun | sunlight + creatures | Snails withdraw into their shells (stop moving) in strong sun and come out when it's wet | (behaviour) | F |
 | | Solar still | sunlight + glass + water vapour | Salt water under a glass roof in the sun: vapour condenses under the glass and drips back fresh, leaving salt (already works: worth a scene and a hint) | (emergent) | T |

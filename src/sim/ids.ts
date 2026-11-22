@@ -160,6 +160,10 @@ export const M = {
   MudPot: 152,
   VolcanicVent: 153,
   Sinkhole: 154,
+  Ant: 155,
+  Yeast: 156,
+  CoralPolyp: 157,
+  CoralRock: 158,
 } as const;
 
 export type MaterialId = (typeof M)[keyof typeof M];

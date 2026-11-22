@@ -519,6 +519,23 @@ describe('every recipe works in the simulation', () => {
       fillRect(w, 0, 32, 40, 8, M.Charcoal);
       fillRect(w, 0, 31, 40, 1, M.Lightning);
     }],
+    ['ant: sugar on earth', M.Ant, 600, (w) => {
+      fillRect(w, 0, 34, 40, 6, M.Earth);
+      fillRect(w, 0, 32, 40, 2, M.Sugar);
+    }],
+    ['yeast: fruit soaking in water', M.Yeast, 600, (w) => {
+      fillRect(w, 0, 30, 40, 10, M.Water);
+      fillRect(w, 0, 28, 40, 2, M.Fruit);
+    }],
+    ['coral polyp: algae on sun-warmed salt water', M.CoralPolyp, 1500, (w) => {
+      fillRect(w, 0, 30, 40, 10, M.SaltWater);
+      fillRect(w, 0, 29, 40, 1, M.Algae);
+      w.sun = 1;
+    }],
+    ['coral rock: a coral polyp in salt water', M.CoralRock, 600, (w) => {
+      fillRect(w, 0, 20, 40, 20, M.SaltWater);
+      w.set(20, 30, M.CoralPolyp);
+    }],
     ['spring: water in gravel under stone', M.Spring, 2000, (w) => {
       fillRect(w, 0, 36, 20, 4, M.Gravel);
       fillRect(w, 20, 36, 20, 4, M.Water);
@@ -630,7 +647,7 @@ describe('every recipe works in the simulation', () => {
       fillRect(w, 0, 38, 40, 2, M.Earth); // not stone: grass touching stone turns to moss
       fillRect(w, 0, 37, 40, 1, M.Grass);
     }],
-    ['bee: drawn by flowers', M.Bee, 600, (w) => fillRect(w, 0, 10, 40, 3, M.Flower)],
+    ['bee: drawn by flowers', M.Bee, 2000, (w) => fillRect(w, 0, 10, 40, 3, M.Flower)],
     ['honey: bees on honeydew', M.Honey, 100, (w) => {
       fillRect(w, 0, 35, 40, 5, M.Honeydew);
       fillRect(w, 0, 32, 40, 3, M.Bee);

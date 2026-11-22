@@ -59,7 +59,7 @@ Discovery progress is kept for when you switch back.
 | `.` | Step one frame while paused (or the Step button) |
 | `T` | Heat view: colour everything by temperature (or the Heat view button) |
 | Speed menu | 0.25× to 3× simulation speed |
-| Wind menu | Blow smoke, fire, steam and falling particles left or right. Clouds sail along; in a strong wind, dunes creep and snow piles into drifts |
+| Wind menu | Blow smoke, fire, steam and falling particles left or right. Clouds sail along; in a strong wind, dunes creep and snow piles into drifts, fire races downwind, and flowers send seeds off on the breeze |
 | Speaker button | Sound on or off. Wind (following the Wind setting, gusting), crackling fire, booming explosions, thunder after lightning (with a corona sizzle as the charge builds before a near strike), hissing steam and acid, rain and pouring sand, bubbling lava, humming electricity, fireworks, buzzing bees, and a chime for each discovery. All made live with the Web Audio API, no sound files |
 | Sun menu | Sunlight from above warms whatever it reaches first: it evaporates water (which rises and makes clouds), dries mud and salt water, burns off clouds and melts snow, but not in the shade. Glass lets it through. Plants grow faster in sunlight and slower in shade (moss the other way round) |
 | Scene menu | Save in this browser, load it again, download or open a scene file, or copy a share link |
@@ -115,6 +115,7 @@ debris start fresh when a scene loads.
 | | Bronze | Conducts; never rusts or greens | Molten copper meets tin |
 | | Slag | Glassy waste powder | Molten iron meets sand |
 | | Basalt | Dark volcanic rock | Lava cooling in open air |
+| | Coral rock | Reef rock built by coral polyps; fizzes in acid, shatters into sand | Coral polyps build it |
 | | Geyser rock | When hot, now and then blasts water and steam upward | Basalt meets water |
 | | Spring | A vent: trickles water up through the rock (and through its own pond) until the aquifer runs dry, then turns to stone | Water in gravel under stone |
 | | Brine spring | A vent of salt water | Salt water in gravel under stone |
@@ -232,6 +233,9 @@ debris start fresh when a scene loads.
 | | Firefly | Creature: drifts over grass, glowing | Grass with open air above |
 | | Bee | Creature: turns honeydew into honey | Flowers draw them |
 | | Snail | Creature: creeps over damp stone eating algae and moss | Moss beside water |
+| | Ant | Digs earth and sand and carries the grains up into anthills; eats sweet things; drowns in water | Sugar on earth |
+| | Yeast | In water, ferments sugar into alcohol and bubbles of carbon dioxide, multiplying while fed | Fruit soaking in water |
+| | Coral polyp | Fixed in salt water, slowly builds a reef of coral rock, faster when warm; bleaches when too hot | Algae on sun-warmed salt water |
 | R | Moss | Creeps over damp stone and brick | Grass touching stone |
 | Y | Algae | Floats and spreads across water | Weeds reaching the surface |
 | | **Tools** | | |

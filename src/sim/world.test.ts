@@ -921,6 +921,98 @@ describe('vents', () => {
   });
 });
 
+describe('ants, yeast and coral', () => {
+  const count = (w: World, m: number): number => w.mat.reduce((n, v) => n + (v === m ? 1 : 0), 0);
+
+  it('ants dig into the earth and carry the grains up into anthills', () => {
+    const w = new World(60, 40, 31);
+    for (let y = 25; y < 40; y++) for (let x = 0; x < 60; x++) w.set(x, y, M.Earth);
+    for (let x = 10; x < 60; x += 10) w.set(x, 24, M.Ant);
+    for (let x = 3; x < 60; x += 6) w.set(x, 24, M.Sugar); // something to eat
+    for (let f = 0; f < 4000; f++) w.step();
+    let heaped = 0;
+    let below = 0;
+    for (let y = 0; y < 25; y++) for (let x = 0; x < 60; x++) if (w.mat[y * 60 + x] === M.Earth) heaped++;
+    for (let y = 26; y < 40; y++) for (let x = 0; x < 60; x++) if (w.mat[y * 60 + x] === M.Ant) below++;
+    expect(heaped).toBeGreaterThan(3); // mounds above the old ground level (loose earth slumps, so they stay small)
+    expect(below).toBeGreaterThan(0); // and ants down in the earth, digging
+  });
+
+  it('yeast ferments sugar into alcohol and carbon dioxide; sugar water alone does not', () => {
+    const brew = (yeast: boolean): World => {
+      const w = new World(30, 30, 32);
+      for (let y = 15; y < 30; y++) for (let x = 0; x < 30; x++) w.set(x, y, M.Water);
+      for (let x = 0; x < 30; x++) w.set(x, 29, M.Sugar);
+      if (yeast) for (let x = 2; x < 30; x += 4) w.set(x, 27, M.Yeast);
+      for (let f = 0; f < 3000; f++) w.step();
+      return w;
+    };
+    const brewed = brew(true);
+    expect(brewed.created[M.Alcohol]).toBeGreaterThan(3);
+    expect(brewed.created[M.CarbonDioxide]).toBeGreaterThan(3);
+    const plain = brew(false);
+    expect(plain.created[M.Alcohol]).toBe(0);
+  });
+
+  it('yeast dies away with no sugar', () => {
+    const w = new World(20, 20, 33);
+    for (let y = 5; y < 20; y++) for (let x = 0; x < 20; x++) w.set(x, y, M.Water);
+    for (let x = 2; x < 20; x += 3) w.set(x, 12, M.Yeast);
+    for (let f = 0; f < 4000; f++) w.step();
+    expect(count(w, M.Yeast)).toBe(0);
+  });
+
+  it('a coral polyp builds a reef in salt water, and bleaches when the water gets too hot', () => {
+    const w = new World(40, 40, 34);
+    for (let y = 10; y < 40; y++) for (let x = 0; x < 40; x++) w.set(x, y, M.SaltWater);
+    w.set(20, 30, M.CoralPolyp);
+    for (let f = 0; f < 4000; f++) w.step();
+    expect(count(w, M.CoralRock)).toBeGreaterThan(5);
+    expect(count(w, M.CoralPolyp)).toBeGreaterThan(0);
+    const hot = new World(10, 10, 35);
+    for (let i = 0; i < hot.size; i++) hot.setCell(i, M.SaltWater);
+    const p = hot.idx(5, 5);
+    hot.setCell(p, M.CoralPolyp);
+    hot.temp[p] = 50;
+    hot.step();
+    expect(hot.mat[p]).toBe(M.CoralRock);
+  });
+});
+
+describe('wind and life', () => {
+  it('flowers in the wind send seeds off downwind', () => {
+    const blow = (wind: number): number => {
+      const w = new World(80, 30, 36);
+      for (let x = 0; x < 80; x++) w.set(x, 29, M.Stone);
+      for (let x = 10; x < 20; x++) w.set(x, 20, M.Flower);
+      w.wind = wind;
+      for (let f = 0; f < 3000; f++) w.step();
+      let far = 0;
+      for (let i = 0; i < w.size; i++) if (w.mat[i] === M.Seed && i % 80 > 25) far++;
+      return far;
+    };
+    expect(blow(1)).toBeGreaterThan(2);
+    expect(blow(0)).toBe(0);
+  });
+
+  it('a fire races along before the wind', () => {
+    const burn = (wind: number): number => {
+      const w = new World(100, 20, 37);
+      for (let x = 0; x < 100; x++) {
+        w.set(x, 19, M.Stone);
+        w.set(x, 18, M.Wood);
+      }
+      w.ignite(w.idx(0, 18));
+      w.wind = wind;
+      for (let f = 0; f < 400; f++) w.step();
+      let reach = 0;
+      for (let x = 0; x < 100; x++) if (w.mat[18 * 100 + x] !== M.Wood || w.burn[18 * 100 + x] > 0) reach = x;
+      return reach;
+    };
+    expect(burn(1)).toBeGreaterThan(burn(0) * 1.3);
+  });
+});
+
 describe('rain', () => {
   it('is the cloud itself coming down, never water from nowhere', () => {
     const w = new World(60, 60, 7);

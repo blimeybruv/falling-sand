@@ -685,6 +685,15 @@ export class World {
     }
 
     this.igniteNeighbours(x, y);
+    // Bellows: in the wind, embers carry a cell or two downwind, so a fire races before the wind.
+    if (this.wind !== 0 && this.rng.chance(Math.abs(this.wind) * 0.3)) {
+      const ex = x + (this.wind > 0 ? 1 : -1) * this.rng.int(1, 2);
+      const ey = y - this.rng.int(0, 1);
+      if (this.inBounds(ex, ey)) {
+        const n = ey * this.width + ex;
+        if (this.rng.chance(MATS[this.mat[n]].flammability)) this.ignite(n);
+      }
+    }
 
     // Flames and a little smoke (or other fumes) above the burning cell.
     if (this.rng.chance(def.flames)) {

@@ -365,6 +365,14 @@ export function spreadMushroom(w: World, x: number, y: number, _i: number): bool
 export function dropSeeds(w: World, x: number, y: number, i: number): boolean {
   if (w.rng.chance(0.0002) && w.get(x, y + 1) === M.Empty) w.set(x, y + 1, M.Seed);
   if (w.rng.chance(0.0003) && w.get(x, y + 1) === M.Empty) w.set(x, y + 1, M.Honeydew);
+  // In the wind, now and then a seed blows off it, carried away downwind to sprout somewhere new.
+  if (w.wind !== 0 && w.rng.chance(0.0004 * Math.abs(w.wind))) {
+    const d = w.wind > 0 ? 1 : -1;
+    if (w.get(x + d, y - 1) === M.Empty) {
+      w.set(x + d, y - 1, M.Seed);
+      if (w.inBounds(x + d, y - 1)) w.launch(w.idx(x + d, y - 1), d * (1 + w.rng.next() * 1.5), -0.6);
+    }
+  }
   // Flowers draw the odd bee.
   if (w.rng.chance(0.0001)) emit(w, x, y, M.Bee);
   // Now and then a flower ripens into fruit, which falls.
@@ -1333,5 +1341,127 @@ export function aquifer(w: World, x: number, y: number, _i: number): boolean {
   const wet = touches(w, x, y, M.Water) ? M.Spring : touches(w, x, y, M.SaltWater) ? M.BrineSpring : -1;
   if (wet >= 0) w.transform(w.idx(x, y - 1), wet as MaterialId);
   return false;
+}
+
+/** Is any of the four neighbours of (x, y) solid, for a crawling creature to hold on to? */
+function hasGrip(w: World, x: number, y: number): boolean {
+  return w.isSolid(x - 1, y) || w.isSolid(x + 1, y) || w.isSolid(x, y - 1) || w.isSolid(x, y + 1);
+}
+
+/**
+ * Ant. Digs a grain of earth or sand from beside or below it, moving into the hole, carries it (the
+ * grain is held in `vel`: 1 earth, 2 sand) up to open air, pushing up through loose soil if need be,
+ * and drops it on the rim of its hole, so ants turn the ground over and pile up anthills. Eats sweet things (sugar, honeydew, fruit,
+ * seeds), breeding when fed; drowns in water, or dies of old age, into earth.
+ */
+export function updateAnt(w: World, x: number, y: number, i: number): boolean {
+  if (w.rng.chance(0.0001) || (touches(w, x, y, M.Water) && w.rng.chance(0.02))) {
+    w.setCell(i, M.Earth);
+    return true;
+  }
+  if (w.rng.chance(0.02)) {
+    let food = neighbourOf(w, x, y, M.Sugar, M.Honeydew);
+    if (food < 0) food = neighbourOf(w, x, y, M.Fruit, M.Seed);
+    if (food >= 0) {
+      w.setCell(food, M.Empty);
+      if (++w.life[i] >= 3 && w.rng.chance(0.3)) {
+        w.life[i] = 0;
+        w.setCell(food, M.Ant);
+      }
+    }
+  }
+  if (!hasGrip(w, x, y)) {
+    if (w.get(x, y + 1) === M.Empty) w.swap(i, w.idx(x, y + 1));
+    return true;
+  }
+  if (!w.rng.chance(0.15)) return true;
+  const carrying = w.vel[i];
+  if (carrying === 0) {
+    // Dig: a grain from beside or below (never the roof over its head).
+    const k = w.rng.int(0, 2);
+    const nx = k === 0 ? x - 1 : k === 1 ? x + 1 : x;
+    const ny = k === 2 ? y + 1 : y;
+    const t = w.get(nx, ny);
+    if ((t === M.Earth || t === M.Sand) && w.inBounds(nx, ny)) {
+      const n = w.idx(nx, ny);
+      w.setCell(n, M.Empty);
+      w.swap(i, n);
+      w.vel[n] = t === M.Earth ? 1 : 2;
+      return true;
+    }
+  } else if (w.get(x, y - 1) === M.Empty && w.get(x, y - 2) === M.Empty) {
+    // At the mouth of the tunnel: toss the grain a couple of cells away (any nearer and it rolls
+    // straight back down the hole), so the grains pile up around the entrance into an anthill.
+    const d = w.rng.sign();
+    for (const tx of [x + 2 * d, x - 2 * d]) {
+      if (w.get(tx, y - 1) === M.Empty && w.get(x + (tx - x) / 2, y - 1) === M.Empty) {
+        w.set(tx, y - 1, carrying === 1 ? M.Earth : M.Sand);
+        w.vel[i] = 0;
+        return true;
+      }
+    }
+  }
+  // Walk to an open cell with something to hold on to; laden, it heads upward, pushing up through
+  // loose earth or sand if it's buried (its tunnels in loose soil soon fall in behind it).
+  const k = carrying !== 0 && w.rng.chance(0.5) ? 2 : w.rng.int(0, 3);
+  const nx = dirX(k, x);
+  const ny = dirY(k, y);
+  const t = w.get(nx, ny);
+  if (t === M.Empty && hasGrip(w, nx, ny)) w.swap(i, w.idx(nx, ny));
+  else if (k === 2 && carrying !== 0 && (t === M.Earth || t === M.Sand) && w.inBounds(nx, ny)) w.swap(i, w.idx(nx, ny));
+  return true;
+}
+
+/**
+ * Yeast: lives in water, fermenting the sugar it touches into alcohol or carbon dioxide (which
+ * bubbles up), multiplying while fed. With no sugar it slowly dies away, out of water it dries up,
+ * and heat kills it: it leaves water behind.
+ */
+export function updateYeast(w: World, x: number, y: number, i: number): boolean {
+  if (w.temp[i] > 60) {
+    w.transform(i, M.Water);
+    return true;
+  }
+  const sugar = neighbourOf(w, x, y, M.Sugar, M.Sugar);
+  if (sugar >= 0) {
+    if (w.rng.chance(0.02)) {
+      w.transform(sugar, w.rng.chance(0.5) ? M.Alcohol : M.CarbonDioxide);
+      if (++w.life[i] >= 3 && w.rng.chance(0.3)) {
+        w.life[i] = 0;
+        breed(w, i, M.Yeast, M.Water, M.Alcohol);
+      }
+    }
+  } else if (w.rng.chance(touches(w, x, y, M.Water) || touches(w, x, y, M.Alcohol) ? 0.002 : 0.02)) {
+    w.transform(i, M.Water);
+    return true;
+  }
+  // It drifts, and slowly settles to the bottom (where the sugar is).
+  const below = w.get(x, y + 1);
+  if ((below === M.Water || below === M.Alcohol) && w.rng.chance(0.03)) w.swap(i, w.idx(x, y + 1));
+  else if (w.rng.chance(0.1)) crawl(w, x, y, i, M.Water, M.Alcohol);
+  return true;
+}
+
+/**
+ * Coral polyp: fixed in salt water, it slowly turns the salt water beside it into coral rock (faster
+ * when the water is warm, from 25°), now and then budding a new polyp on the reef instead. Over 40°
+ * it bleaches; out of salt water it dies; either way it becomes coral rock.
+ */
+export function updateCoral(w: World, x: number, y: number, i: number): boolean {
+  const t = w.temp[i];
+  if (t > 40) {
+    w.transform(i, M.CoralRock);
+    return true;
+  }
+  if (!w.rng.chance(t >= 25 ? 0.006 : 0.002)) return true;
+  const k = w.rng.int(0, 3);
+  const nx = dirX(k, x);
+  const ny = dirY(k, y);
+  if (w.get(nx, ny) === M.SaltWater) {
+    w.transform(w.idx(nx, ny), w.rng.chance(0.15) ? M.CoralPolyp : M.CoralRock);
+  } else if (neighbourOf(w, x, y, M.SaltWater, M.SaltWater) < 0 && w.rng.chance(0.2)) {
+    w.transform(i, M.CoralRock);
+  }
+  return true;
 }
 

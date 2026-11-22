@@ -53,6 +53,9 @@ import {
   vent,
   swallow,
   aquifer,
+  updateAnt,
+  updateYeast,
+  updateCoral,
   electromagnet,
   spreadAlgae,
   formLoam,
@@ -921,7 +924,11 @@ const defs: Record<MaterialId, Def> = {
     residue: { into: M.Ash, chance: 0.1 },
     update: spreadAlgae,
     // Water rich with algae now and then has a fish in it.
-    reactions: [{ with: M.Water, side: 'below', chance: 0.0005, otherInto: M.Fish }],
+    reactions: [
+      { with: M.Water, side: 'below', chance: 0.0005, otherInto: M.Fish },
+      // On warm salt water (the sun warms it), algae and polyp make a coral.
+      { with: M.SaltWater, minTemp: 26, chance: 0.002, otherInto: M.CoralPolyp },
+    ],
     description: 'Green scum that floats and spreads across the surface of water.',
   },
   [M.SwampGas]: {
@@ -1703,6 +1710,65 @@ const defs: Record<MaterialId, Def> = {
     update: swallow,
     description: 'A hole eaten down through chalk by acid: liquids that reach it drain away underground.',
   },
+  [M.Ant]: {
+    ...base,
+    name: 'Ant',
+    key: '',
+    category: 'life',
+    kind: 'static',
+    density: 100,
+    colour: [40, 22, 16],
+    colourEnd: [80, 40, 24],
+    colourJitter: 0.1,
+    flammability: 0.3,
+    burnTime: [2, 4],
+    burnsInto: M.Smoke,
+    update: updateAnt,
+    description: 'Digs grains of earth and sand and carries them up to the surface, building anthills and tunnels. Eats sweet things; dies into earth.',
+  },
+  [M.Yeast]: {
+    ...base,
+    name: 'Yeast',
+    key: '',
+    category: 'life',
+    kind: 'static',
+    density: 100,
+    colour: [222, 206, 160],
+    colourEnd: [200, 180, 130],
+    colourJitter: 0.08,
+    update: updateYeast,
+    description: 'Tiny fungus living in water: it ferments sugar into alcohol and bubbles of carbon dioxide, multiplying while fed. Dies away when the sugar runs out, or in heat.',
+  },
+  [M.CoralPolyp]: {
+    ...base,
+    name: 'Coral polyp',
+    key: '',
+    category: 'life',
+    kind: 'static',
+    density: 100,
+    colour: [255, 110, 140],
+    colourEnd: [255, 172, 110],
+    colourJitter: 0.1,
+    update: updateCoral,
+    description: 'Fixed in salt water, it slowly builds a reef of coral rock from the sea, faster when the water is warm. Too hot, it bleaches into rock.',
+  },
+  [M.CoralRock]: {
+    ...base,
+    name: 'Coral rock',
+    key: '',
+    kind: 'static',
+    density: 100,
+    colour: [226, 186, 172],
+    colourEnd: [248, 226, 210],
+    colourJitter: 0.1,
+    shattersInto: M.Sand,
+    // Like chalk and shells, it's calcium carbonate: it fizzes in acid.
+    reactions: [
+      { with: M.Acid, chance: 0.05, into: M.Fizz, otherInto: M.Fizz },
+      { with: M.Vinegar, chance: 0.05, into: M.Fizz, otherInto: M.Fizz },
+    ],
+    description: 'Reef rock built by coral polyps. Fizzes in acid; shattered, it makes coral sand.',
+  },
   [M.Sap]: {
     ...base,
     name: 'Sap',
@@ -1736,6 +1802,8 @@ const defs: Record<MaterialId, Def> = {
     colourJitter: 0.05,
     above: { temp: 160, into: M.Caramel },
     update: formAlcohol,
+    // Spilled on earth, it draws ants.
+    reactions: [{ with: M.Earth, chance: 0.001, otherInto: M.Ant }],
     description: 'Sweet white powder. Cook it into caramel, or ferment it with water and mushroom.',
   },
   [M.Caramel]: {
@@ -2013,6 +2081,8 @@ const defs: Record<MaterialId, Def> = {
     lifetime: [1500, 3000],
     decay: { into: M.Seed, chance: 0.6 },
     update: formAlcohol,
+    // Soaking in water, the wild yeast on its skin comes alive.
+    reactions: [{ with: M.Water, chance: 0.002, otherInto: M.Yeast }],
     description: 'Ripens from flowers and falls. Rots away leaving a seed; ferments like sugar.',
   },
   [M.Gold]: {
@@ -2809,7 +2879,7 @@ export const MATERIALS: readonly MaterialDef[] = Object.values(M).map((id) => ({
 export const PALETTE: readonly MaterialDef[] = [
   // ground
   M.Sand, M.Earth, M.Mud, M.Clay, M.Loam, M.Compost, M.Fertiliser, M.Stone, M.Brick, M.Glass, M.Obsidian, M.Ice, M.Icicle, M.Snow,
-  M.Salt, M.IronOre, M.Iron, M.Rust, M.CopperOre, M.Copper, M.Verdigris, M.Gold, M.IronFilings, M.Magnet, M.Steel, M.Tin, M.Bronze, M.Slag, M.Basalt, M.GeyserRock, M.Spring, M.BrineSpring, M.Gusher, M.GasVent, M.Fumarole, M.MudPot, M.VolcanicVent, M.Sinkhole,
+  M.Salt, M.IronOre, M.Iron, M.Rust, M.CopperOre, M.Copper, M.Verdigris, M.Gold, M.IronFilings, M.Magnet, M.Steel, M.Tin, M.Bronze, M.Slag, M.Basalt, M.CoralRock, M.GeyserRock, M.Spring, M.BrineSpring, M.Gusher, M.GasVent, M.Fumarole, M.MudPot, M.VolcanicVent, M.Sinkhole,
   M.SaltCrystal, M.GlassFibre, M.Quartz, M.TarSand, M.Gravel, M.Concrete, M.Terracotta,
   M.Porcelain, M.Adobe, M.Quicklime, M.SlakedLime, M.Mortar, M.Frost, M.Permafrost, M.Graphite, M.Fulgurite, M.Diamond, M.Chalk, M.Cement, M.Stalactite, M.Rubber, M.Wax, M.Glaze, M.Pumice, M.Quicksand, M.Hail, M.DryIce, M.StainedGlass,
   // liquids and gases
@@ -2821,7 +2891,7 @@ export const PALETTE: readonly MaterialDef[] = [
   // life
   M.Seed, M.Grass, M.Wood, M.Flower, M.Mushroom, M.Moss, M.Algae, M.Vine, M.Seaweed, M.Cactus, M.Sap, M.Sugar, M.Caramel, M.Toffee, M.CandyFloss, M.Popcorn, M.Fruit, M.Pulp, M.Paper, M.Bamboo, M.Amber, M.Honeydew, M.Honey, M.Sawdust,
   // creatures
-  M.Earthworm, M.Termite, M.Fish, M.Firefly, M.Bee, M.Snail,
+  M.Earthworm, M.Termite, M.Fish, M.Firefly, M.Bee, M.Snail, M.Ant, M.Yeast, M.CoralPolyp,
 ].map((id) => MATERIALS[id]);
 
 /** Room temperature. Cells drift back towards it when nothing heats or cools them. */
