@@ -328,6 +328,28 @@ after the anomalies. Best built after the anomalies.
 | | Wrong water | Direction | A liquid that flows towards the nearest wall instead of down, and climbs | Water passed through linked gates | F |
 | | Tolling glass | Time and sound | Rings softly (a low tone in the soundscape) a few seconds before anything near it changes: a fuse catching, a creature hatching, lightning charging | Glass struck by lightning inside hush | S |
 
+## Figures (design note, 22 Nov): only if the rule changes
+
+`CLAUDE.md` allows materials and single-cell creatures only: no people, stick figures or
+multi-cell entities. **Don't build this unless the user changes that rule** (and writes the
+exception into `CLAUDE.md`). Recorded so the idea isn't lost: the user suggested that if entities
+ever come, tiny minimalist figures (a few flat-coloured pixels, in the spirit of minimalist
+pixel-art games) would fit best. Our own figures and behaviours, not a recreation of any particular
+game, its fighting, characters or look.
+
+- **Separate from the grid**: a figure is a small sprite drawn over the world, with its own
+  position and velocity, not cells in the simulation, so "cells are materials" stays true and the
+  renderer's one pass over the grid stays as it is (figures are drawn on top afterwards).
+- **The fun is the physics they land in**: they walk on solids, climb small steps, fall, swim or
+  sink in liquids, slow down in mud and quicksand, get pushed by wind and thrown by explosions,
+  catch fire, get struck by lightning (a rod nearby protects them), slip on ice, shelter from rain.
+- **Simple and bounded**: a cap on how many exist, a few behaviours (wander, climb, flee fire, seek
+  shelter, follow light at night), no combat system, nothing that needs pathfinding over the whole
+  grid.
+- **Opt-in**: a setting or its own palette tab, so the sandbox stays a materials game by default.
+- **Scenes**: figures would need their own section in the scene format (bump `VERSION`, keep old
+  scenes loading without them).
+
 ## Load-bearing materials (design note)
 
 Feasible in its simple form; a session's work.
