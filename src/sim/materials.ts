@@ -46,6 +46,8 @@ import {
   growMoss,
   rainCloud,
   updateVapour,
+  updateFog,
+  thickenIce,
   solarCell,
   spinDynamo,
   growIcicle,
@@ -205,6 +207,17 @@ export interface MaterialDef {
    * then into something else instead (salt water leaving salt).
    */
   sunlit?: { chance: number; into: MaterialId; sometimes?: { into: MaterialId; chance: number } };
+  /**
+   * Under a clear night sky (the first thing the sky reaches in its column), now and then
+   * (`chance` per visit, on the clearest night) turns into `into`: mist rising off water.
+   */
+  night?: {
+    chance: number;
+    into: MaterialId;
+    sometimes?: { into: MaterialId; chance: number };
+    /** Once the night sky has chilled it below `temp`, it turns into `into` instead (a pond skinning over). */
+    cold?: { temp: number; into: MaterialId };
+  };
 
   // ---- other
   /** 0..1: how strongly wind pushes it sideways. */
@@ -311,6 +324,8 @@ const defs: Record<MaterialId, Def> = {
     wind: 0.05,
     // Sunshine slowly evaporates it into vapour, which makes clouds: the water cycle.
     sunlit: { chance: 0.006, into: M.Vapour },
+    // Under a clear night sky, mist rises off it, and once it's cold enough it skins over with ice.
+    night: { chance: 0.003, into: M.Fog, cold: { temp: -1, into: M.ThinIce } },
     key: '2',
     kind: 'liquid',
     density: 10,
@@ -2062,16 +2077,23 @@ const defs: Record<MaterialId, Def> = {
     name: 'Fog',
     key: '',
     category: 'fluid',
-    kind: 'gas',
-    density: 0.95,
+    // Cool, damp air a little heavier than the air around it: modelled like carbon dioxide, as a
+    // very light liquid, so it hangs over the ground and pools in hollows instead of rising away.
+    kind: 'liquid',
+    density: 1.2,
+    dispersion: 4,
     colour: [176, 186, 198],
     colourJitter: 0.06,
     lifetime: [600, 1200],
-    rise: 0.02,
+    // Fog doesn't vanish: it evaporates back into (invisible) water vapour, which keeps the water
+    // cycle whole now that clear nights raise fog off ponds.
+    decay: { into: M.Vapour, chance: 1 },
     wind: 0.8,
+    fadeFrames: 40,
     transparent: false,
-    sunlit: { chance: 0.03, into: M.Empty },
-    description: 'A thin mist that lingers low and drifts, then fades.',
+    sunlit: { chance: 0.03, into: M.Vapour },
+    update: updateFog,
+    description: 'A thin mist that lingers low and drifts, then evaporates. Rises off water on clear nights; freezing fog leaves frost on the ground.',
   },
   [M.Stalactite]: {
     ...base,
@@ -2949,6 +2971,20 @@ const defs: Record<MaterialId, Def> = {
     ],
     description: 'Old snail shells. Fizzes in acid or vinegar; burnt, it makes quicklime.',
   },
+  [M.ThinIce]: {
+    ...base,
+    name: 'Thin ice',
+    key: '',
+    kind: 'static',
+    density: 100,
+    colour: [196, 226, 246],
+    colourJitter: 0.05,
+    conductivity: 0.1,
+    // Unlike placed ice, it holds no cold of its own: the morning sun melts it.
+    above: { temp: 2, into: M.Water },
+    update: thickenIce,
+    description: 'The skin of ice a clear night leaves on a pond. Thickens through a cold night; melts in the morning sun.',
+  },
   [M.Vapour]: {
     ...base,
     name: 'Water vapour',
@@ -2999,6 +3035,10 @@ export const BURNING_TEMP = 500;
 export const SUN_WARMTH = 28;
 /** Degrees full sun adds to a sunlit cell each time the light visits its column (every 4th frame). */
 export const SUN_HEAT = 6;
+/** On the clearest night, whatever is open to the sky cools to about this far below ambient. */
+export const NIGHT_CHILL = 35;
+/** Degrees the clearest night takes from an exposed cell each time it visits its column: slower than the sun warms. */
+export const NIGHT_HEAT = 2;
 
 /** Explosions never exceed this radius, so a chain of nitroglycerin can't freeze the page. */
 export const MAX_BLAST_RADIUS = 12;

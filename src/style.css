@@ -454,6 +454,9 @@ button.quiet {
   .brush input {
     width: 90px;
   }
+  .toolbar select {
+    padding: 6px 6px;
+  }
 }
 
 /* ---- phones: compact toolbar, palette scrolls sideways in one row */

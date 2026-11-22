@@ -169,6 +169,7 @@ export const M = {
   HeatLamp: 161,
   StormCloud: 162,
   Cirrus: 163,
+  ThinIce: 164,
 } as const;
 
 export type MaterialId = (typeof M)[keyof typeof M];

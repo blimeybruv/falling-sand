@@ -257,8 +257,8 @@ cloud itself coming down, so weather can't make water from nothing.
 | | Burning glass | Sunlight through a glass lens focuses to a hot spot that lights tinder | sunlight pass bends at glass | S |
 | ✅ | Sunny plants | Grass and trees grow faster in sunlight, seeds struggle in deep shade | growth reads a "lit" flag | F |
 | | Rainbow | Sun plus falling rain draws a faint arc (render-only easter egg) | renderer | F |
-| | Gusty wind | A Wind option that varies in strength and sometimes turns | main loop varies `world.wind` | F |
-| | Day and night | The sun rises and sets, the sky colour shifts, clear nights cool things (frost) | `world.sun` over time + renderer | S |
+| ✅ | Gusty wind | A Wind option that varies in strength and sometimes turns | main loop varies `world.wind` | F |
+| ✅ | Day and night | The sun rises and sets, the sky colour shifts (dusk, stars), clear nights cool things (frost) | `world.sun` below 0 is night; `sunAt`, renderer `skyColour` | S |
 | | Seasons | Ambient temperature changes: winter freezes ponds, rain becomes snow | ambient is a constant today | S |
 
 ## Clouds, redesigned (21-22 Nov)
@@ -295,6 +295,12 @@ when it's heavy, and stay after the rain.
   Cirrus never rains and fades over about a minute. It's what the water cycle leaves high in the
   sky.
 
+**Later (22 Nov, afternoon).** Lone wisps now evaporate back into invisible vapour instead of
+vanishing. Vapour reaching the cloud layer hangs there until it touches cloud or enough of it
+has gathered, then condenses. Clouds keep their water, and condense in clumps rather than as lone
+specks. Cirrus stops climbing about 14 rows above the cloud layer, so it streams across the sky
+rather than piling into a white band along the top.
+
 **Rendering.** Each cloud material gets its own depth-shading table, a white top darkening
 downwards, so a storm base reads as a different colour, not just as a deep cloud.
 
@@ -310,7 +316,7 @@ applies to Neon.
 | ✅ | Strikes one at a time | However big the storm, bolts come a second or two apart | `STRIKE_GAP` | T |
 | | Anvil | A very tall storm cloud spreads sideways where it meets the top of the sky (cumulonimbus) | spread rule at the ceiling | F |
 | | Mammatus | Pouches hanging under a storm base as it decays | renderer, or a sag rule | F |
-| | Fog bank | Cloud that forms at ground level on cold, still nights (needs day and night) | condensation near cold ground | F |
+| ✅ | Fog bank | Mist rising off water on clear nights, hanging low and pooling in hollows (fog is now a very light liquid, like CO2) | `night` change on Water | F |
 | | Rain shafts | Rain from a storm drawn as faint grey streaks, not separate drops | renderer | F |
 
 ## Interplay ideas, round 8 (brainstormed 21 Nov)
@@ -326,7 +332,7 @@ standing alone.
 | ✅ | Fulgurite | lightning + sand + glass | Lightning striking sand fuses a branching tube of glassy rock down into it | Lightning hitting sand | T |
 | ✅ | Dunes and snowdrifts | wind + powders | In a strong wind, exposed grains of sand, snow and ash hop downwind, so dunes creep and snow piles into drifts behind walls | (behaviour) | F |
 | ✅ | Sunny plants | sunlight + shade + growth | With the sun out, grass and trees grow faster in sunlight and slower in shade | (behaviour) | F |
-| | Night frost | day and night + sunlight + temperature | On clear nights, exposed surfaces cool and dew freezes into frost; cloud cover keeps the ground warm | (needs day and night) | F |
+| ✅ | Night frost | day and night + sunlight + temperature | On clear nights, exposed surfaces cool, ponds skin over with thin ice and freezing fog leaves frost on frozen ground; cloud cover keeps the ground warm | Fog on frozen ground | F |
 | ✅ | Accumulator | solar cell + battery + day and night | A battery that stores pulses (from a solar cell by day) and gives them back once the supply stops, so a lamp can run at night | Pulses from another source arriving at a battery | F |
 | ✅ | Thermocouple | temperature + electricity | Copper joined to iron sends pulses while one side is much hotter than the other: fire powering a circuit | Molten copper cooling against iron | F |
 | ✅ | Bellows effect | wind + fire | Fire spreads faster downwind and struggles upwind, so a blaze races before the wind | (behaviour) | F |

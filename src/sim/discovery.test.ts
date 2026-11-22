@@ -342,6 +342,10 @@ describe('every recipe works in the simulation', () => {
       fillRect(w, 0, 36, 40, 4, M.Snow);
       fillRect(w, 0, 30, 40, 6, M.Steam);
     }],
+    ['fog: a clear night over water', M.Fog, 600, (w) => {
+      fillRect(w, 0, 34, 40, 6, M.Water);
+      w.sun = -1;
+    }],
     ['stalactite: salt water under a stone ceiling', M.Stalactite, 400, (w) => {
       fillRect(w, 0, 0, 40, 3, M.Stone);
       fillRect(w, 0, 3, 40, 37, M.SaltWater);

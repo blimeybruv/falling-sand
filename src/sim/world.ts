@@ -19,6 +19,8 @@ import { M, type MaterialId } from './ids';
 import {
   AMBIENT_TEMP,
   BURNING_TEMP,
+  NIGHT_CHILL,
+  NIGHT_HEAT,
   SUN_HEAT,
   SUN_WARMTH,
   MATERIALS,
@@ -80,6 +82,9 @@ const DRIFTS = Float32Array.from(MATERIALS, (d) => d.drifts ?? 0);
 /** Sunlight shines through these (air, gases, glass) and stops at the first thing that isn't. */
 const TRANSPARENT = Uint8Array.from(MATERIALS, (d) => ((d.transparent ?? (d.kind === 'gas' || d.kind === 'empty')) ? 1 : 0));
 const SUNLIT_CHANCE = Float32Array.from(MATERIALS, (d) => d.sunlit?.chance ?? 0);
+const NIGHT_CHANCE = Float32Array.from(MATERIALS, (d) => d.night?.chance ?? 0);
+/** Under the night sky, cells colder than this take their `night.cold` change (-Infinity: none). */
+const NIGHT_COLD_TEMP = Float32Array.from(MATERIALS, (d) => d.night?.cold?.temp ?? -Infinity);
 
 // Module-local copies of imported constants used in hot loops. (Under Vitest's module transform,
 // every read of an imported binding is a property lookup, which made benchmarks misleading.)
@@ -134,8 +139,20 @@ export class World {
   /**
    * Sunshine, 0 (none) to 1 (full). Light comes straight down each column and warms the first thing
    * it reaches, which may also change (`sunlit` in the material table): water evaporates, clouds burn off.
+   * Below 0 it's a clear night, down to -1: the first thing under the open sky in each column loses
+   * heat to it, towards NIGHT_CHILL below ambient, and may change (`night`). Whatever is under a
+   * cloud or a roof stays warm.
    */
   sun = 0;
+  /**
+   * Frames in a whole day and night (0: no cycle, `sun` stays as set). While cycling, `sun` follows
+   * the time of day, starting at sunrise when `dayClock` is 0.
+   */
+  dayLength = 0;
+  /** Frames since sunrise of the first day; step() advances it while `dayLength` is set. */
+  dayClock = 0;
+  /** Gusty wind: while set, step() varies `wind` smoothly, in strength and now and then in direction. */
+  gusty = false;
   /** Frame number in which each cell last moved or was created; such cells are skipped. */
   private readonly stamp: Uint32Array;
   private explosionsThisFrame = 0;
@@ -466,7 +483,9 @@ export class World {
     this.stepping = true;
     this.updateTemperature();
     this.updateElectricity();
-    if (this.sun > 0) this.updateSunlight();
+    if (this.dayLength > 0) this.sun = sunAt(this.dayClock++, this.dayLength);
+    if (this.gusty) this.wind = gustAt(this.frame);
+    if (this.sun !== 0) this.updateSunlight();
     const { width: w, height: h, mat, stamp } = this;
     const f = this.frame;
     const leftToRight = (f & 1) === 0;
@@ -488,22 +507,36 @@ export class World {
    * anything transparent and stops at the first cell that isn't. That cell warms towards a hot
    * summer surface temperature (never cooling something already hotter), and may change in the sun.
    * Whatever lies under it is in its shade.
+   *
+   * At night (`sun` below 0) the same cell instead loses heat to the clear sky, towards NIGHT_CHILL
+   * below ambient (never warming something colder), and may change under the night sky. A cloud,
+   * fog or a roof is that first cell itself, so whatever lies under it keeps warm.
    */
   private updateSunlight(): void {
     const { width: w, height: h, mat } = this;
     const t = this.temp;
     const sun = this.sun;
-    const target = AMBIENT + SUN_WARMTH * sun;
-    const heat = SUN_HEAT * sun;
+    const night = sun < 0;
+    const strength = night ? -sun : sun;
+    const target = night ? AMBIENT - NIGHT_CHILL * strength : AMBIENT + SUN_WARMTH * sun;
+    const heat = (night ? NIGHT_HEAT : SUN_HEAT) * strength;
+    const chances = night ? NIGHT_CHANCE : SUNLIT_CHANCE;
     const end = w * h;
     for (let x = this.frame & 3; x < w; x += 4) {
       let i = x;
       while (i < end && TRANSPARENT[mat[i]]) i += w;
       if (i >= end) continue;
-      if (t[i] < target) t[i] = Math.min(target, t[i] + heat);
       const m = mat[i];
-      if (SUNLIT_CHANCE[m] > 0 && this.rng.chance(SUNLIT_CHANCE[m] * sun)) {
-        const change = MATS[m].sunlit!;
+      if (night) {
+        if (t[i] > target) t[i] = Math.max(target, t[i] - heat);
+        const cold = NIGHT_COLD_TEMP[m];
+        if (t[i] < cold) {
+          this.transform(i, MATS[m].night!.cold!.into);
+          continue;
+        }
+      } else if (t[i] < target) t[i] = Math.min(target, t[i] + heat);
+      if (chances[m] > 0 && this.rng.chance(chances[m] * strength)) {
+        const change = night ? MATS[m].night! : MATS[m].sunlit!;
         const other = change.sometimes;
         this.transform(i, other && this.rng.chance(other.chance) ? other.into : change.into);
       }
@@ -920,4 +953,25 @@ export class World {
     if (this.get(x + dir, y) === M.Empty) this.swap(i, this.idx(x + dir, y));
     else if (this.get(x - dir, y) === M.Empty) this.swap(i, this.idx(x - dir, y));
   }
+}
+
+/**
+ * The sun at `clock` frames after the first sunrise, in a day and night `length` frames long: up
+ * through the morning to full sun at midday and down to sunset halfway through, then a clear night,
+ * coldest at midnight. It rises and sets quickly (the sine is scaled up and clipped), so most of
+ * the day is bright and most of the night properly dark.
+ */
+export function sunAt(clock: number, length: number): number {
+  const s = Math.sin((2 * Math.PI * (clock % length)) / length) * 1.6;
+  return s > 1 ? 1 : s < -1 ? -1 : s;
+}
+
+/**
+ * Gusty wind at a given frame: three slow waves with unrelated periods, so it swells and drops,
+ * lulls now and then, and every so often swings round to blow the other way. Mostly between light
+ * and strong; -1 to 1 like `World.wind`.
+ */
+export function gustAt(frame: number): number {
+  const v = 0.75 * Math.sin(frame * 0.0023) + 0.4 * Math.sin(frame * 0.0107 + 1.3) + 0.25 * Math.sin(frame * 0.041 + 0.7);
+  return v > 1 ? 1 : v < -1 ? -1 : v;
 }

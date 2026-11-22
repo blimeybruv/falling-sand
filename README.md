@@ -59,9 +59,9 @@ Discovery progress is kept for when you switch back.
 | `.` | Step one frame while paused (or the Step button) |
 | `T` | Heat view: colour everything by temperature (or the Heat view button) |
 | Speed menu | 0.25× to 3× simulation speed |
-| Wind menu | Blow smoke, fire, steam and falling particles left or right. Clouds sail along; in a strong wind, dunes creep and snow piles into drifts, fire races downwind, and flowers send seeds off on the breeze |
+| Wind menu | Blow smoke, fire, steam and falling particles left or right. Clouds sail along; in a strong wind, dunes creep and snow piles into drifts, fire races downwind, and flowers send seeds off on the breeze. Gusty swells and drops and now and then turns round |
 | Speaker button | Sound on or off. Wind (following the Wind setting, gusting), crackling fire, booming explosions, thunder after lightning (with a corona sizzle as the charge builds before a near strike), hissing steam and acid, rain and pouring sand, bubbling lava, humming electricity, fireworks, buzzing bees, and a chime for each discovery. All made live with the Web Audio API, no sound files |
-| Sun menu | Sunlight from above warms whatever it reaches first: it evaporates water (which rises and makes clouds), dries mud and salt water, burns off clouds and melts snow, but not in the shade. Glass lets it through. Plants grow faster in sunlight and slower in shade (moss the other way round) |
+| Sun menu | Sunlight from above warms whatever it reaches first: it evaporates water (which rises and makes clouds), dries mud and salt water, burns off clouds and melts snow, but not in the shade. Glass lets it through. Plants grow faster in sunlight and slower in shade (moss the other way round). Day/night runs a three-minute day: the sky brightens, warms at dawn and dusk and fills with stars; clear nights chill whatever is open to the sky (a cloud or a roof keeps it warm), mist rises off water, ponds skin over with thin ice, and fog settling on frozen ground leaves frost. The morning sun melts it all |
 | Scene menu | Save in this browser, load it again, download or open a scene file, or copy a share link |
 | `J` or Journal button | Discovery journal: what you've found, and hints for the rest |
 | Mode menu | Discovery or Sandbox |
@@ -137,7 +137,7 @@ debris start fresh when a scene loads.
 | | Quicklime | Gets fiercely hot when wet | Stalactite past 800° |
 | | Slaked lime | Thick white paste | Quicklime meets water |
 | | Mortar | Sets into stone | Slaked lime meets sand |
-| | Frost | Thin white coat; melts when warm | Steam meets dry ice |
+| | Frost | Thin white coat; melts when warm | Steam meets dry ice, or fog on ground frozen by a clear night |
 | | Permafrost | Frozen ground; thaws into mud | Earth touching ice |
 | | Graphite | Conducts electricity | Lightning through charcoal |
 | | Fulgurite | Glassy tubes of fused sand where lightning struck | Lightning striking sand |
@@ -172,7 +172,7 @@ debris start fresh when a scene loads.
 | | Chlorine | Heavy yellow-green gas; wilts plants | Electrified salt water |
 | | Bleach | Kills algae, moss and mushrooms; clears stained glass | Chlorine meets lye |
 | | Sulfur dioxide | Heavy choking gas; makes water acidic and clouds rain acid | Burning sulfur |
-| | Fog | Thin mist that lingers low and drifts | Steam meets snow or ice |
+| | Fog | Thin mist that lingers low over the ground and pools in hollows, then evaporates | Steam meets snow or ice, or a clear night over water |
 | | Ink | Deep blue-black liquid that burns | Soot meets oil |
 | | Ozone | Faint gas left by lightning; bleaches | Lightning fades |
 | | Neon | Glows bright pink while electricity passes through it (keep it in a glass tube) | Plasma touching glass |

@@ -7,7 +7,7 @@ import { Journal } from './journal';
 import { ERASER_KEY, Palette } from './palette';
 import { saveDiscovery, saveMode, type Mode } from './progress';
 import { downloadScene, loadFromBrowser, loadFromFile, saveToBrowser, shareLink } from './scenes';
-import { MAX_BRUSH, MIN_BRUSH, SPEEDS, SUNS, WINDS, type GameState } from './state';
+import { DAY_LENGTH, MAX_BRUSH, MIN_BRUSH, SPEEDS, SUNS, WINDS, type GameState } from './state';
 import type { Sound } from './sound';
 
 function byId<T extends HTMLElement>(id: string): T {
@@ -151,19 +151,34 @@ export function setupControls(state: GameState, world: World, discovery: Discove
     const opt = document.createElement('option');
     opt.value = String(value);
     opt.textContent = label;
-    opt.selected = value === world.wind;
+    opt.selected = Number.isNaN(value) ? world.gusty : !world.gusty && value === world.wind;
     windSel.append(opt);
   }
-  windSel.addEventListener('change', () => (world.wind = Number(windSel.value)));
+  windSel.addEventListener('change', () => {
+    const value = Number(windSel.value);
+    world.gusty = Number.isNaN(value);
+    world.wind = world.gusty ? 0 : value;
+  });
 
   for (const [label, value] of SUNS) {
     const opt = document.createElement('option');
     opt.value = String(value);
     opt.textContent = label;
-    opt.selected = value === world.sun;
+    opt.selected = Number.isNaN(value) ? world.dayLength > 0 : world.dayLength === 0 && value === world.sun;
     sunSel.append(opt);
   }
-  sunSel.addEventListener('change', () => (world.sun = Number(sunSel.value)));
+  sunSel.addEventListener('change', () => {
+    const value = Number(sunSel.value);
+    if (Number.isNaN(value)) {
+      // Start at sunrise.
+      world.dayLength = DAY_LENGTH;
+      world.dayClock = 0;
+      world.sun = 0;
+    } else {
+      world.dayLength = 0;
+      world.sun = value;
+    }
+  });
 
   const syncSound = (): void => soundBtn.setAttribute('aria-pressed', String(sound.enabled));
   soundBtn.addEventListener('click', () => {

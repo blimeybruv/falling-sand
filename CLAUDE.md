@@ -32,9 +32,11 @@ src/main.ts  creates World + Renderer + UI and runs the requestAnimationFrame lo
 - Each `step()` first spreads heat (`updateTemperature`), then moves electricity
   (`updateElectricity`: a conductor's charge is `CHARGE_ACTIVE` for one frame, when it passes to idle
   conducting neighbours, then cools down, so pulses travel one cell a frame and never flow back),
-  then, if `world.sun > 0`, shines sunlight (`updateSunlight`: straight down every 4th column in
-  turn, warming the first cell that isn't `transparent` and applying its `sunlit` change), then
-  updates cells. Start a pulse with `world.electrify(i)`. Use `transform(i, m)`
+  then, if `world.sun` isn't 0, shines sunlight (`updateSunlight`: straight down every 4th column in
+  turn, warming the first cell that isn't `transparent` and applying its `sunlit` change; when
+  `sun` is below 0 it's a clear night, which instead chills that cell and applies its `night`
+  change), then updates cells. With `dayLength` set, `sun` follows the time of day (`sunAt`); with
+  `gusty` set, `wind` follows `gustAt`. Start a pulse with `world.electrify(i)`. Use `transform(i, m)`
   instead of `setCell` for phase changes (melting, boiling), so the cell keeps its temperature (unless
   the new material has a `startTemp`, which it takes instead). Burning cells don't melt until they stop.
 - `step()` updates bottom-up, alternating the row direction each frame. A `stamp` array makes sure
@@ -88,7 +90,7 @@ Movement is density-based: a mover can swap with an empty, liquid or gas cell th
   been created, plus the reward once enough are found. The UI saves progress in localStorage.
 - Recipes should follow from the physics where possible, and hints should nudge rather than give the
   answer. Avoid reactions that fire constantly in ordinary sandbox play.
-- Internal-only materials (Leaf, Spark, Molten wax, Water vapour, Dried paint) stay out of `PALETTE` and need no recipe.
+- Internal-only materials (Leaf, Spark, Molten wax, Water vapour, Dried paint, Thin ice) stay out of `PALETTE` and need no recipe.
 - Weather conserves water: rain is the cloud itself coming down (a cloud cell turns into the drop),
   never water from nowhere, or the sun's water cycle would slowly flood a scene.
 - Clouds come in three kinds (see "Clouds, redesigned" in `docs/elements.md`):
@@ -107,7 +109,9 @@ burning wood holds 500°, burning charcoal 950°, fire cells 700°, a brick laye
 lightning bolts 1200° (cooler than real ones, which last microseconds, so a copper lightning rod
 survives). Strong sun warms a
 surface to 33–48° (weak sun about half that above ambient): it thaws snow, frost and permafrost but
-shouldn't cook fish (50°) or melt wax (60°). Add a test that the recipe works and,
+shouldn't cook fish (50°) or melt wax (60°). The clearest night chills open earth to about −8°
+within 10 s (bare stone stays above freezing: it holds more heat), and a pond's surface to −1° (thin ice)
+within a few seconds where fog doesn't cover it. Add a test that the recipe works and,
 where it matters, one that an ordinary situation does *not* trigger it (see "an ordinary wood fire
 does not melt sand into glass").
 

@@ -72,7 +72,8 @@ const SHADE_GROWTH = 0.35;
  */
 function thrives(w: World, x: number, y: number, base: number, shadeLoving = false): boolean {
   const sun = w.sun;
-  if (sun === 0) return w.rng.chance(base);
+  // At night (sun below 0) plants just grow at their ordinary rate.
+  if (sun <= 0) return w.rng.chance(base);
   if (!w.rng.chance(base * (1 + sun))) return false;
   return w.inSunlight(x, y) !== shadeLoving || w.rng.chance(SHADE_GROWTH / (1 + sun));
 }
@@ -725,7 +726,8 @@ function moveCloud(w: World, x: number, y: number, i: number): boolean {
     return true;
   }
   if (w.rng.chance(0.005) && countAround(w, x, y, M.Cloud, M.StormCloud) <= 2) {
-    w.setCell(i, M.Empty);
+    // Back into invisible vapour, which drifts until it gathers with more and condenses again.
+    w.setCell(i, M.Vapour);
     return true;
   }
   const above = w.get(x, y - 1);
@@ -759,8 +761,18 @@ export function updateVapour(w: World, x: number, y: number, i: number): boolean
       w.transform(i, M.Cirrus);
       return true;
     }
-  } else if (y <= ceiling + 3 && w.rng.chance(countAround(w, x, y, M.Cloud, M.StormCloud) > 0 ? 0.08 : 0.01)) {
-    w.transform(i, M.Cloud);
+  } else if (y <= ceiling + 3) {
+    // At the cloud layer, vapour condenses onto cloud that's already there, or once enough has
+    // gathered; until then it hangs there, drifting, so it condenses in clumps rather than as lone
+    // specks. A little slips on upwards and becomes cirrus.
+    if (countAround(w, x, y, M.Cloud, M.StormCloud) > 0 ? w.rng.chance(0.3) : countAround(w, x, y, M.Vapour, M.Vapour) >= 3 && w.rng.chance(0.05)) {
+      w.transform(i, M.Cloud);
+      return true;
+    }
+    if (w.rng.chance(0.03)) return false;
+    const nx = x + (w.wind !== 0 && w.rng.chance(Math.abs(w.wind)) ? Math.sign(w.wind) : w.rng.sign());
+    const ny = y + w.rng.int(-1, 1);
+    if (ny >= ceiling - CIRRUS_GAP && w.get(nx, ny) === M.Empty) w.swap(i, w.idx(nx, ny));
     return true;
   }
   return false;
@@ -772,12 +784,23 @@ export function updateVapour(w: World, x: number, y: number, i: number): boolean
  * (it drifts cell by cell, like a gas), fading away after a minute or so.
  */
 export function updateCirrus(w: World, x: number, y: number, i: number): boolean {
-  if (y > cloudCeiling(w, x) - 3 && w.get(x, y - 1) === M.Empty && w.rng.chance(0.3)) {
+  const ceiling = cloudCeiling(w, x);
+  if (y > ceiling - 3 && w.get(x, y - 1) === M.Empty && w.rng.chance(0.3)) {
     w.swap(i, w.idx(x, y - 1));
+    return true;
+  }
+  // High enough: it stops climbing and only streams sideways, so it hangs as streaks across the
+  // sky instead of piling into a white band along the very top.
+  if (y < ceiling - CIRRUS_HIGH) {
+    const d = w.wind !== 0 && w.rng.chance(Math.abs(w.wind) * 0.9) ? Math.sign(w.wind) : w.rng.chance(0.2) ? w.rng.sign() : 0;
+    if (d !== 0 && w.get(x + d, y) === M.Empty) w.swap(i, w.idx(x + d, y));
+    else if (w.rng.chance(0.02) && w.get(x, y + 1) === M.Empty) w.swap(i, w.idx(x, y + 1));
     return true;
   }
   return false;
 }
+/** Rows above the cloud layer where cirrus stops rising. */
+const CIRRUS_HIGH = 14;
 
 /** Frames of charge building (corona) between a cloud deciding to strike and the bolt. */
 const STRIKE_CHARGE: readonly [number, number] = [40, 70];
@@ -1720,3 +1743,19 @@ export function filament(w: World, x: number, y: number, i: number): boolean {
   return false;
 }
 
+/**
+ * Fog: settling on ground that a clear night has chilled below freezing, it leaves its water there
+ * as frost (rime). Otherwise it drifts as an ordinary gas.
+ */
+export function updateFog(w: World, x: number, y: number, i: number): boolean {
+  if (y + 1 >= w.height || !w.rng.chance(0.05) || w.temp[i + w.width] >= 0 || !w.isSolid(x, y + 1)) return false;
+  w.transform(i, M.Frost);
+  return true;
+}
+
+/** Thin ice: while it's well below freezing, the water just under it freezes on, so the skin thickens slowly through a cold night. */
+export function thickenIce(w: World, x: number, y: number, i: number): boolean {
+  if (w.temp[i] > -4 || !w.rng.chance(0.004)) return true;
+  if (w.get(x, y + 1) === M.Water && w.temp[w.idx(x, y + 1)] < 0) w.transform(w.idx(x, y + 1), M.ThinIce);
+  return true;
+}

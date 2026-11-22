@@ -21,6 +21,13 @@ const CLOUD_LEVELS = 16;
 /** A gap of up to this many rows (minus one) inside a cloud still counts as the same cloud. */
 const CLOUD_GAP = 6;
 
+/** Sky colours: a sunny day, a clear night, and the warm tint of dawn and dusk (with Day and night on). */
+const DAY_SKY = [26, 34, 54] as const;
+const NIGHT_SKY = [5, 7, 16] as const;
+const DUSK_SKY = [52, 30, 40] as const;
+/** Stars come out at night in this top fraction of the grid (caves lower down stay starless). */
+const STAR_ROWS = 0.45;
+
 const LITTLE_ENDIAN = new Uint8Array(new Uint32Array([0x0a0b0c0d]).buffer)[0] === 0x0d;
 
 function pack(r: number, g: number, b: number): number {
@@ -64,7 +71,12 @@ export class Renderer {
   private readonly cloudRow: Int32Array;
   private readonly cloudDepth: Uint16Array;
   private frame = 0;
+  /** Air's own colour (Sun off, no day and night): the sky is tinted from this. */
   private readonly background: readonly [number, number, number];
+  /** Drawn as sky: air, and materials coloured as air (invisible water vapour). */
+  private readonly isAir: Uint8Array;
+  /** Brightness (0: none) of the star at each cell, for clear nights. */
+  private readonly stars: Uint8Array;
   private seed = 0x9e3779b9;
 
   constructor(canvas: HTMLCanvasElement, world: World) {
@@ -121,6 +133,20 @@ export class Renderer {
       }
     }
     this.background = MATERIALS[M.Empty].colour;
+    const air = this.background;
+    this.isAir = Uint8Array.from(MATERIALS, (d) =>
+      d.id === M.Empty || (d.colourJitter === 0 && !d.colourEnd && d.colour.every((c, k) => c === air[k])) ? 1 : 0,
+    );
+    // A fixed scatter of stars (about one cell in 250), some brighter than others.
+    this.stars = new Uint8Array(world.size);
+    let s = 0x2545f491;
+    const starCells = Math.floor(world.height * STAR_ROWS) * world.width;
+    for (let i = 0; i < starCells; i++) {
+      s ^= s << 13;
+      s ^= s >>> 17;
+      s ^= s << 5;
+      if ((s >>> 0) % 250 === 0) this.stars[i] = 90 + ((s >>> 8) % 160);
+    }
     const shaded = MATERIALS.filter((d) => d.cloudShading);
     this.cloudBase = new Int32Array(MATERIALS.length).fill(-1);
     this.cloudLut = new Uint32Array(Math.max(1, shaded.length) * CLOUD_LEVELS * SHADES);
@@ -154,15 +180,22 @@ export class Renderer {
     // Thick clouds are lit from above: they darken the deeper a cell is below the cloud's top.
     cloudRow.fill(-100);
     const glowShift = this.frame >> 3;
-    const [bgR, bgG, bgB] = this.background;
+    const [bgR, bgG, bgB] = this.skyColour(world);
     const bg = pack(bgR, bgG, bgB);
+    const { isAir, stars } = this;
+    // Stars show on clear nights, fading in as it gets dark, and twinkle a little.
+    const starlight = world.sun < -0.3 ? Math.min(1, (-world.sun - 0.3) / 0.5) : 0;
     const fireBase = M.Fire * SHADES;
     let seed = this.seed;
 
     for (let i = 0; i < size; i++) {
       const m = mat[i];
-      if (m === M.Empty) {
-        pixels[i] = bg;
+      if (isAir[m]) {
+        if (starlight > 0 && stars[i] !== 0) {
+          const twinkle = ((i * 7 + glowShift) & 7) === 0 ? 0.6 : 1;
+          const v = stars[i] * starlight * twinkle;
+          pixels[i] = pack(bgR + ((v - bgR) * 0.9) | 0, bgG + ((v - bgG) * 0.9) | 0, bgB + ((v * 1.05 - bgB) * 0.9) | 0);
+        } else pixels[i] = bg;
         continue;
       }
       if (charge[i] !== 0) {
@@ -206,6 +239,27 @@ export class Renderer {
       }
     }
     this.seed = seed;
+  }
+
+  /**
+   * The colour of the sky (and of air everywhere): bluer in sunshine, near-black on a clear night,
+   * and with Day and night on, warm around sunrise and sunset.
+   */
+  private skyColour(world: World): [number, number, number] {
+    const sun = world.sun;
+    const base = this.background;
+    const to = sun >= 0 ? DAY_SKY : NIGHT_SKY;
+    const a = Math.min(1, Math.abs(sun));
+    let r = base[0] + (to[0] - base[0]) * a;
+    let g = base[1] + (to[1] - base[1]) * a;
+    let b = base[2] + (to[2] - base[2]) * a;
+    if (world.dayLength > 0 && a < 0.4) {
+      const d = (1 - a / 0.4) * 0.7;
+      r += (DUSK_SKY[0] - r) * d;
+      g += (DUSK_SKY[1] - g) * d;
+      b += (DUSK_SKY[2] - b) * d;
+    }
+    return [r | 0, g | 0, b | 0];
   }
 
   private renderHeat(world: World): void {

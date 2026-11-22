@@ -3,20 +3,24 @@ import type { Mode } from './progress';
 
 /** Speeds offered in the speed menu, in simulation steps per 60 Hz tick. */
 export const SPEEDS = [0.25, 0.5, 1, 2, 3] as const;
-/** Wind settings offered in the wind menu: label and World.wind value. */
+/** Wind settings offered in the wind menu: label and World.wind value; NaN means gusty (World.gusty). */
 export const WINDS: readonly (readonly [string, number])[] = [
   ['← Strong', -1],
   ['← Light', -0.4],
   ['Off', 0],
   ['Light →', 0.4],
   ['Strong →', 1],
+  ['Gusty', NaN],
 ];
-/** Sun settings offered in the sun menu: label and World.sun value. */
+/** Sun settings offered in the sun menu: label and World.sun value; NaN means Day and night. */
 export const SUNS: readonly (readonly [string, number])[] = [
   ['Off', 0],
   ['Weak', 0.5],
   ['Strong', 1],
+  ['Day/night', NaN],
 ];
+/** With Day and night on, frames in a whole day and night: three minutes at normal speed. */
+export const DAY_LENGTH = 3 * 60 * 60;
 export const MIN_BRUSH = 0;
 export const MAX_BRUSH = 30;
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { AMBIENT_TEMP, CHARGE_ACTIVE, M, MATERIALS, MAX_BLAST_RADIUS, MAX_EXPLOSIONS_PER_FRAME, PALETTE, World, type MaterialId } from './index';
+import { AMBIENT_TEMP, CHARGE_ACTIVE, M, MATERIALS, MAX_BLAST_RADIUS, MAX_EXPLOSIONS_PER_FRAME, PALETTE, World, gustAt, sunAt, type MaterialId } from './index';
 
 function run(world: World, frames: number): void {
   for (let f = 0; f < frames; f++) world.step();
@@ -1181,6 +1181,8 @@ describe('clouds', () => {
     run(w, 2700);
     expect(w.created[M.Water]).toBeGreaterThan(1000);
     expect(w.noise.strikes).toBeGreaterThan(0);
+    // (Torn-off wisps go back to vapour and recondense rather than vanishing, so it takes a while.)
+    run(w, 3000);
     expect(count(w, M.StormCloud)).toBeLessThan(30);
     // What's left is a fair-weather cloud of real depth (at least eight rows across 60 columns),
     // not a wisp.
@@ -1206,10 +1208,130 @@ describe('clouds', () => {
     expect(w.created[M.Water]).toBe(0);
   });
 
-  it('lone wisps of cloud evaporate', () => {
+  it('lone wisps of cloud evaporate back into vapour, which gathers at the cloud layer', () => {
     const w = new World(80, 80, 1);
     for (let k = 0; k < 40; k++) w.set(4 + (k % 20) * 4, 30 + Math.floor(k / 20) * 10, M.Cloud);
     run(w, 1200);
-    expect(count(w, M.Cloud)).toBeLessThan(4);
+    // No specks are left where they were...
+    let low = 0;
+    for (let y = 25; y < 80; y++) for (let x = 0; x < 80; x++) if (w.get(x, y) === M.Cloud) low++;
+    expect(low).toBe(0);
+    // ...they went back to vapour (water isn't lost), and what gathered recondensed up high.
+    expect(w.created[M.Vapour]).toBeGreaterThan(30);
+    expect(count(w, M.Cloud) + count(w, M.Vapour)).toBeLessThanOrEqual(40);
+  });
+});
+
+describe('day and night', () => {
+  function fill(w: World, x0: number, y0: number, wd: number, ht: number, m: MaterialId): void {
+    for (let y = y0; y < y0 + ht; y++) for (let x = x0; x < x0 + wd; x++) w.set(x, y, m);
+  }
+
+  it('the sun rises, peaks at midday, sets, and the night is coldest at midnight', () => {
+    const day = 1000;
+    expect(sunAt(0, day)).toBe(0);
+    expect(sunAt(250, day)).toBe(1);
+    expect(sunAt(100, day)).toBeGreaterThan(0.8); // mid-morning is already bright
+    expect(sunAt(750, day)).toBe(-1);
+    expect(sunAt(600, day)).toBeLessThan(-0.8);
+    expect(sunAt(1250, day)).toBe(1); // and again the next day
+    const w = new World(10, 10, 1);
+    w.dayLength = day;
+    for (let f = 0; f < 250; f++) w.step();
+    expect(w.sun).toBeGreaterThan(0.99);
+    for (let f = 0; f < 500; f++) w.step();
+    expect(w.sun).toBeLessThan(-0.99);
+  });
+
+  it('a clear night chills open ground below freezing; under a cloud it stays warm', () => {
+    const w = new World(60, 60, 1);
+    // (Earth: bare stone holds more heat and stays above freezing through a night.)
+    fill(w, 0, 45, 60, 15, M.Earth);
+    fill(w, 30, 25, 30, 10, M.Cloud);
+    w.sun = -1;
+    run(w, 1200);
+    expect(w.temp[45 * 60 + 10]).toBeLessThan(0);
+    expect(w.temp[45 * 60 + 45]).toBeGreaterThan(AMBIENT_TEMP - 3);
+  });
+
+  it('mist rises off a pond on a clear night and it skins over with thin ice; the morning sun clears both', () => {
+    const w = new World(60, 60, 1);
+    fill(w, 0, 50, 60, 10, M.Stone);
+    fill(w, 0, 44, 60, 6, M.Water);
+    w.sun = -1;
+    run(w, 1800);
+    expect(w.created[M.Fog]).toBeGreaterThan(10);
+    expect(w.count(M.ThinIce)).toBeGreaterThan(10);
+    // Only a skin: most of the pond stays liquid.
+    expect(w.count(M.Water)).toBeGreaterThan(200);
+    w.sun = 1;
+    run(w, 1800);
+    expect(w.count(M.ThinIce)).toBe(0);
+    expect(w.count(M.Fog)).toBe(0);
+  });
+
+  it('a pond on an ordinary day, or with the sun off, neither mists nor freezes', () => {
+    for (const sun of [0, 1]) {
+      const w = new World(60, 60, 1);
+      fill(w, 0, 50, 60, 10, M.Stone);
+      fill(w, 0, 44, 60, 6, M.Water);
+      w.sun = sun;
+      run(w, 1800);
+      expect(w.created[M.Fog]).toBe(0);
+      expect(w.created[M.ThinIce]).toBe(0);
+    }
+  });
+
+  it('thin ice holds no cold of its own: left at room temperature it melts', () => {
+    const w = new World(30, 30, 1);
+    fill(w, 0, 20, 30, 10, M.Water);
+    fill(w, 0, 19, 30, 1, M.ThinIce);
+    run(w, 600);
+    expect(w.count(M.ThinIce)).toBe(0);
+  });
+
+  it('freezing fog settling on frozen ground leaves frost; on warm ground it does not', () => {
+    const frost = (groundTemp: number): number => {
+      const w = new World(40, 30, 1);
+      fill(w, 0, 20, 40, 10, M.Stone);
+      fill(w, 0, 18, 40, 2, M.Fog);
+      for (let x = 0; x < 40; x++) w.temp[20 * 40 + x] = groundTemp;
+      // Keep the ground at that temperature, as a long clear night would.
+      for (let f = 0; f < 120; f++) {
+        for (let x = 0; x < 40; x++) w.temp[20 * 40 + x] = groundTemp;
+        w.step();
+      }
+      return w.count(M.Frost);
+    };
+    expect(frost(-6)).toBeGreaterThan(10);
+    expect(frost(AMBIENT_TEMP)).toBe(0);
+  });
+
+  it('fog evaporates into water vapour rather than vanishing', () => {
+    const w = new World(40, 40, 1);
+    fill(w, 0, 30, 40, 10, M.Stone);
+    fill(w, 0, 28, 40, 2, M.Fog);
+    run(w, 1300);
+    expect(w.count(M.Fog)).toBe(0);
+    expect(w.created[M.Vapour]).toBeGreaterThan(60);
+  });
+
+  it('gusty wind swells and drops, and now and then turns round', () => {
+    let min = 0, max = 0, strong = 0, calm = 0;
+    for (let f = 0; f < 20000; f++) {
+      const g = gustAt(f);
+      min = Math.min(min, g);
+      max = Math.max(max, g);
+      if (Math.abs(g) > 0.6) strong++;
+      if (Math.abs(g) < 0.15) calm++;
+    }
+    expect(max).toBeGreaterThan(0.9);
+    expect(min).toBeLessThan(-0.9);
+    expect(strong).toBeGreaterThan(2000);
+    expect(calm).toBeGreaterThan(500);
+    const w = new World(10, 10, 1);
+    w.gusty = true;
+    run(w, 700);
+    expect(w.wind).toBeCloseTo(gustAt(700), 5);
   });
 });
