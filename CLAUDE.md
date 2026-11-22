@@ -91,6 +91,13 @@ Movement is density-based: a mover can swap with an empty, liquid or gas cell th
 - Internal-only materials (Leaf, Spark, Molten wax, Water vapour, Dried paint) stay out of `PALETTE` and need no recipe.
 - Weather conserves water: rain is the cloud itself coming down (a cloud cell turns into the drop),
   never water from nowhere, or the sun's water cycle would slowly flood a scene.
+- Clouds come in three kinds (see "Clouds, redesigned" in `docs/elements.md`):
+  - Cloud: persistent fair-weather cumulus.
+  - Storm cloud: the base of a deep cloud, which pours and strikes.
+  - Cirrus: high and fading, never rains.
+
+  Cloud and Storm cloud have no lifetime, so they set `fadeFrames: 0`. Any gas without a
+  lifetime needs that, or it renders invisible.
 
 ## Calibrating temperatures
 

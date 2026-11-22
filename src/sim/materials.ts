@@ -60,6 +60,8 @@ import {
   thermocouple,
   heatLamp,
   filament,
+  stormCloud,
+  updateCirrus,
   electromagnet,
   spreadAlgae,
   formLoam,
@@ -233,6 +235,8 @@ export interface MaterialDef {
     spent: MaterialId;
     launch?: number;
   };
+  /** Renderer: shaded by depth, as part of a cloud's body (bright tops, darker bases). */
+  cloudShading?: boolean;
   /** Renderer: the colour it glows while its `life` counter is above zero (a lit lamp). */
   litColour?: readonly [number, number, number];
   /** Renderer: the colour it glows while carrying a pulse (instead of the usual spark), e.g. neon. */
@@ -500,7 +504,7 @@ const defs: Record<MaterialId, Def> = {
     reactions: [
       // Hot steam rising through volcanic rock (water seeping onto basalt near lava) opens a fumarole.
       // (Volcanic rock, not just heat: steam off a pot boiled over a wood fire is nearly as hot.)
-      { with: M.Basalt, minTemp: 100, chance: 0.003, otherInto: M.Fumarole },
+      { with: M.Basalt, minTemp: 100, chance: 0.03, otherInto: M.Fumarole },
       { with: M.Snow, chance: 0.05, into: M.Fog },
       { with: M.Ice, chance: 0.05, into: M.Fog },
       // On something as cold as dry ice it freezes straight to frost.
@@ -867,16 +871,18 @@ const defs: Record<MaterialId, Def> = {
     density: 0.25,
     colour: [214, 220, 232],
     colourJitter: 0.05,
-    lifetime: [600, 1200],
-    decay: { into: M.Water, chance: 0.5 },
+    // Fair-weather cloud lasts: it only goes by raining, burning off in the sun, or breaking up in
+    // the wind. It moves as a body (moveCloud in behaviours.ts), not like a gas.
     rise: 0.05,
-    // Wind moves clouds as whole bodies, in rainCloud, rather than cell by cell (which smears them).
     wind: 0,
     update: rainCloud,
+    cloudShading: true,
+    // No lifetime, so no fading out (the renderer fades gases over the end of their life).
+    fadeFrames: 0,
     // Sunshine burns clouds off from the top: thin ones go first, thick storm clouds last.
     transparent: false,
     sunlit: { chance: 0.03, into: M.Empty },
-    description: 'Hangs up high and drifts in the wind, raining (or snowing, near ice).',
+    description: 'Fair-weather cloud: hangs puffy and white below the upper atmosphere, drifts in the wind, drizzles now and then. Piled deep, its base darkens into storm cloud.',
   },
   [M.Snow]: {
     ...base,
@@ -1607,6 +1613,8 @@ const defs: Record<MaterialId, Def> = {
     conducts: true,
     conductivity: 0.05,
     chargeColour: [255, 80, 190],
+    // No lifetime, so no fading out (the renderer fades gases over the end of their life).
+    fadeFrames: 0,
     description: 'A rare gas from plasma meeting glass. Glows bright pink while electricity passes through it: keep it in a glass tube.',
   },
   [M.Spring]: {
@@ -1816,6 +1824,41 @@ const defs: Record<MaterialId, Def> = {
     litColour: [255, 168, 72],
     update: heatLamp,
     description: 'A carbon filament in glass. Powered, it glows and shines heat down in a narrow cone, fading with distance: thaws, dries, boils puddles and burns off cloud and fog beneath it.',
+  },
+  [M.StormCloud]: {
+    ...base,
+    name: 'Storm cloud',
+    key: '',
+    category: 'fluid',
+    kind: 'gas',
+    density: 0.25,
+    colour: [150, 156, 174],
+    colourEnd: [128, 134, 152],
+    colourJitter: 0.05,
+    wind: 0,
+    update: stormCloud,
+    cloudShading: true,
+    // No lifetime, so no fading out (the renderer fades gases over the end of their life).
+    fadeFrames: 0,
+    transparent: false,
+    sunlit: { chance: 0.01, into: M.Empty },
+    description: 'The dark base of a cloud piled deep: it pours with rain and makes the lightning. Rained out, it clears back into fair-weather cloud.',
+  },
+  [M.Cirrus]: {
+    ...base,
+    name: 'Cirrus',
+    key: '',
+    category: 'fluid',
+    kind: 'gas',
+    density: 0.2,
+    colour: [206, 216, 234],
+    colourJitter: 0.06,
+    lifetime: [2400, 4800],
+    fadeFrames: 600,
+    rise: 0,
+    wind: 0.9,
+    update: updateCirrus,
+    description: 'Thin, high wisps of ice crystals in the upper atmosphere, smeared out by the wind. Never rains; fades away.',
   },
   [M.Sap]: {
     ...base,
@@ -2937,7 +2980,7 @@ export const PALETTE: readonly MaterialDef[] = [
   M.SaltCrystal, M.GlassFibre, M.Quartz, M.TarSand, M.Gravel, M.Concrete, M.Terracotta,
   M.Porcelain, M.Adobe, M.Quicklime, M.SlakedLime, M.Mortar, M.Frost, M.Permafrost, M.Graphite, M.Fulgurite, M.Diamond, M.Chalk, M.Cement, M.Stalactite, M.Rubber, M.Wax, M.Glaze, M.Pumice, M.Quicksand, M.Hail, M.DryIce, M.StainedGlass,
   // liquids and gases
-  M.Water, M.SaltWater, M.Oil, M.Tar, M.Lye, M.Foam, M.Fizz, M.Acid, M.Lava, M.Smoke, M.Steam, M.Cloud,
+  M.Water, M.SaltWater, M.Oil, M.Tar, M.Lye, M.Foam, M.Fizz, M.Acid, M.Lava, M.Smoke, M.Steam, M.Cloud, M.StormCloud, M.Cirrus,
   M.CarbonDioxide, M.Hydrogen, M.Mercury, M.Alcohol, M.Vinegar, M.Chlorine, M.Bleach, M.SulfurDioxide, M.Fog, M.Ink, M.Ozone, M.Neon, M.RedPaint, M.MoltenGlass, M.MoltenIron, M.MoltenCopper, M.Brimstone, M.Bubble,
   // fire and blasts
   M.Fire, M.Charcoal, M.Coal, M.Ash, M.Sulfur, M.Saltpetre, M.Gunpowder, M.Fireworks, M.Thermite,

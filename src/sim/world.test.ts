@@ -522,7 +522,8 @@ describe('sunlight', () => {
     };
     const sunny = run(0.5);
     expect(sunny.created[M.Vapour]).toBeGreaterThan(50);
-    expect(sunny.created[M.Cloud]).toBeGreaterThan(20);
+    // Vapour condenses into cloud at the cloud layer, or into cirrus if it climbs above it.
+    expect(sunny.created[M.Cloud] + sunny.created[M.Cirrus]).toBeGreaterThan(20);
     const dark = run(0);
     expect(dark.created[M.Vapour]).toBe(0);
     expect(dark.created[M.Cloud]).toBe(0);
@@ -578,7 +579,7 @@ describe('lightning', () => {
 describe('lightning rods', () => {
   it('draw strikes from a storm to themselves', () => {
     const w = new World(60, 120, 16);
-    for (let y = 22; y < 42; y++) for (let x = 0; x < 60; x++) w.set(x, y, M.Cloud);
+    for (let y = 22; y < 52; y++) for (let x = 0; x < 60; x++) w.set(x, y, M.Cloud);
     for (let y = 100; y < 120; y++) for (let x = 0; x < 60; x++) w.set(x, y, M.Stone);
     for (let y = 60; y < 100; y++) w.set(30, y, M.Copper); // a copper spire
     let strikes = 0;
@@ -1118,13 +1119,19 @@ describe('creatures and the elements', () => {
 
 describe('rain', () => {
   it('is the cloud itself coming down, never water from nowhere', () => {
-    const w = new World(60, 60, 7);
-    for (let y = 20; y < 30; y++) for (let x = 0; x < 60; x++) w.set(x, y, M.Cloud);
+    // A storm-deep cloud (30 rows) pours; every drop costs a cloud cell, so water plus whatever is
+    // still cloud or vapour never exceeds the cloud it started as.
+    const w = new World(60, 80, 7);
+    for (let y = 10; y < 40; y++) for (let x = 0; x < 60; x++) w.set(x, y, M.Cloud);
     for (let f = 0; f < 3000; f++) w.step();
-    let water = 0;
-    for (let i = 0; i < w.size; i++) if (w.mat[i] === M.Water) water++;
-    expect(water).toBeGreaterThan(100);
-    expect(water).toBeLessThanOrEqual(600);
+    let water = 0, airborne = 0;
+    for (let i = 0; i < w.size; i++) {
+      const m = w.mat[i];
+      if (m === M.Water) water++;
+      else if (m === M.Cloud || m === M.StormCloud || m === M.Cirrus || m === M.Vapour || m === M.Steam) airborne++;
+    }
+    expect(water).toBeGreaterThan(300);
+    expect(water + airborne).toBeLessThanOrEqual(1800);
   });
 
   it('pours from a thick cloud, which rains itself thinner from the bottom up', () => {
@@ -1138,3 +1145,71 @@ describe('rain', () => {
   });
 });
 
+
+describe('clouds', () => {
+  function count(w: World, m: number): number {
+    let n = 0;
+    for (let i = 0; i < w.size; i++) if (w.mat[i] === m) n++;
+    return n;
+  }
+  function rowsOf(w: World, m: number): [number, number] {
+    let top = w.height, bottom = -1;
+    for (let y = 0; y < w.height; y++)
+      for (let x = 0; x < w.width; x++)
+        if (w.get(x, y) === m) { top = Math.min(top, y); bottom = Math.max(bottom, y); }
+    return [top, bottom];
+  }
+
+  it('a fair-weather cloud keeps its body: compact, mostly unrained, no lightning', () => {
+    // Clouds used to have a lifetime and pour from any depth, so a cloud this size was gone in
+    // 20 seconds. Now it hangs at the cloud layer, only drizzling.
+    const w = new World(80, 80, 1);
+    for (let y = 14; y < 24; y++) for (let x = 0; x < 80; x++) w.set(x, y, M.Cloud);
+    run(w, 1800);
+    expect(count(w, M.Cloud)).toBeGreaterThan(800 * 0.85);
+    const [top, bottom] = rowsOf(w, M.Cloud);
+    expect(bottom - top).toBeLessThan(16);
+    expect(w.created[M.StormCloud]).toBe(0);
+    expect(w.noise.strikes).toBe(0);
+  });
+
+  it('a deep cloud grows a storm base that pours, then clears to fair-weather cloud', () => {
+    const w = new World(60, 120, 1);
+    for (let y = 15; y < 55; y++) for (let x = 0; x < 60; x++) w.set(x, y, M.Cloud);
+    run(w, 300);
+    expect(count(w, M.StormCloud)).toBeGreaterThan(600);
+    run(w, 2700);
+    expect(w.created[M.Water]).toBeGreaterThan(1000);
+    expect(w.noise.strikes).toBeGreaterThan(0);
+    expect(count(w, M.StormCloud)).toBeLessThan(30);
+    // What's left is a fair-weather cloud of real depth (at least eight rows across 60 columns),
+    // not a wisp.
+    expect(count(w, M.Cloud)).toBeGreaterThan(8 * 60);
+  });
+
+  it('strikes come one at a time, however big the storm', () => {
+    const w = new World(200, 120, 2);
+    for (let y = 10; y < 60; y++) for (let x = 0; x < 200; x++) w.set(x, y, M.Cloud);
+    run(w, 600);
+    // At least 40 frames between one strike charging and the next.
+    expect(w.noise.strikes).toBeLessThanOrEqual(600 / 40);
+    expect(w.noise.strikes).toBeGreaterThan(0);
+  });
+
+  it('vapour climbing above the cloud layer becomes cirrus, which never rains and fades', () => {
+    const w = new World(60, 80, 1);
+    for (let y = 0; y < 2; y++) for (let x = 0; x < 60; x++) w.set(x, y, M.Vapour);
+    run(w, 600);
+    expect(count(w, M.Cirrus)).toBe(120);
+    run(w, 6000);
+    expect(count(w, M.Cirrus)).toBeLessThan(10);
+    expect(w.created[M.Water]).toBe(0);
+  });
+
+  it('lone wisps of cloud evaporate', () => {
+    const w = new World(80, 80, 1);
+    for (let k = 0; k < 40; k++) w.set(4 + (k % 20) * 4, 30 + Math.floor(k / 20) * 10, M.Cloud);
+    run(w, 1200);
+    expect(count(w, M.Cloud)).toBeLessThan(4);
+  });
+});

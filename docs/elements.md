@@ -261,6 +261,58 @@ cloud itself coming down, so weather can't make water from nothing.
 | | Day and night | The sun rises and sets, the sky colour shifts, clear nights cool things (frost) | `world.sun` over time + renderer | S |
 | | Seasons | Ambient temperature changes: winter freezes ponds, rain becomes snow | ambient is a constant today | S |
 
+## Clouds, redesigned (21-22 Nov)
+
+**Why clouds had lost their body.** Measured on a 7,950-cell cloud drawn as three thick strokes:
+1,830 cells were left after 10 s and none after 20 s. With rain turned off, about 7,940 were left
+after 10 s and 10 after 20 s. Two things were eating it:
+
+- **Pouring.** Any cloud deeper than a few rows rained at a rate that grew with its depth. That
+  emptied the cloud in seconds, from the bottom up.
+- **Lifetime.** Every cloud cell had a lifetime of 10-20 s, so whatever the rain left still
+  vanished.
+
+Cells also rose one at a time, so a cloud streaked into strands, and the lone-wisp rule then ate
+the strands. A person expects a cloud to hang there as a white heap with a darker base, rain only
+when it's heavy, and stay after the rain.
+
+**The design: three kinds of cloud, each with a shape people know.**
+
+- **Cumulus (Cloud).** Persistent: it has no lifetime and no fade, and only evaporates as a lone
+  wisp or in sunshine.
+  - Below the cloud layer, every column rises a row on the same frame, every 20 frames, so the cloud
+    floats up as one block.
+  - At the layer it puffs up into domes, and loose cells settle into gaps beside the body.
+  - It drizzles only now and then.
+- **Storm cloud.** Where a cloud is piled 14 or more rows deep, its base darkens into storm cloud.
+  - Storm cloud pours, harder the deeper the cloud above it.
+  - It charges and strikes lightning, the only cloud that does. Strikes come one at a time, at
+    least 40 frames apart, however big the storm.
+  - Once fewer than 8 rows of cloud are left above it, it clears back to cumulus. A storm rains
+    itself out into a fair-weather cloud of real depth, not into nothing. The gap between 14 and 8
+    stops cloud flickering between the two kinds.
+- **Cirrus.** Water vapour that climbs well above the cloud layer becomes thin, wind-blown streaks.
+  Cirrus never rains and fades over about a minute. It's what the water cycle leaves high in the
+  sky.
+
+**Rendering.** Each cloud material gets its own depth-shading table, a white top darkening
+downwards, so a storm base reads as a different colour, not just as a deep cloud.
+
+**Gotcha.** Gases fade over their last `fadeFrames` frames of life, and a gas with no lifetime
+has life 0. A persistent gas needs `fadeFrames: 0`, or it renders invisible. That fix also
+applies to Neon.
+
+| | Idea | What it does | How | Effort |
+|---|---|---|---|---|
+| ✅ | Persistent cumulus | Clouds keep their body; rising columns move as one block | `moveCloud`, `riseColumn` | F |
+| ✅ | Storm cloud | Deep clouds grow a dark base that pours and strikes, then clears | `stormCloud`, rows-above test with hysteresis | F |
+| ✅ | Cirrus | High, thin, wind-blown streaks from vapour above the cloud layer | `updateCirrus`, `updateVapour` | F |
+| ✅ | Strikes one at a time | However big the storm, bolts come a second or two apart | `STRIKE_GAP` | T |
+| | Anvil | A very tall storm cloud spreads sideways where it meets the top of the sky (cumulonimbus) | spread rule at the ceiling | F |
+| | Mammatus | Pouches hanging under a storm base as it decays | renderer, or a sag rule | F |
+| | Fog bank | Cloud that forms at ground level on cold, still nights (needs day and night) | condensation near cold ground | F |
+| | Rain shafts | Rain from a storm drawn as faint grey streaks, not separate drops | renderer | F |
+
 ## Interplay ideas, round 8 (brainstormed 21 Nov)
 
 Features that come from systems the game already has meeting each other, rather than new materials

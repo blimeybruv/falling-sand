@@ -576,43 +576,73 @@ export function freezeWater(w: World, x: number, y: number, i: number): boolean 
 
 /**
  * The top of the cloud layer at column x: above it is the upper atmosphere, where red sprites
- * appear. It rolls gently along the sky and slowly drifts over time, so cloud tops billow into
- * domes and dips instead of pressing flat against one row. Three waves with unrelated lengths,
- * drifting at different speeds and in both directions, keep the domes from looking evenly spaced:
- * a long swell raises whole stretches, the middle wave makes the domes, a short one lumps them.
+ * appear and cirrus drifts. It rolls gently along the sky and slowly drifts over time, so cloud tops
+ * billow into domes and dips instead of pressing flat against one row. Three waves with unrelated
+ * lengths, drifting at different speeds and in both directions, keep the domes from looking evenly
+ * spaced: a long swell raises whole stretches, the middle wave makes the domes, a short one lumps
+ * them. It depends only on the frame, the grid size and the column, so it's worked out once per
+ * column per frame and cached (a cloud bank asks for it once per cell).
  */
+let ceilingFrame = -1;
+let ceilingWidth = 0;
+let ceilingHeight = 0;
+let ceilingRows = new Int16Array(0);
 function cloudCeiling(w: World, x: number): number {
-  const base = w.height * 0.22;
-  const swell = w.height * 0.03;
-  const t = w.frame;
-  return Math.round(
-    base +
-      swell *
-        (0.7 * Math.sin(x * 0.043 + t * 0.0011) +
-          Math.sin(x * 0.11 - t * 0.002) +
-          0.45 * Math.sin(x * 0.29 + t * 0.0037)),
-  );
+  if (w.frame !== ceilingFrame || w.width !== ceilingWidth || w.height !== ceilingHeight) {
+    if (ceilingRows.length < w.width) ceilingRows = new Int16Array(w.width);
+    const base = w.height * 0.22;
+    const swell = w.height * 0.03;
+    const t = w.frame;
+    for (let c = 0; c < w.width; c++) {
+      ceilingRows[c] = Math.round(
+        base + swell * (0.7 * Math.sin(c * 0.043 + t * 0.0011) + Math.sin(c * 0.11 - t * 0.002) + 0.45 * Math.sin(c * 0.29 + t * 0.0037)),
+      );
+    }
+    ceilingFrame = w.frame;
+    ceilingWidth = w.width;
+    ceilingHeight = w.height;
+  }
+  return ceilingRows[x < 0 ? 0 : x >= w.width ? w.width - 1 : x];
 }
 
 /**
- * Cloud: hangs below the upper atmosphere; now and then drops rain below it; near ice it snows
- * instead, and sometimes hails; thick clouds strike lightning (and sometimes red sprites).
+ * Clouds. Two kinds make up the body of the sky's clouds, and they behave as one cloud:
+ *   Cloud (fair-weather cumulus): white, puffy, long-lasting; it only drizzles now and then.
+ *   Storm cloud (cumulonimbus): the lower part of a cloud piled deep (STORM_DEPTH rows or more of
+ *     cloud above it) darkens into storm cloud, which rains hard and makes the lightning (with its
+ *     corona and red sprites). As it rains itself out and the cloud above thins below STORM_CLEAR
+ *     rows, it clears back into fair-weather cloud. So a big cloud towers white over a dark,
+ *     pouring base, then settles into a fair-weather cloud.
+ * They move as a body, not a gas (see moveCloud). Rain is the cloud itself coming down.
  */
-/**
- * Chance per frame, per CLOUD_DEPTH_STEP rows of cloud beyond CLOUD_THIN, that a cloud's base turns
- * to rain. Clouds up to CLOUD_THIN rows thick only drizzle; deeper ones pour until they're about that.
- */
-const CLOUD_POUR = 0.008;
-/** Chance per frame that a cell on a cloud's base turns to rain, however thin the cloud. */
-const CLOUD_DRIZZLE = 0.006;
-const CLOUD_THIN = 8;
-const CLOUD_DEPTH_STEP = 4;
+function isCloud(t: number): boolean {
+  return t === M.Cloud || t === M.StormCloud;
+}
 
-/** Roughly how much thicker than CLOUD_THIN the cloud above (x, y) is, in steps (0 to 5). */
-function cloudDepth(w: World, x: number, y: number): number {
+/** Chance per frame that a cell on the base of a fair-weather cloud turns to rain: now and then. */
+const CLOUD_DRIZZLE = 0.0005;
+/** A storm cloud's base rains far harder, and harder still per CLOUD_DEPTH_STEP rows of cloud above. */
+const STORM_RAIN = 0.004;
+const STORM_POUR = 0.003;
+const CLOUD_DEPTH_STEP = 4;
+/** Rows of cloud above a cell that turn it to storm cloud; fewer than STORM_CLEAR, and it clears. */
+const STORM_DEPTH = 14;
+const STORM_CLEAR = 8;
+
+/** How many rows of cloud lie above (x, y), counting up to `limit` (one-cell gaps don't end it). */
+function cloudRowsAbove(w: World, x: number, y: number, limit: number): number {
   let n = 0;
-  while (n < 5 && w.get(x, y - CLOUD_THIN - n * CLOUD_DEPTH_STEP) === M.Cloud) n++;
+  for (let yy = y - 1; yy >= 0 && n < limit; yy--) {
+    if (isCloud(w.get(x, yy))) n++;
+    else if (!isCloud(w.get(x, yy - 1))) break;
+  }
   return n;
+}
+
+/** The cloud cell i at (x, y) turns into a raindrop (or snow, hail or acid rain): the cloud coming down. */
+function rainDrop(w: World, x: number, y: number, i: number): void {
+  w.setCell(i, M.Empty);
+  rainFrom(w, x, y - 1);
 }
 
 /** Cells a second a cloud travels in a strong wind, divided by 60: whole clouds sail at this pace. */
@@ -635,7 +665,7 @@ function cloudDrift(w: World, x: number, y: number, i: number): boolean {
   }
   // Only a cell on the true upwind edge moves (no cloud just behind it), so each row advances one
   // cell per move however many little holes it has.
-  for (let k = 1; k <= 3; k++) if (w.get(x - d * k, y) === M.Cloud) return false;
+  for (let k = 1; k <= 3; k++) if (isCloud(w.get(x - d * k, y))) return false;
   // It goes to the row's leading edge: the first gap with open air beyond it (or, if something
   // solid is in the way, the last hole before that). Raindrops inside the cloud don't stop it.
   let hole = 0;
@@ -643,8 +673,8 @@ function cloudDrift(w: World, x: number, y: number, i: number): boolean {
     const t = w.get(x + d * k, y);
     if (t === M.Empty) {
       hole = k;
-      if (w.get(x + d * (k + 1), y) !== M.Cloud && w.get(x + d * (k + 2), y) !== M.Cloud && w.get(x + d * (k + 3), y) !== M.Cloud) break;
-    } else if (t !== M.Cloud && w.isSolid(x + d * k, y)) break;
+      if (!isCloud(w.get(x + d * (k + 1), y)) && !isCloud(w.get(x + d * (k + 2), y)) && !isCloud(w.get(x + d * (k + 3), y))) break;
+    } else if (!isCloud(t) && w.isSolid(x + d * k, y)) break;
   }
   if (hole === 0) return false;
   w.swap(i, w.idx(x + d * hole, y));
@@ -652,41 +682,39 @@ function cloudDrift(w: World, x: number, y: number, i: number): boolean {
 }
 
 /**
- * Water vapour (from water evaporating in the sun) rises to the cloud layer and condenses into
- * cloud there, sooner beside cloud that's already there, so clouds grow where vapour gathers.
+ * Below the cloud layer, every column of cloud rises a row once every CLOUD_RISE_EVERY frames
+ * (about 3 rows a second), all on the same frame, so a cloud floats up as one block: if each column
+ * rose at random moments, neighbouring columns would drift rows apart and the cloud would streak.
  */
-export function updateVapour(w: World, x: number, y: number, i: number): boolean {
-  if (y <= cloudCeiling(w, x) + 3 && w.rng.chance(countAround(w, x, y, M.Cloud, M.Cloud) > 0 ? 0.08 : 0.01)) {
-    w.transform(i, M.Cloud);
-    return true;
+const CLOUD_RISE_EVERY = 20;
+
+/**
+ * A column of cloud rises as one: the cell at its bottom hops to the first gap above the column (a
+ * hole inside the cloud, or open air at its top, as long as that's not in the upper atmosphere), so
+ * the column moves up a row with no gaps opening in it, and holes fill in from below.
+ */
+function riseColumn(w: World, x: number, y: number, i: number, ceiling: number): boolean {
+  for (let ty = y - 1; ty >= ceiling; ty--) {
+    const t = w.get(x, ty);
+    if (t === M.Empty) {
+      w.swap(i, w.idx(x, ty));
+      return true;
+    }
+    if (!isCloud(t)) return false;
   }
   return false;
 }
 
-/** Frames of charge building (corona) between a cloud deciding to strike and the bolt. */
-const STRIKE_CHARGE: readonly [number, number] = [40, 70];
-
-export function rainCloud(w: World, x: number, y: number, i: number): boolean {
-  // Deep inside a thick cloud, very rarely, lightning: first the charge builds for a second or so
-  // (the corona crackle you can hear before a close strike), counted down in `vel`, then it strikes.
-  const charging = w.vel[i];
-  if (charging > 0) {
-    w.noise.corona++;
-    w.vel[i] = charging - 1;
-    if (charging === 1) strike(w, x, y);
-  } else if (w.rng.chance(0.00002) && countAround(w, x, y, M.Cloud, M.Cloud) >= 6) {
-    w.vel[i] = w.rng.int(STRIKE_CHARGE[0], STRIKE_CHARGE[1]);
-  }
-  // The base of the cloud drizzles, and under a thick cloud it pours. The rain is the cloud itself
-  // coming down (no water from nowhere), so a deep bank rains itself thinner from the bottom up.
-  if (w.get(x, y + 1) === M.Empty && w.rng.chance(CLOUD_DRIZZLE + CLOUD_POUR * cloudDepth(w, x, y))) {
-    w.setCell(i, M.Empty);
-    rainFrom(w, x, y - 1);
-    return true;
-  }
+/**
+ * How a cloud moves: as a body, not a gas. The wind carries it whole (cloudDrift). In the upper
+ * atmosphere it sinks back down. Below the cloud layer it floats slowly up to it a whole column at
+ * a time (riseColumn), so a cloud drawn low lifts as a block to the billowing ceiling; once there
+ * it settles sideways only into gaps beside more cloud, so it stays puffed up instead of spreading
+ * thin. At the top a wisp now and then puffs up (a ragged edge); a lone wisp with hardly any cloud
+ * around it slowly evaporates (clean edges).
+ */
+function moveCloud(w: World, x: number, y: number, i: number): boolean {
   if (w.wind !== 0 && w.rng.chance(Math.abs(w.wind) * CLOUD_DRIFT) && cloudDrift(w, x, y, i)) return true;
-  // Clouds don't climb into the upper atmosphere (the top of the screen): they hang below it,
-  // drifting, and sink back down if they find themselves up there.
   const ceiling = cloudCeiling(w, x);
   if (y < ceiling) {
     if (w.get(x, y + 1) === M.Empty && w.rng.chance(0.3)) w.swap(i, w.idx(x, y + 1));
@@ -696,12 +724,117 @@ export function rainCloud(w: World, x: number, y: number, i: number): boolean {
     }
     return true;
   }
-  // Right at the top, now and then a wisp puffs up a little (and sinks back later): a ragged edge.
-  if (y <= ceiling + 1 && w.rng.chance(0.02) && w.get(x, y - 1) === M.Empty) {
+  if (w.rng.chance(0.005) && countAround(w, x, y, M.Cloud, M.StormCloud) <= 2) {
+    w.setCell(i, M.Empty);
+    return true;
+  }
+  const above = w.get(x, y - 1);
+  // Right at the top, now and then a wisp puffs up a little (and sinks back later).
+  if (above === M.Empty && y <= ceiling + 1) {
+    if (w.rng.chance(0.02)) w.swap(i, w.idx(x, y - 1));
+    return true;
+  }
+  // The bottom of a column carries the whole column up a row.
+  if (w.frame % CLOUD_RISE_EVERY === 0 && !isCloud(w.get(x, y + 1)) && riseColumn(w, x, y, i, ceiling)) return true;
+  if (w.rng.chance(0.05)) {
+    const nx = x + w.rng.sign();
+    const ny = w.rng.chance(0.5) ? y - 1 : y;
+    if (ny >= ceiling && w.get(nx, ny) === M.Empty && countAround(w, nx, ny, M.Cloud, M.StormCloud) >= 4) w.swap(i, w.idx(nx, ny));
+  }
+  return true;
+}
+
+/** Above this many rows over the cloud layer, rising vapour freezes into cirrus instead of cloud. */
+const CIRRUS_GAP = 6;
+
+/**
+ * Water vapour (from water evaporating in the sun) rises to the cloud layer and condenses into
+ * cloud there, sooner beside cloud that's already there, so clouds grow where vapour gathers. Vapour
+ * that slips past the cloud layer into the upper atmosphere freezes into thin cirrus instead.
+ */
+export function updateVapour(w: World, x: number, y: number, i: number): boolean {
+  const ceiling = cloudCeiling(w, x);
+  if (y < ceiling - CIRRUS_GAP) {
+    if (w.rng.chance(0.01)) {
+      w.transform(i, M.Cirrus);
+      return true;
+    }
+  } else if (y <= ceiling + 3 && w.rng.chance(countAround(w, x, y, M.Cloud, M.StormCloud) > 0 ? 0.08 : 0.01)) {
+    w.transform(i, M.Cloud);
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Cirrus: thin, high wisps of ice crystals. It stays in the upper atmosphere (rising back if it
+ * sinks to the cloud layer), never rains, lets the sun through, and is smeared out by the wind
+ * (it drifts cell by cell, like a gas), fading away after a minute or so.
+ */
+export function updateCirrus(w: World, x: number, y: number, i: number): boolean {
+  if (y > cloudCeiling(w, x) - 3 && w.get(x, y - 1) === M.Empty && w.rng.chance(0.3)) {
     w.swap(i, w.idx(x, y - 1));
     return true;
   }
   return false;
+}
+
+/** Frames of charge building (corona) between a cloud deciding to strike and the bolt. */
+const STRIKE_CHARGE: readonly [number, number] = [40, 70];
+
+/** Fair-weather cloud: drizzles now and then; piled deep, it darkens into storm cloud. */
+export function rainCloud(w: World, x: number, y: number, i: number): boolean {
+  if (w.rng.chance(0.01) && cloudRowsAbove(w, x, y, STORM_DEPTH) >= STORM_DEPTH) {
+    w.transform(i, M.StormCloud);
+    return true;
+  }
+  if (w.get(x, y + 1) === M.Empty && w.rng.chance(CLOUD_DRIZZLE)) {
+    rainDrop(w, x, y, i);
+    return true;
+  }
+  return moveCloud(w, x, y, i);
+}
+
+/**
+ * Storm cloud: rains hard (harder the deeper the cloud above), and deep inside, very rarely,
+ * lightning: first the charge builds for a second or so (the corona crackle you can hear before a
+ * close strike), counted down in `vel`, then it strikes. Once the cloud above has thinned, it
+ * clears back into fair-weather cloud.
+ */
+let strikeWorld: World | null = null;
+let nextStrikeFrame = 0;
+/** Frames between one strike starting to charge and the next one being allowed, anywhere in the world. */
+const STRIKE_GAP: readonly [number, number] = [40, 160];
+
+export function stormCloud(w: World, x: number, y: number, i: number): boolean {
+  const charging = w.vel[i];
+  if (charging > 0) {
+    w.noise.corona++;
+    w.vel[i] = charging - 1;
+    if (charging === 1) strike(w, x, y);
+  } else if (
+    (w.frame >= nextStrikeFrame || w !== strikeWorld) &&
+    w.rng.chance(0.00004) &&
+    countAround(w, x, y, M.Cloud, M.StormCloud) >= 6
+  ) {
+    // However big the storm, strikes come one at a time, a second or two apart: a huge storm
+    // cloud would otherwise flicker with bolts and fill the sky with sprites.
+    w.vel[i] = w.rng.int(STRIKE_CHARGE[0], STRIKE_CHARGE[1]);
+    strikeWorld = w;
+    nextStrikeFrame = w.frame + w.rng.int(STRIKE_GAP[0], STRIKE_GAP[1]);
+  }
+  if (charging === 0 && w.rng.chance(0.01) && cloudRowsAbove(w, x, y, STORM_CLEAR) < STORM_CLEAR) {
+    w.transform(i, M.Cloud);
+    return true;
+  }
+  if (w.get(x, y + 1) === M.Empty) {
+    const deep = Math.max(0, cloudRowsAbove(w, x, y, STORM_CLEAR + 5 * CLOUD_DEPTH_STEP) - STORM_CLEAR);
+    if (w.rng.chance(STORM_RAIN + STORM_POUR * Math.floor(deep / CLOUD_DEPTH_STEP))) {
+      rainDrop(w, x, y, i);
+      return true;
+    }
+  }
+  return moveCloud(w, x, y, i);
 }
 
 /** One drop from a cloud: rain, acid rain in sulfur dioxide, or near ice snow and sometimes hail. */
@@ -815,7 +948,7 @@ function findRod(w: World, x: number, y: number): number {
     if (rx < 0 || rx >= w.width) continue;
     for (let ry = y + 1; ry < bestY; ry++) {
       const def = w.defAt(rx, ry);
-      if (def.id === M.Cloud || def.kind === 'empty' || def.kind === 'gas') continue;
+      if (isCloud(def.id) || def.kind === 'empty' || def.kind === 'gas') continue;
       if (def.kind === 'liquid') continue; // rain, or a film of water lying on the rod
       // The first solid thing below the cloud in this column: is it a conductor, high enough?
       if (def.conducts && def.kind === 'static' && ry - y > Math.abs(dx) && (ry < bestY || Math.abs(dx) < Math.abs(best - x))) {
@@ -848,7 +981,7 @@ function strike(w: World, x: number, y: number): void {
   for (let by = y + 1; by < w.height; by++) {
     bx += rod >= 0 && bx !== rod && w.rng.chance(0.8) ? Math.sign(rod - bx) : w.rng.int(-1, 1);
     const def = w.defAt(bx, by);
-    if (def.id === M.Cloud) continue;
+    if (isCloud(def.id)) continue;
     if (def.kind === 'empty' || def.kind === 'gas') {
       w.set(bx, by, M.Lightning);
       continue;
@@ -1071,7 +1204,7 @@ export function billowSmoke(w: World, x: number, y: number, i: number): boolean 
  */
 function spawnSprites(w: World, x: number, y: number): void {
   let top = y;
-  while (w.get(x, top - 1) === M.Cloud) top--;
+  while (isCloud(w.get(x, top - 1))) top--;
   let sky = 0;
   while (sky < top && w.get(x, top - 1 - sky) === M.Empty) sky++;
   if (sky < 14) return;

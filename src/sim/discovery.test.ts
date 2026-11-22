@@ -149,10 +149,13 @@ describe('every recipe works in the simulation', () => {
       fillRect(w, 10, 20, 20, 3, M.Salt);
     }],
     ['cloud: steam crowding at the top', M.Cloud, 400, (w) => fillRect(w, 0, 0, 40, 3, M.Steam)],
-    ['snow: a cloud near ice', M.Snow, 800, (w) => {
-      fillRect(w, 0, 0, 40, 2, M.Cloud);
-      fillRect(w, 0, 6, 40, 1, M.Ice);
+    ['snow: a cloud near ice', M.Snow, 1500, (w) => {
+      // Fair-weather cloud only drizzles now and then, so give it some width of base to snow from.
+      fillRect(w, 0, 6, 40, 7, M.Cloud);
+      fillRect(w, 0, 18, 40, 1, M.Ice);
     }],
+    ['storm cloud: a cloud piled deep', M.StormCloud, 600, (w) => fillRect(w, 0, 8, 40, 30, M.Cloud)],
+    ['cirrus: vapour rising above the clouds', M.Cirrus, 600, (w) => fillRect(w, 0, 0, 40, 2, M.Vapour)],
     ['moss: grass touching stone', M.Moss, 600, (w) => {
       fillRect(w, 0, 35, 40, 5, M.Stone);
       fillRect(w, 0, 34, 40, 1, M.Grass);
@@ -274,8 +277,9 @@ describe('every recipe works in the simulation', () => {
       fillRect(w, 0, 35, 40, 2, M.Sulfur);
       for (let x = 0; x < 40; x++) w.ignite(w.idx(x, 36));
     }],
-    ['lightning: a thick cloud strikes', M.Lightning, 2500, (w) => {
-      fillRect(w, 0, 0, 40, 12, M.Cloud);
+    ['lightning: a storm cloud strikes', M.Lightning, 2500, (w) => {
+      // Piled deep enough (14 rows or more) that its base darkens into storm cloud.
+      fillRect(w, 0, 0, 40, 30, M.Cloud);
       fillRect(w, 0, 38, 40, 2, M.Stone);
     }],
     ['battery: iron and charcoal in salt water', M.Battery, 300, (w) => {
@@ -569,7 +573,7 @@ describe('every recipe works in the simulation', () => {
       fillRect(w, 0, 10, 40, 1, M.Stone);
       fillRect(w, 0, 11, 40, 6, M.SwampGas);
     }],
-    ['fumarole: water on hot basalt', M.Fumarole, 600, (w) => {
+    ['fumarole: water on hot basalt', M.Fumarole, 1500, (w) => {
       fillRect(w, 0, 34, 40, 6, M.Lava);
       fillRect(w, 0, 33, 40, 1, M.Basalt);
       fillRect(w, 0, 29, 40, 4, M.Water);
@@ -1299,15 +1303,17 @@ describe('round 3, part 2', () => {
 describe('round 4', () => {
   it('lava under water hardly crusts into basalt; lava in open air does', () => {
     const basalt = (underwater: boolean): number => {
-      const w = new World(30, 30, 90);
-      fillRect(w, 0, 25, 30, 5, M.Lava);
-      if (underwater) fillRect(w, 0, 10, 30, 15, M.Water);
+      // A deep pool, so the lava stays covered (boiled-off water goes up into cloud, which only
+      // drizzles it back slowly).
+      const w = new World(30, 50, 90);
+      fillRect(w, 0, 45, 30, 5, M.Lava);
+      if (underwater) fillRect(w, 0, 10, 30, 35, M.Water);
       run(w, 1500);
       return w.created[M.Basalt];
     };
     // Boiling water keeps opening brief gaps of air above the lava, so it does crust a little:
-    // measured over 1500 frames, roughly 2-6 cells under water against 12-16 in the open.
-    expect(basalt(true)).toBeLessThan(basalt(false) * 0.6);
+    // measured over 1500 frames, 0-4 cells under water against 12-16 in the open.
+    expect(basalt(true)).toBeLessThan(basalt(false) / 3);
   });
 
   it('molten glass with no wind stays molten glass (until it cools)', () => {
@@ -1531,7 +1537,7 @@ describe('red sprites', () => {
   it('flash in the open sky above a thick storm cloud, red heads above violet tendrils', () => {
     // A tall world, so there is upper atmosphere above the cloud layer (which starts 22% down).
     const w = new World(60, 120, 120);
-    fillRect(w, 0, 22, 60, 12, M.Cloud);
+    fillRect(w, 0, 22, 60, 30, M.Cloud);
     let seen = 0;
     let headAboveTendrils = false;
     for (let f = 0; f < 3000 && seen === 0; f++) {
@@ -1562,7 +1568,7 @@ describe('red sprites', () => {
 
   it('never appear without room: a storm with no open sky above it makes none', () => {
     const w = new World(60, 40, 121);
-    fillRect(w, 0, 0, 60, 14, M.Cloud);
+    fillRect(w, 0, 0, 60, 30, M.Cloud);
     run(w, 3000);
     expect(w.created[M.Lightning]).toBeGreaterThan(0);
     expect(w.created[M.Sprite]).toBe(0);
@@ -1570,7 +1576,7 @@ describe('red sprites', () => {
 
   it('each flash lasts under half a second (at most 28 frames)', () => {
     const w = new World(60, 120, 122);
-    fillRect(w, 0, 22, 60, 20, M.Cloud);
+    fillRect(w, 0, 22, 60, 30, M.Cloud);
     let seen = 0;
     for (let f = 0; f < 3000; f++) {
       w.step();

@@ -54,8 +54,12 @@ export class Renderer {
   private readonly dimLut: Uint32Array;
   /** 256 colours from cold (blue) through ambient (dark) to hot (red, yellow, white). */
   private readonly heatLut: Uint32Array;
-  /** Cloud colours from sunlit white (level 0) to storm grey (CLOUD_LEVELS - 1). */
+  /**
+   * For each cloud-shaded material (cloud, storm cloud), its colours from sunlit (level 0) to deep
+   * in shadow (CLOUD_LEVELS - 1); cloudBase[m] is where material m's table starts (-1: not shaded).
+   */
   private readonly cloudLut: Uint32Array;
+  private readonly cloudBase: Int32Array;
   /** Per column while drawing: the row of the last cloud cell seen, and how deep into cloud it was. */
   private readonly cloudRow: Int32Array;
   private readonly cloudDepth: Uint16Array;
@@ -117,15 +121,21 @@ export class Renderer {
       }
     }
     this.background = MATERIALS[M.Empty].colour;
-    this.cloudLut = new Uint32Array(CLOUD_LEVELS * SHADES);
-    for (let level = 0; level < CLOUD_LEVELS; level++) {
-      const t = level / (CLOUD_LEVELS - 1);
-      for (let s = 0; s < SHADES; s++) {
-        const j = M.Cloud * SHADES + s;
-        // Slightly bluer as it darkens: slate rather than plain grey.
-        this.cloudLut[level * SHADES + s] = pack(this.lutR[j] * (1 - 0.55 * t), this.lutG[j] * (1 - 0.53 * t), this.lutB[j] * (1 - 0.45 * t));
+    const shaded = MATERIALS.filter((d) => d.cloudShading);
+    this.cloudBase = new Int32Array(MATERIALS.length).fill(-1);
+    this.cloudLut = new Uint32Array(Math.max(1, shaded.length) * CLOUD_LEVELS * SHADES);
+    shaded.forEach((d, k) => {
+      const offset = k * CLOUD_LEVELS * SHADES;
+      this.cloudBase[d.id] = offset;
+      for (let level = 0; level < CLOUD_LEVELS; level++) {
+        const t = level / (CLOUD_LEVELS - 1);
+        for (let s = 0; s < SHADES; s++) {
+          const j = d.id * SHADES + s;
+          // Slightly bluer as it darkens: slate rather than plain grey.
+          this.cloudLut[offset + level * SHADES + s] = pack(this.lutR[j] * (1 - 0.55 * t), this.lutG[j] * (1 - 0.53 * t), this.lutB[j] * (1 - 0.45 * t));
+        }
       }
-    }
+    });
     this.cloudRow = new Int32Array(world.width);
     this.cloudDepth = new Uint16Array(world.width);
   }
@@ -140,7 +150,7 @@ export class Renderer {
 
   private renderMaterials(world: World): void {
     const { mat, shade, life, burn, charge, size, width } = world;
-    const { pixels, lut, lutR, lutG, lutB, fadeFrames, flickers, isGlow, cloudLut, cloudRow, cloudDepth, chargeHead, chargeTail, litLut } = this;
+    const { pixels, lut, lutR, lutG, lutB, fadeFrames, flickers, isGlow, cloudLut, cloudBase, cloudRow, cloudDepth, chargeHead, chargeTail, litLut } = this;
     // Thick clouds are lit from above: they darken the deeper a cell is below the cloud's top.
     cloudRow.fill(-100);
     const glowShift = this.frame >> 3;
@@ -181,7 +191,7 @@ export class Renderer {
           (bgG + (lutG[j] - bgG) * a) | 0,
           (bgB + (lutB[j] - bgB) * a) | 0,
         );
-      } else if (m === M.Cloud) {
+      } else if (cloudBase[m] >= 0) {
         const x = i % width;
         const y = (i - x) / width;
         // Small gaps (raindrops, holes, wind) don't count as the cloud ending, or every hole
@@ -190,7 +200,7 @@ export class Renderer {
         cloudDepth[x] = depth;
         cloudRow[x] = y;
         const level = depth <= CLOUD_LIT ? 0 : Math.min(CLOUD_LEVELS - 1, (((depth - CLOUD_LIT) * (CLOUD_LEVELS - 1)) / CLOUD_DEEP) | 0);
-        pixels[i] = cloudLut[level * SHADES + shade[i]];
+        pixels[i] = cloudLut[cloudBase[m] + level * SHADES + shade[i]];
       } else {
         pixels[i] = lut[m * SHADES + shade[i]];
       }
