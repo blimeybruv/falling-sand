@@ -27,6 +27,20 @@ const NIGHT_SKY = [5, 7, 16] as const;
 const DUSK_SKY = [52, 30, 40] as const;
 /** Stars come out at night in this top fraction of the grid (caves lower down stay starless). */
 const STAR_ROWS = 0.45;
+/** The rainbow's bands, outside to in. */
+const RAINBOW = [
+  [255, 70, 60],
+  [255, 150, 50],
+  [250, 225, 70],
+  [90, 210, 90],
+  [70, 140, 255],
+  [90, 80, 210],
+  [150, 80, 200],
+] as const;
+/** Falling raindrops (counted as the frame is drawn) for a full-strength rainbow. */
+const RAINBOW_RAIN = 150;
+/** At full strength the rainbow is this see-through: faint, as real ones are. */
+const RAINBOW_ALPHA = 0.32;
 
 const LITTLE_ENDIAN = new Uint8Array(new Uint32Array([0x0a0b0c0d]).buffer)[0] === 0x0d;
 
@@ -79,6 +93,12 @@ export class Renderer {
   private readonly isAir: Uint8Array;
   /** Brightness (0: none) of the star at each cell, for clear nights. */
   private readonly stars: Uint8Array;
+  /** Which rainbow band (1..7, 0 for none) each cell lies in: one arc across the sky. */
+  private readonly arc: Uint8Array;
+  /** How strong the rainbow is now (0..1): it fades in and out as sun and rain come and go. */
+  private rainbow = 0;
+  /** The bands' colours blended over the sky at the current strength (index 1..7). */
+  private readonly arcColours = new Uint32Array(RAINBOW.length + 1);
   private seed = 0x9e3779b9;
 
   constructor(canvas: HTMLCanvasElement, world: World) {
@@ -122,18 +142,7 @@ export class Renderer {
       d.chargeColour ? pack(d.chargeColour[0] * 0.8, d.chargeColour[1] * 0.8, d.chargeColour[2] * 0.8) : pack(240, 200, 90),
     );
     this.dimLut = this.lut.map((_, j) => pack(this.lutR[j] * 0.3, this.lutG[j] * 0.3, this.lutB[j] * 0.3));
-    this.heatLut = new Uint32Array(256);
-    for (let k = 0; k < 256; k++) {
-      if (k < 64) {
-        // cold: bright blue at k = 0 fading to dark at k = 63 (ambient)
-        const a = 1 - k / 63;
-        this.heatLut[k] = pack(20 + 60 * a, 40 + 120 * a, 60 + 195 * a);
-      } else {
-        // hot: dark red -> red -> orange -> yellow -> white
-        const a = (k - 64) / 191;
-        this.heatLut[k] = pack(60 + 195 * Math.min(1, a * 2), 20 + 235 * Math.max(0, Math.min(1, a * 2 - 0.5)), 20 + 235 * Math.max(0, a * 2 - 1.2));
-      }
-    }
+    this.heatLut = Uint32Array.from({ length: 256 }, (_, k) => pack(...heatLevelRgb(k)));
     this.background = MATERIALS[M.Empty].colour;
     const air = this.background;
     this.isAir = Uint8Array.from(MATERIALS, (d) =>
@@ -148,6 +157,19 @@ export class Renderer {
       s ^= s >>> 17;
       s ^= s << 5;
       if ((s >>> 0) % 250 === 0) this.stars[i] = 90 + ((s >>> 8) % 160);
+    }
+    // The rainbow: an arc centred below the bottom of the grid, its top about a third of the way
+    // down, each band a little over 1% of the height wide.
+    this.arc = new Uint8Array(world.size);
+    const band = Math.max(1, Math.round(world.height * 0.012));
+    const cx = world.width / 2;
+    const cy = world.height * 1.1;
+    const outer = world.height * 0.78;
+    for (let y = 0; y < world.height; y++) {
+      for (let x = 0; x < world.width; x++) {
+        const k = Math.floor((outer - Math.hypot(x - cx, y - cy)) / band);
+        if (k >= 0 && k < RAINBOW.length) this.arc[y * world.width + x] = k + 1;
+      }
     }
     const shaded = MATERIALS.filter((d) => d.cloudShading);
     this.cloudBase = new Int32Array(MATERIALS.length).fill(-1);
@@ -185,9 +207,20 @@ export class Renderer {
     const glowShift = this.frame >> 3;
     const [bgR, bgG, bgB] = this.skyColour(world);
     const bg = pack(bgR, bgG, bgB);
-    const { isAir, stars } = this;
+    const { isAir, stars, arc, arcColours } = this;
     // Stars show on clear nights, fading in as it gets dark, and twinkle a little.
     const starlight = world.sun < -0.3 ? Math.min(1, (-world.sun - 0.3) / 0.5) : 0;
+    // A rainbow, faint, while the sun shines on falling rain (counted below, for the next frame).
+    const bow = this.rainbow * RAINBOW_ALPHA;
+    if (bow > 0.01) {
+      for (let k = 0; k < RAINBOW.length; k++) {
+        const [r, g, b] = RAINBOW[k];
+        arcColours[k + 1] = pack(bgR + (r - bgR) * bow, bgG + (g - bgG) * bow, bgB + (b - bgB) * bow);
+      }
+    }
+    const vel = world.vel;
+    const water: number = M.Water;
+    let rain = 0;
     const fireBase = M.Fire * SHADES;
     let seed = this.seed;
 
@@ -198,7 +231,8 @@ export class Renderer {
           const twinkle = ((i * 7 + glowShift) & 7) === 0 ? 0.6 : 1;
           const v = stars[i] * starlight * twinkle;
           pixels[i] = pack(bgR + ((v - bgR) * 0.9) | 0, bgG + ((v - bgG) * 0.9) | 0, bgB + ((v * 1.05 - bgB) * 0.9) | 0);
-        } else pixels[i] = bg;
+        } else if (bow > 0.01 && arc[i] !== 0) pixels[i] = arcColours[arc[i]];
+        else pixels[i] = bg;
         continue;
       }
       if (charge[i] !== 0) {
@@ -252,9 +286,12 @@ export class Renderer {
         pixels[i] = cloudLut[cloudBase[m] + level * SHADES + shade[i]];
       } else {
         pixels[i] = lut[m * SHADES + shade[i]];
+        if (m === water && vel[i] > 2) rain++;
       }
     }
     this.seed = seed;
+    const target = world.sun > 0.2 ? Math.min(1, rain / RAINBOW_RAIN) * Math.min(1, world.sun * 1.5) : 0;
+    this.rainbow += (target - this.rainbow) * (target > this.rainbow ? 0.03 : 0.01);
   }
 
   /**
@@ -286,10 +323,8 @@ export class Renderer {
       const d = t - AMBIENT_TEMP;
       if (d > -1 && d < 1) {
         pixels[i] = dimLut[mat[i] * SHADES + shade[i]];
-      } else if (d < 0) {
-        pixels[i] = heatLut[Math.max(0, Math.round(63 + d * (63 / 50)))];
       } else {
-        pixels[i] = heatLut[Math.min(255, 64 + Math.round(Math.sqrt(d / 1200) * 191))];
+        pixels[i] = heatLut[heatLevel(t)];
       }
     }
   }
@@ -322,5 +357,31 @@ export function swatchColour(id: number): string {
   const [r, g, b] = def.colourEnd
     ? def.colour.map((c, k) => Math.round((c + def.colourEnd![k]) / 2))
     : def.colour;
+  return `rgb(${r}, ${g}, ${b})`;
+}
+
+/** Heat view: the colour level (0..255) for a temperature, 63 being room temperature. */
+export function heatLevel(t: number): number {
+  const d = t - AMBIENT_TEMP;
+  return d < 0 ? Math.max(0, Math.round(63 + d * (63 / 50))) : Math.min(255, 64 + Math.round(Math.sqrt(d / 1200) * 191));
+}
+
+/** Heat view: the colour of a level, from bright blue (cold) through dark (room) to red, yellow and white (hot). */
+function heatLevelRgb(k: number): [number, number, number] {
+  if (k < 64) {
+    // cold: bright blue at k = 0 fading to dark at k = 63 (ambient)
+    const a = 1 - k / 63;
+    return [20 + 60 * a, 40 + 120 * a, 60 + 195 * a];
+  }
+  // hot: dark red -> red -> orange -> yellow -> white
+  const a = (k - 64) / 191;
+  return [60 + 195 * Math.min(1, a * 2), 20 + 235 * Math.max(0, Math.min(1, a * 2 - 0.5)), 20 + 235 * Math.max(0, a * 2 - 1.2)];
+}
+
+/** CSS colour the heat view gives a temperature (for its legend). */
+export function heatColour(t: number): string {
+  // Room temperature shows the materials themselves, dimmed: a neutral dark grey stands for that.
+  if (Math.abs(t - AMBIENT_TEMP) < 1) return 'rgb(34, 34, 40)';
+  const [r, g, b] = heatLevelRgb(heatLevel(t)).map((c) => Math.round(c));
   return `rgb(${r}, ${g}, ${b})`;
 }

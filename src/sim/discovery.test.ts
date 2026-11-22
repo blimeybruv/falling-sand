@@ -1310,16 +1310,20 @@ describe('round 4', () => {
   it('lava under water hardly crusts into basalt; lava in open air does', () => {
     const basalt = (underwater: boolean): number => {
       // A deep pool, so the lava stays covered (boiled-off water goes up into cloud, which only
-      // drizzles it back slowly).
-      const w = new World(30, 50, 90);
-      fillRect(w, 0, 45, 30, 5, M.Lava);
-      if (underwater) fillRect(w, 0, 10, 30, 35, M.Water);
-      run(w, 1500);
-      return w.created[M.Basalt];
+      // drizzles it back slowly). Added up over a few worlds: one alone is too noisy.
+      let n = 0;
+      for (let seed = 88; seed < 94; seed++) {
+        const w = new World(30, 50, seed);
+        fillRect(w, 0, 45, 30, 5, M.Lava);
+        if (underwater) fillRect(w, 0, 10, 30, 35, M.Water);
+        run(w, 1500);
+        n += w.created[M.Basalt];
+      }
+      return n;
     };
     // Boiling water keeps opening brief gaps of air above the lava, so it does crust a little:
-    // measured over 1500 frames, 0-4 cells under water against 12-16 in the open.
-    expect(basalt(true)).toBeLessThanOrEqual(basalt(false) / 3);
+    // measured over 1500 frames, 0-9 cells a world under water against 12-19 in the open.
+    expect(basalt(true)).toBeLessThan(basalt(false) / 3);
   });
 
   it('molten glass with no wind stays molten glass (until it cools)', () => {

@@ -57,12 +57,12 @@ Discovery progress is kept for when you switch back.
 | `[` and `]` | Smaller / bigger brush (or the Brush slider) |
 | `Space` | Pause / play |
 | `.` | Step one frame while paused (or the Step button) |
-| `T` | Heat view: colour everything by temperature (or the Heat view button) |
+| `T` | Heat view: colour everything by temperature, with a scale in the corner (or the Heat view button) |
 | Speed menu | 0.25× to 3× simulation speed |
 | Wind menu | Blow smoke, fire, steam and falling particles left or right. Clouds sail along; in a strong wind, dunes creep and snow piles into drifts, fire races downwind, and flowers send seeds off on the breeze. Gusty swells and drops and now and then turns round |
 | Edges button | Walls (the default: things pile up against the edges) or open: sand, liquids and creatures fall off the bottom, liquids and gases flow out of the sides and rise out of the top, and clouds sail off with the wind. Solid things you draw stay put, so you can build a floor |
 | Speaker button | Sound on or off. Wind (following the Wind setting, gusting), crackling fire, booming explosions, thunder after lightning (with a corona sizzle as the charge builds before a near strike), hissing steam and acid, rain and pouring sand, bubbling lava, humming electricity, fireworks, buzzing bees, and a chime for each discovery. All made live with the Web Audio API, no sound files |
-| Sun menu | Sunlight from above warms whatever it reaches first: it evaporates water (which rises and makes clouds), dries mud and salt water, burns off clouds and melts snow, but not in the shade. Glass lets it through. Plants grow faster in sunlight and slower in shade (moss the other way round). Day/night runs a three-minute day: the sky brightens, warms at dawn and dusk and fills with stars; clear nights chill whatever is open to the sky (a cloud or a roof keeps it warm), mist rises off water, ponds skin over with thin ice, and fog settling on frozen ground leaves frost. The morning sun melts it all |
+| Sun menu | Sunlight from above warms whatever it reaches first: it evaporates water (which rises and makes clouds), dries mud and salt water, burns off clouds and melts snow, but not in the shade. Glass lets it through. Plants grow faster in sunlight and slower in shade (moss the other way round). Sun on falling rain draws a faint rainbow. Vapour rising against a roof condenses on it, so salt water under glass in the sun makes a solar still: fresh water drips back, salt is left behind. Day/night runs a three-minute day: the sky brightens, warms at dawn and dusk and fills with stars; clear nights chill whatever is open to the sky (a cloud or a roof keeps it warm), mist rises off water, ponds skin over with thin ice, and fog settling on frozen ground leaves frost. The morning sun melts it all |
 | Scene menu | Save in this browser, load it again, download or open a scene file, or copy a share link |
 | `J` or Journal button | Discovery journal: what you've found, and hints for the rest |
 | Mode menu | Discovery or Sandbox |
@@ -87,7 +87,7 @@ debris start fresh when a scene loads.
 | D | Earth | Brown powder; turns to mud when wet, and to loam beside sand and clay | Starter |
 | M | Mud | Thick, slow liquid; dries back to earth when heated; settles into clay in water | Earth meets water |
 | C | Clay | Sticky powder that stands in steep piles; fired in a kiln it becomes brick | Mud left in water |
-| O | Loam | Rich soil: seeds grow tall trees on it without water, and grass spreads over it | Earth with sand and clay around it |
+| O | Loam | Rich soil: seeds grow tall trees on it without water, and grass spreads over it; after rain, mushrooms sprout on it in the shade | Earth with sand and clay around it |
 | | Fertiliser | Seeds on it sprout without water, grass beside it spreads faster; enriches earth into loam | Ash meets saltpetre |
 | | Compost | Rots down into loam | Mushroom in grass or leaves |
 | 3 | Stone | Static and indestructible (only burning thermite melts it); conducts heat well | Starter |
@@ -189,7 +189,7 @@ debris start fresh when a scene loads.
 | | Coal | Burns for a very long time, very hot | Charcoal buried with no air and baked past 200° |
 | X | Ash | Light powder left by fires; floats on water and blows in the wind | Wood, leaves or grass burning out |
 | U | Sulfur | Yellow powder; burns with choking smoke; slowly turns water acidic | Lava meets water (now and then) |
-| P | Saltpetre | White crystals | Leaves buried in earth |
+| P | Saltpetre | White crystals (nitrate): grass spreads faster on it. Lightning striking soil leaves some | Leaves buried in earth, or lightning striking soil |
 | G | Gunpowder | Powder; burns very fast with small blasts, so a line of it works as a fuse | Charcoal with sulfur and saltpetre |
 | | Fireworks | Shoots up when lit, then bursts into coloured sparks | Gunpowder meets salt or rust |
 | | Thermite | Hard to light; burns at 2500°, melts stone into lava and metal into molten iron | Rust meets charcoal |
@@ -215,7 +215,7 @@ debris start fresh when a scene loads.
 | 5 | Grass | Weeds and grass: spreads over damp ground and loam, and into water; burns | A sandy shore |
 | 4 | Wood | Static; burns slowly; buried under sand it slowly turns to oil | Grow a tree |
 | | Flower | Blooms on trees grown in loam; now and then drops a seed | A tree rooted in loam |
-| | Mushroom | Grows in buried damp wood and slowly eats through wood and leaves | Wood buried in damp ground |
+| | Mushroom | Grows in buried damp wood and slowly eats through wood and leaves; sprouts on loam in damp shade after rain; rots into compost after a minute or so | Wood buried in damp ground, or rain on loam in the shade |
 | | Vine | Climbs wood, stone and brick walls | Grass meets wood |
 | | Seaweed | Grows upward through salt water | Grass meets salt water |
 | | Cactus | Grows in the desert; burning releases water | A seed on dry sand far from water |
@@ -233,7 +233,7 @@ debris start fresh when a scene loads.
 | | Honeydew | Sweet drops that ferment like sugar | Flowers drip it |
 | | Honey | Thick, golden, very slow | Bees on honeydew |
 | | Sawdust | Light, catches fire easily | Termites eating wood |
-| | Earthworm | Creature: burrows through earth, leaving loam; drowns in water | Damp loam |
+| | Earthworm | Creature: burrows through earth, leaving loam; comes up to the surface when rain lies on the ground; drowns if it falls into water | Damp loam |
 | | Termite | Creature: eats wood into sawdust; dies out in the open | Rotting wood (mushrooms) |
 | | Fish | Creature: swims, eats algae, breeds; can't survive out of water; stunned by a nearby blast, it floats up and comes round | Water under algae |
 | | Firefly | Creature: drifts over grass, glowing | Grass with open air above |
@@ -312,7 +312,6 @@ estimates.
 - [ ] **Run the simulation in a Web Worker**: move `World.step()` off the main thread and pass the arrays across, so bigger grids stay smooth.
 - [ ] **More sound**: a volume slider; ice cracking, glass shattering.
 - [ ] **Smarter liquids**: pressure, so water rises to the same level in connected containers (a U-bend).
-- [ ] **Heat view legend**: a small temperature scale in the corner while heat view is on.
 - [ ] **Accessibility**: a high-contrast palette option, and keyboard control of the brush position.
 
 ## Licence

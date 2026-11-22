@@ -256,7 +256,7 @@ cloud itself coming down, so weather can't make water from nothing.
 | ✅ | Heat lamp | A placeable lamp that heats in a straight line (dissipates a cloud locally, warms a greenhouse) | `update` with a ray | F |
 | | Burning glass | Sunlight through a glass lens focuses to a hot spot that lights tinder | sunlight pass bends at glass | S |
 | ✅ | Sunny plants | Grass and trees grow faster in sunlight, seeds struggle in deep shade | growth reads a "lit" flag | F |
-| | Rainbow | Sun plus falling rain draws a faint arc (render-only easter egg) | renderer | F |
+| ✅ | Rainbow | Sun plus falling rain draws a faint arc (render-only easter egg) | renderer | F |
 | ✅ | Gusty wind | A Wind option that varies in strength and sometimes turns | main loop varies `world.wind` | F |
 | ✅ | Day and night | The sun rises and sets, the sky colour shifts (dusk, stars), clear nights cool things (frost) | `world.sun` below 0 is night; `sunAt`, renderer `skyColour` | S |
 | | Seasons | Ambient temperature changes: winter freezes ponds, rain becomes snow | ambient is a constant today | S |
@@ -354,11 +354,11 @@ standing alone.
 | ✅ | Thermocouple | temperature + electricity | Copper joined to iron sends pulses while one side is much hotter than the other: fire powering a circuit | Molten copper cooling against iron | F |
 | ✅ | Bellows effect | wind + fire | Fire spreads faster downwind and struggles upwind, so a blaze races before the wind | (behaviour) | F |
 | ✅ | Seed drift | wind + plants | Flowers in the wind release seeds that blow downwind and sprout where they land on loam | (behaviour) | F |
-| | Rain wakes the soil | rain + creatures + plants | Earthworms come to the surface in rain; mushrooms sprout in damp shade after a storm | (behaviour) | F |
+| ✅ | Rain wakes the soil | rain + creatures + plants | Earthworms come to the surface in rain; mushrooms sprout in damp shade after a storm | (behaviour) | F |
 | ✅ | Snails in the sun | sunlight + creatures | Snails withdraw into their shells (stop moving) in strong sun and come out when it's wet | (behaviour) | F |
-| | Solar still | sunlight + glass + water vapour | Salt water under a glass roof in the sun: vapour condenses under the glass and drips back fresh, leaving salt (already works: worth a scene and a hint) | (emergent) | T |
+| ✅ | Solar still | sunlight + glass + water vapour | Salt water under a glass roof in the sun: vapour condenses under the glass and drips back fresh, leaving salt (needed vapour to condense on roofs: it didn't, before) | (emergent) | T |
 | ✅ | Stunned fish | explosions + creatures | Fish caught at the edge of a blast float up, stunned, and may recover | (behaviour) | F |
-| | Lightning feeds the soil | lightning + earth + plants | A strike on loam leaves a little saltpetre (nitrates), so grass flourishes after a storm | (behaviour) | F |
+| ✅ | Lightning feeds the soil | lightning + earth + plants | A strike on loam leaves a little saltpetre (nitrates), so grass flourishes after a storm | (behaviour) | F |
 
 ## Anomalies (design note, 21 Nov)
 

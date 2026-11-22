@@ -80,8 +80,8 @@ function thrives(w: World, x: number, y: number, base: number, shadeLoving = fal
 
 /** Grass: now and then spreads into neighbouring water, or over neighbouring open ground (see below). */
 export function growGrass(w: World, x: number, y: number, _i: number): boolean {
-  // Fed by fertiliser beside or beneath it, grass spreads twice as fast.
-  if (!thrives(w, x, y, 0.03) && !(thrives(w, x, y, 0.03) && touches(w, x, y, M.Fertiliser))) return true;
+  // Fed by fertiliser or saltpetre (nitrate) beside or beneath it, grass spreads twice as fast.
+  if (!thrives(w, x, y, 0.03) && !(thrives(w, x, y, 0.03) && (touches(w, x, y, M.Fertiliser) || touches(w, x, y, M.Saltpetre)))) return true;
   const nx = x + w.rng.int(-1, 1);
   const ny = y + w.rng.int(-1, 1);
   const t = w.get(nx, ny);
@@ -939,12 +939,19 @@ function roundCloud(w: World, x: number, y: number, i: number): void {
 const CIRRUS_GAP = 6;
 
 /**
- * Water vapour (from water evaporating in the sun) rises to the cloud layer and condenses into
+ * Water vapour (from water evaporating in the sun) rises to the cloud layer (or a roof, where it
+ * condenses back into water) and condenses into
  * cloud there, sooner beside cloud that's already there, so clouds grow where vapour gathers. Vapour
  * that slips past the cloud layer into the upper atmosphere freezes into thin cirrus instead.
  */
 export function updateVapour(w: World, x: number, y: number, i: number): boolean {
   const ceiling = cloudCeiling(w, x);
+  // Rising against a roof below the clouds (glass, stone, a cave ceiling), it condenses on the
+  // underside and drips back as fresh water: the way a solar still works.
+  if (y > ceiling + 3 && w.rng.chance(0.01) && w.get(x, y - 1) !== M.Empty && w.isSolid(x, y - 1)) {
+    w.transform(i, M.Water);
+    return true;
+  }
   if (y < ceiling - CIRRUS_GAP) {
     if (w.rng.chance(0.01)) {
       w.transform(i, M.Cirrus);
@@ -1206,9 +1213,39 @@ function strike(w: World, x: number, y: number): void {
     if (w.inBounds(bx, by)) {
       const n = w.idx(bx, by);
       if (def.id === M.Sand) fuseSand(w, bx, by);
-      else if (!w.electrify(n)) w.ignite(n);
+      else if (isFertileSoil(def.id)) feedSoil(w, bx, by);
+      else {
+        // Rain puddled on the ground: the nitrates still wash into the soil a little way below.
+        if (def.id === M.Water) {
+          for (let dy = 1; dy <= 6; dy++) {
+            const t = w.get(bx, by + dy);
+            if (isFertileSoil(t)) feedSoil(w, bx, by + dy);
+            if (t !== M.Water) break;
+          }
+        }
+        if (!w.electrify(n)) w.ignite(n);
+      }
     }
     return;
+  }
+}
+
+/**
+ * A bolt striking soil fixes nitrogen from the air, as real lightning does: it leaves a little
+ * saltpetre (nitrate) where it hit and in the ground around, and grass flourishes on it.
+ */
+function isFertileSoil(t: number): boolean {
+  return t === M.Earth || t === M.Loam || t === M.Grass;
+}
+
+function feedSoil(w: World, x: number, y: number): void {
+  for (let dy = 0; dy <= 2; dy++) {
+    for (let dx = -1; dx <= 1; dx++) {
+      const t = w.get(x + dx, y + dy);
+      if (isFertileSoil(t) && (dx === 0 && dy === 0 ? true : w.rng.chance(0.35))) {
+        w.transform(w.idx(x + dx, y + dy), M.Saltpetre);
+      }
+    }
   }
 }
 
@@ -1519,14 +1556,25 @@ function breed(w: World, n: number, kind: MaterialId, into: MaterialId, orInto: 
   if (m >= 0) w.setCell(m, kind);
 }
 
-/** Earthworm: burrows through earth and loam, leaving loam behind; breeds when fed; drowns in water. */
+/**
+ * Earthworm: burrows through earth and loam, leaving loam behind; breeds when fed. When rain lies
+ * on the ground above it, it comes up to the surface (as real worms do) and waits out the rain
+ * there. Fallen into water, away from any soil, it drowns.
+ */
 export function updateWorm(w: World, x: number, y: number, i: number): boolean {
-  if ((w.rng.chance(0.00005) || (touches(w, x, y, M.Water) && w.rng.chance(0.01)))) {
+  const soil = neighbourOf(w, x, y, M.Earth, M.Loam) >= 0;
+  if (w.rng.chance(0.00005) || (!soil && touches(w, x, y, M.Water) && w.rng.chance(0.01))) {
     w.transform(i, M.Earth);
     return true;
   }
-  if (neighbourOf(w, x, y, M.Earth, M.Loam) < 0) return false; // in the open: it falls
+  if (!soil) return false; // in the open: it falls
   if (!w.rng.chance(0.3)) return true;
+  if (rainAbove(w, x, y)) {
+    // Rain: head up towards the surface, and stay there while the ground is wet.
+    const above = w.get(x, y - 1);
+    if (above === M.Earth || above === M.Loam) w.swap(i, w.idx(x, y - 1));
+    return true;
+  }
   const n = crawl(w, x, y, i, M.Earth, M.Loam);
   if (n >= 0 && w.mat[i] === M.Earth && w.rng.chance(0.1)) {
     w.transform(i, M.Loam);
@@ -1536,6 +1584,31 @@ export function updateWorm(w: World, x: number, y: number, i: number): boolean {
     }
   }
   return true;
+}
+
+/** How deep a worm can be and still feel rain lying on the ground above it. */
+const WORM_RAIN_DEPTH = 12;
+
+/** Whether rain is lying on the ground straight above (x, y), through no more than WORM_RAIN_DEPTH cells of soil. */
+function rainAbove(w: World, x: number, y: number): boolean {
+  for (let k = 1; k <= WORM_RAIN_DEPTH; k++) {
+    const t = w.get(x, y - k);
+    if (t === M.Water) return true;
+    if (t !== M.Earth && t !== M.Loam && t !== M.Earthworm) return false;
+  }
+  return false;
+}
+
+/**
+ * Loam: after rain, in damp shade (the sun is down, or something shades it), now and then a
+ * mushroom sprouts on its surface, never close beside another.
+ */
+export function sproutMushroom(w: World, x: number, y: number, _i: number): boolean {
+  // (Open air above first: it rules out nearly every cell, buried ones, at once.)
+  if (w.get(x, y - 1) !== M.Empty || !w.rng.chance(0.0004) || !w.near(x, y, 2, M.Water)) return false;
+  if (w.inSunlight(x, y - 1) || w.near(x, y, 5, M.Mushroom)) return false;
+  w.set(x, y - 1, M.Mushroom);
+  return false;
 }
 
 /** Termite: eats into neighbouring wood, leaving sawdust; breeds when fed; dies out in the open. */

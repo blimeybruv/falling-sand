@@ -232,6 +232,31 @@ input:focus-visible {
   font-variant-numeric: tabular-nums;
 }
 
+#heat-legend {
+  position: absolute;
+  left: 8px;
+  bottom: 6px;
+  width: min(320px, 60%);
+  padding: 5px 7px 3px;
+  border-radius: 6px;
+  background: rgba(14, 15, 20, 0.75);
+  pointer-events: none;
+}
+
+#heat-legend .heat-bar {
+  height: 8px;
+  border-radius: 3px;
+}
+
+#heat-legend .heat-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
 /* ---- palette */
 #palette {
   display: flex;
@@ -463,6 +488,10 @@ button.quiet {
 
 /* ---- phones: compact toolbar, palette scrolls sideways in one row */
 @media (max-width: 640px) {
+  #heat-legend .heat-labels span:nth-child(2),
+  #heat-legend .heat-labels span:nth-child(8) {
+    visibility: hidden;
+  }
   .toolbar {
     gap: 6px 10px;
     padding: 6px 8px;

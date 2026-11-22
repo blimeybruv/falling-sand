@@ -49,7 +49,7 @@ export const RECIPES: Readonly<Partial<Record<MaterialId, Recipe>>> = {
     hint: 'Volcanoes leave yellow deposits where lava meets the sea.',
     recipe: 'Lava meets water (now and then).',
   },
-  [M.Saltpetre]: { hint: 'Bury fallen leaves in the earth.', recipe: 'Leaves buried in earth.' },
+  [M.Saltpetre]: { hint: 'Bury fallen leaves in the earth.', recipe: 'Leaves buried in earth, or lightning striking soil.' },
   [M.Salt]: {
     hint: "Boil water away, and look at what's left behind.",
     recipe: 'Boiling water now and then leaves a grain of salt (boiling salt water leaves lots).',
@@ -76,7 +76,7 @@ export const RECIPES: Readonly<Partial<Record<MaterialId, Recipe>>> = {
   [M.Foam]: { hint: 'What do you get from lye and fat?', recipe: 'Lye meets oil: soap foam.' },
   [M.Thermite]: { hint: 'Grind rust with a fuel.', recipe: 'Rust meets charcoal. It takes a very hot flame to light.' },
   [M.Fireworks]: { hint: 'Gunpowder with a pinch of metal salts.', recipe: 'Gunpowder meets salt or rust.' },
-  [M.Mushroom]: { hint: 'Bury wood somewhere dark and damp.', recipe: 'Wood buried in damp ground.' },
+  [M.Mushroom]: { hint: 'Bury wood somewhere dark and damp.', recipe: 'Wood buried in damp ground, or rain on loam in the shade.' },
   [M.Flower]: { hint: 'Grow a tree in the richest soil.', recipe: 'Trees rooted in loam flower.' },
   [M.Dynamite]: { hint: 'Make the touchiest explosive safe to handle.', recipe: 'Nitroglycerin soaked into clay.' },
   [M.CarbonDioxide]: {

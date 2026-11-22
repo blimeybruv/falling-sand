@@ -47,6 +47,7 @@ import {
   rainCloud,
   updateVapour,
   updateFog,
+  sproutMushroom,
   thickenIce,
   solarCell,
   spinDynamo,
@@ -664,7 +665,9 @@ const defs: Record<MaterialId, Def> = {
     conductivity: 0.05,
     // Damp, rich soil now and then turns up an earthworm.
     reactions: [{ with: M.Water, chance: 0.0003, into: M.Earthworm }],
-    description: 'Rich soil: seeds grow into tall trees on it even without water, and grass spreads over it.',
+    // After rain, mushrooms sprout on it in the shade.
+    update: sproutMushroom,
+    description: 'Rich soil: seeds grow into tall trees on it even without water, and grass spreads over it. After rain, mushrooms sprout on it in the shade.',
   },
   [M.Clay]: {
     ...base,
@@ -1166,6 +1169,10 @@ const defs: Record<MaterialId, Def> = {
     burnTime: [20, 40],
     residue: { into: M.Ash, chance: 0.2 },
     update: spreadMushroom,
+    // Each mushroom lasts a minute or so, then rots into compost (by then it has spread on through
+    // damp wood, if it's in any).
+    lifetime: [1800, 3600],
+    decay: { into: M.Compost, chance: 1 },
     // Rotting wood draws termites.
     reactions: [
       { with: M.Wood, chance: 0.001, otherInto: M.Termite },
@@ -1173,7 +1180,7 @@ const defs: Record<MaterialId, Def> = {
       { with: M.Grass, chance: 0.002, otherInto: M.Compost },
       { with: M.Leaf, chance: 0.004, otherInto: M.Compost },
     ],
-    description: 'Grows in wood shut away in the damp dark, slowly eating through it.',
+    description: 'Grows in wood shut away in the damp dark, slowly eating through it, and sprouts on loam in damp shade after rain. Rots into compost.',
   },
   [M.Flower]: {
     ...base,

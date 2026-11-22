@@ -694,24 +694,27 @@ describe('solar cell', () => {
 });
 
 describe('sunny plants', () => {
-  // Grass on loam, the right half under a stone roof; returns grass grown in the open and in the shade.
+  // Grass on loam, the right half under a stone roof; returns grass grown in the open and in the
+  // shade, added up over a few worlds (a single one is too noisy: from 7/14 to 12/8 with the sun off).
   const grow = (sun: number): [number, number] => {
-    const w = new World(80, 40, 14);
-    for (let x = 0; x < 80; x++) {
-      w.set(x, 39, M.Loam);
-      w.set(x, 38, M.Loam);
-    }
-    for (let x = 40; x < 80; x++) w.set(x, 20, M.Stone);
-    w.set(10, 37, M.Grass);
-    w.set(60, 37, M.Grass);
-    w.sun = sun;
-    for (let f = 0; f < 1500; f++) w.step();
     let open = 0;
     let shade = 0;
-    for (let i = 0; i < w.size; i++) {
-      if (w.mat[i] !== M.Grass) continue;
-      if (i % 80 < 40) open++;
-      else shade++;
+    for (let seed = 14; seed < 18; seed++) {
+      const w = new World(80, 40, seed);
+      for (let x = 0; x < 80; x++) {
+        w.set(x, 39, M.Loam);
+        w.set(x, 38, M.Loam);
+      }
+      for (let x = 40; x < 80; x++) w.set(x, 20, M.Stone);
+      w.set(10, 37, M.Grass);
+      w.set(60, 37, M.Grass);
+      w.sun = sun;
+      for (let f = 0; f < 1500; f++) w.step();
+      for (let i = 0; i < w.size; i++) {
+        if (w.mat[i] !== M.Grass) continue;
+        if (i % 80 < 40) open++;
+        else shade++;
+      }
     }
     return [open, shade];
   };
@@ -1418,5 +1421,76 @@ describe('heat conduction', () => {
     // Five cells of tin over lava is still hot enough to pop seeds (180°) on top.
     expect(tin).toBeGreaterThan(180);
     expect(brick).toBeLessThan(AMBIENT_TEMP + 40);
+  });
+});
+
+describe('after the storm', () => {
+  function fill(w: World, x0: number, y0: number, wd: number, ht: number, m: MaterialId): void {
+    for (let y = y0; y < y0 + ht; y++) for (let x = x0; x < x0 + wd; x++) w.set(x, y, m);
+  }
+
+  it('lightning striking soil leaves saltpetre (nitrates), and grass spreads faster on it', { timeout: 20000 }, () => {
+    const w = new World(60, 120, 3);
+    fill(w, 0, 112, 60, 8, M.Loam);
+    fill(w, 0, 15, 60, 40, M.Cloud);
+    for (let f = 0; f < 4000 && w.created[M.Saltpetre] === 0; f++) w.step();
+    expect(w.noise.strikes).toBeGreaterThan(0);
+    expect(w.created[M.Saltpetre]).toBeGreaterThan(0);
+    const spread = (under: MaterialId): number => {
+      const g = new World(40, 20, 4);
+      fill(g, 0, 19, 40, 1, under);
+      fill(g, 0, 18, 40, 1, M.Loam);
+      g.set(20, 17, M.Grass);
+      run(g, 1200);
+      return g.count(M.Grass);
+    };
+    expect(spread(M.Saltpetre)).toBeGreaterThan(spread(M.Stone));
+  });
+
+  it('earthworms come up to the surface when rain soaks the ground, and survive there', () => {
+    const surfaced = (rain: boolean): number => {
+      const w = new World(40, 40, 5);
+      fill(w, 0, 28, 40, 12, M.Loam);
+      for (let x = 2; x < 40; x += 4) w.set(x, 36, M.Earthworm);
+      for (let f = 0; f < 900; f++) {
+        if (rain && f % 6 === 0) w.set(w.rng.int(0, 39), 0, M.Water);
+        w.step();
+      }
+      let n = 0;
+      for (let y = 0; y < 31; y++) for (let x = 0; x < 40; x++) if (w.get(x, y) === M.Earthworm) n++;
+      return n;
+    };
+    expect(surfaced(true)).toBeGreaterThan(surfaced(false) + 3);
+  });
+
+  it('mushrooms sprout on wet loam in the shade, not in strong sun or on dry loam, and rot into compost', () => {
+    const sprouts = (sun: number, wet: boolean): World => {
+      const w = new World(60, 30, 6);
+      fill(w, 0, 24, 60, 6, M.Loam);
+      if (wet) for (let x = 0; x < 60; x += 2) w.set(x, 23, M.Water);
+      w.sun = sun;
+      run(w, 1500);
+      return w;
+    };
+    expect(sprouts(0, true).created[M.Mushroom]).toBeGreaterThan(2);
+    expect(sprouts(1, true).created[M.Mushroom]).toBe(0);
+    expect(sprouts(0, false).created[M.Mushroom]).toBe(0);
+    const w = new World(10, 10, 7);
+    w.set(5, 9, M.Stone);
+    w.set(5, 8, M.Mushroom);
+    run(w, 3700);
+    expect(w.count(M.Mushroom)).toBe(0);
+    expect(w.count(M.Compost)).toBe(1);
+  });
+
+  it('a solar still: salt water under glass in the sun gives fresh water and leaves salt', { timeout: 20000 }, () => {
+    const w = new World(40, 40, 8);
+    fill(w, 0, 36, 40, 4, M.Stone);
+    fill(w, 0, 30, 40, 6, M.SaltWater);
+    fill(w, 0, 20, 40, 1, M.Glass);
+    w.sun = 1;
+    run(w, 3000);
+    expect(w.created[M.Water]).toBeGreaterThan(20);
+    expect(w.count(M.Salt)).toBeGreaterThan(5);
   });
 });

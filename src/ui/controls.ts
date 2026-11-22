@@ -7,6 +7,7 @@ import { Journal } from './journal';
 import { ERASER_KEY, Palette } from './palette';
 import { saveDiscovery, saveMode, type Mode } from './progress';
 import { downloadScene, loadFromBrowser, loadFromFile, saveToBrowser, shareLink } from './scenes';
+import { heatColour } from '../render/renderer';
 import { DAY_LENGTH, MAX_BRUSH, MIN_BRUSH, SPEEDS, SUNS, WINDS, type GameState } from './state';
 import type { Sound } from './sound';
 
@@ -121,9 +122,24 @@ export function setupControls(state: GameState, world: World, discovery: Discove
     brush.value = String(state.brush);
     brushValue.textContent = String(state.brush);
   };
+  // Heat view's legend: the colours it gives temperatures from deep cold to white heat, evenly
+  // spaced (the scale itself isn't linear, so each label sits under its own colour).
+  const legend = byId<HTMLDivElement>('heat-legend');
+  const legendTemps = [-30, 0, 20, 100, 300, 600, 1200, 2000];
+  legend.querySelector<HTMLDivElement>('.heat-bar')!.style.background = `linear-gradient(to right, ${legendTemps
+    .map((t, k) => `${heatColour(t)} ${((k / (legendTemps.length - 1)) * 100).toFixed(1)}%`)
+    .join(', ')})`;
+  legend.querySelector<HTMLDivElement>('.heat-labels')!.append(
+    ...legendTemps.map((t) => {
+      const span = document.createElement('span');
+      span.textContent = `${t < 0 ? '−' : ''}${Math.abs(t)}°`;
+      return span;
+    }),
+  );
   const toggleHeat = (): void => {
     state.heatView = !state.heatView;
     heatBtn.setAttribute('aria-pressed', String(state.heatView));
+    legend.hidden = !state.heatView;
   };
 
   playBtn.addEventListener('click', togglePause);
