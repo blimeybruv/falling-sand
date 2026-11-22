@@ -1544,23 +1544,35 @@ export function thermocouple(w: World, x: number, y: number, _i: number): boolea
 /** How far down a heat lamp's beam reaches, and how hot it can make what it lands on. */
 const LAMP_REACH = 150;
 const LAMP_TEMP = 150;
+/** The beam's half-width per cell travelled (about 8 degrees either side of straight down). */
+const LAMP_SPREAD = 0.15;
+/** Warmth a ray brings, and the distance at which that has halved. */
+const LAMP_HEAT = 20;
+const LAMP_FALLOFF = 60;
 
 /**
- * Heat lamp: a carbon filament in glass. For a while after each pulse it shines straight down,
- * through anything see-through, warming the first thing it reaches and baking it as sunshine does
- * (thawing, drying, burning off cloud and fog), only harder.
+ * Heat lamp: a carbon filament in glass. For a while after each pulse (`life` counts down: it glows
+ * while lit) it shines down in a narrow cone: each frame one ray, at a random angle within it, so
+ * over a few frames it warms a widening patch. The ray passes through anything see-through and warms
+ * the first thing it reaches, less the further it has come, baking it as sunshine does (thawing,
+ * drying, burning off cloud and fog), only harder close up.
  */
 export function heatLamp(w: World, x: number, y: number, i: number): boolean {
   if (w.charge[i] !== 0) w.life[i] = 90;
   if (w.life[i] <= 0) return true;
   w.life[i]--;
-  for (let ny = y + 1; ny < w.height && ny <= y + LAMP_REACH; ny++) {
-    const def = w.defAt(x, ny);
+  const slope = (w.rng.next() * 2 - 1) * LAMP_SPREAD;
+  for (let k = 1; k <= LAMP_REACH; k++) {
+    const ny = y + k;
+    const nx = x + Math.round(slope * k);
+    if (ny >= w.height || nx < 0 || nx >= w.width) break;
+    const def = w.defAt(nx, ny);
     if (def.transparent ?? (def.kind === 'gas' || def.kind === 'empty')) continue;
-    const n = w.idx(x, ny);
-    if (w.temp[n] < LAMP_TEMP) w.temp[n] = Math.min(LAMP_TEMP, w.temp[n] + 4);
+    const n = w.idx(nx, ny);
+    const strength = LAMP_FALLOFF / (LAMP_FALLOFF + k);
+    if (w.temp[n] < LAMP_TEMP) w.temp[n] = Math.min(LAMP_TEMP, w.temp[n] + LAMP_HEAT * strength);
     const change = def.sunlit;
-    if (change && w.rng.chance(change.chance * 4)) {
+    if (change && w.rng.chance(change.chance * 4 * strength)) {
       const other = change.sometimes;
       w.transform(n, other && w.rng.chance(other.chance) ? other.into : change.into);
     }

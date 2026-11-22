@@ -48,6 +48,8 @@ export class Renderer {
   /** Colour while carrying a pulse: the bright head, and the fading tail behind it (per material). */
   private readonly chargeHead: Uint32Array;
   private readonly chargeTail: Uint32Array;
+  /** Colour while lit (`life` above zero), for lamps; 0 for materials that don't glow when lit. */
+  private readonly litLut: Uint32Array;
   /** Material colours at 30% brightness, the backdrop for the heat view. */
   private readonly dimLut: Uint32Array;
   /** 256 colours from cold (blue) through ambient (dark) to hot (red, yellow, white). */
@@ -97,6 +99,7 @@ export class Renderer {
     // Electricity: a bright head where the pulse is, a warm glow fading behind it, unless the
     // material glows its own colour (neon).
     this.chargeHead = Uint32Array.from(MATERIALS, (d) => (d.chargeColour ? pack(...d.chargeColour) : pack(255, 252, 200)));
+    this.litLut = Uint32Array.from(MATERIALS, (d) => (d.litColour ? pack(...d.litColour) : 0));
     this.chargeTail = Uint32Array.from(MATERIALS, (d) =>
       d.chargeColour ? pack(d.chargeColour[0] * 0.8, d.chargeColour[1] * 0.8, d.chargeColour[2] * 0.8) : pack(240, 200, 90),
     );
@@ -137,7 +140,7 @@ export class Renderer {
 
   private renderMaterials(world: World): void {
     const { mat, shade, life, burn, charge, size, width } = world;
-    const { pixels, lut, lutR, lutG, lutB, fadeFrames, flickers, isGlow, cloudLut, cloudRow, cloudDepth, chargeHead, chargeTail } = this;
+    const { pixels, lut, lutR, lutG, lutB, fadeFrames, flickers, isGlow, cloudLut, cloudRow, cloudDepth, chargeHead, chargeTail, litLut } = this;
     // Thick clouds are lit from above: they darken the deeper a cell is below the cloud's top.
     cloudRow.fill(-100);
     const glowShift = this.frame >> 3;
@@ -161,7 +164,9 @@ export class Renderer {
       seed ^= seed >>> 17;
       seed ^= seed << 5;
 
-      if (burn[i] > 0 && (seed & 3) !== 0) {
+      if (litLut[m] !== 0 && life[i] > 0) {
+        pixels[i] = litLut[m];
+      } else if (burn[i] > 0 && (seed & 3) !== 0) {
         pixels[i] = lut[fireBase + ((seed >>> 4) & (SHADES - 1))];
       } else if (m === M.Fire) {
         pixels[i] = lut[fireBase + ((seed >>> 4) & (SHADES - 1))];

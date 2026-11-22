@@ -1056,11 +1056,26 @@ describe('circuits: accumulator, thermocouple, heat lamp', () => {
     expect(pulses(false)).toBe(0);
   });
 
+  it("a heat lamp's warmth fades with distance", () => {
+    const warmth = (gap: number): number => {
+      const w = new World(40, 130, 43);
+      for (let x = 0; x < 40; x++) w.set(x, 129, M.Stone);
+      w.set(20, 128 - gap, M.HeatLamp);
+      w.set(19, 128 - gap, M.Battery);
+      for (let f = 0; f < 800; f++) w.step();
+      let hottest = 0;
+      for (let x = 0; x < 40; x++) hottest = Math.max(hottest, w.temp[w.idx(x, 129)]);
+      return hottest;
+    };
+    expect(warmth(10)).toBeGreaterThan(warmth(110) + 30);
+  });
+
   it('a powered heat lamp melts the ice beneath it; an unpowered one does not', () => {
     const ice = (powered: boolean): number => {
+      // A lamp about ten cells above a small block of ice.
       const w = new World(30, 40, 40);
-      w.set(15, 5, M.HeatLamp);
-      if (powered) w.set(14, 5, M.Battery);
+      w.set(15, 25, M.HeatLamp);
+      if (powered) w.set(14, 25, M.Battery);
       for (let x = 0; x < 30; x++) w.set(x, 39, M.Stone);
       for (let y = 36; y < 39; y++) for (let x = 13; x < 18; x++) w.set(x, y, M.Ice);
       for (let f = 0; f < 2000; f++) w.step();

@@ -202,7 +202,7 @@ debris start fresh when a scene loads.
 | | Dynamo | A magnet in a copper coil: sends pulses into touching metal while the wind turns it (out in the open) or water pours onto it | A magnet touching copper, out in the wind |
 | | Accumulator | A rechargeable battery: stores the pulses fed into it (from a solar cell, say) and pays them out once the supply stops, so a circuit runs on after dark | Pulses from a solar cell or another battery arriving at a battery |
 | | Thermocouple | Copper fused to iron: sends pulses while one side is far hotter than another, so a fire can power a circuit | Molten copper setting against iron |
-| | Heat lamp | A carbon-filament bulb: powered, it shines heat straight down, thawing, drying and burning off cloud and fog beneath it | Graphite carrying a pulse against glass |
+| | Heat lamp | A carbon-filament bulb: powered, it glows and shines heat down in a narrow cone, fading with distance; thaws, dries, boils puddles and burns off cloud and fog | Graphite carrying a pulse against glass |
 | | Plasma | Glowing gas at 4000° | Lightning through hydrogen, or gas past 2000° |
 | | Briquette | Burns for ages at a steady heat | Charcoal meets clay |
 | | Peat | Slow-burning fuel | Grass or moss buried under earth |
@@ -305,7 +305,7 @@ estimates.
 - [ ] **Undo**: keep the last few scenes in memory (the scene format is small) and restore one with `Ctrl+Z`.
 - [ ] **Example scenes**: a handful of built-in scenes (a volcano, a fuse and charges, a pond with plants) in a menu, stored as share-link text.
 - [ ] **Line and shape tools**: drag to draw a straight line, a rectangle or a circle (outline or filled) in the selected material, with a preview outline while dragging, plus a "replace" brush that swaps one material for another. Tool buttons beside the brush slider, with keyboard shortcuts. Ideal for building containers and kilns. The sim already has `paintLine`; shapes are a few more `World` helpers plus input handling in `src/ui/input.ts`.
-- [ ] **Pan and zoom on touch**: pinch to zoom into part of the grid, and drag with two fingers to pan (two fingers erase today).
+- [ ] **Zoom and pan**: zoom into part of the grid (mouse wheel or keys on a desktop, pinch on touch) and pan around it (drag with the middle button, or two fingers, which erase today). The grid stays the same size; only the view changes, so the simulation cost doesn't.
 - [ ] **Run the simulation in a Web Worker**: move `World.step()` off the main thread and pass the arrays across, so bigger grids stay smooth.
 - [ ] **More sound**: a volume slider; ice cracking, glass shattering.
 - [ ] **Smarter liquids**: pressure, so water rises to the same level in connected containers (a U-bend).

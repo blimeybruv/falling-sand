@@ -233,6 +233,8 @@ export interface MaterialDef {
     spent: MaterialId;
     launch?: number;
   };
+  /** Renderer: the colour it glows while its `life` counter is above zero (a lit lamp). */
+  litColour?: readonly [number, number, number];
   /** Renderer: the colour it glows while carrying a pulse (instead of the usual spark), e.g. neon. */
   chargeColour?: readonly [number, number, number];
   /** Two-material reactions; see Reaction. */
@@ -1810,9 +1812,10 @@ const defs: Record<MaterialId, Def> = {
     colourEnd: [236, 220, 190],
     colourJitter: 0.06,
     conducts: true,
-    chargeColour: [255, 200, 120],
+    chargeColour: [255, 236, 190],
+    litColour: [255, 168, 72],
     update: heatLamp,
-    description: 'A carbon filament in glass. Powered, it shines heat straight down: thaws, dries, and burns off cloud and fog beneath it.',
+    description: 'A carbon filament in glass. Powered, it glows and shines heat down in a narrow cone, fading with distance: thaws, dries, boils puddles and burns off cloud and fog beneath it.',
   },
   [M.Sap]: {
     ...base,

@@ -307,6 +307,27 @@ A larger feature: best built after the cloud redesign.
 | | Linked gates | Distance | A pair: what falls into one comes out of the other (single cells linked by a shared colour, not one multi-cell entity) | Two arc nodes struck at once | S |
 | | Transmuter | Conservation | Slowly turns its neighbours one step along a chain (lead to gold, stone to quartz) and burns out after a while | The reward for finding every anomaly | F |
 
+## Eldritch materials (design note, 22 Nov)
+
+Suggested by the user, alongside the anomalies. Where an anomaly breaks one law of physics,
+an eldritch material is wrong in a way the senses notice: it eats light, swallows sound, looks like
+something it isn't, or seems to act only when you look away. Our own designs, in the game's
+style, not borrowed from any particular mythos. The usual rules hold: single cells only (a creeping
+growth is cells spreading, like moss, never one big creature), bounded spread (each needs something
+to feed on, and light, heat or salt drives it back, so it can't overrun a scene), and the
+performance budget. Rare, found through strange combinations, and perhaps a hidden Discovery tab
+after the anomalies. Best built after the anomalies.
+
+| | Material | What's wrong with it | What it does | How it might form | Effort |
+|---|---|---|---|---|---|
+| | Umbral ooze | Light | A slow black liquid that darkens everything near it (the renderer dims its surroundings); sunlight and heat lamps boil it away, so it pools in shadow | Ink in a sealed, unlit cave beside a sprite's ashes | F |
+| | Hush | Sound | A pale mist that swallows sound: the soundscape fades around it, explosions inside it are muffled, and fire inside it gutters out | Fog that has drifted through umbral ooze | F |
+| | Creeping bloom | Life | A faintly glowing growth that spreads over wood, flesh-free organics and stone in the dark, feeding on them; it withers in sunlight or a heat lamp's beam and burns readily, so light and fire keep it in check | Mushroom left in the dark beside umbral ooze | F |
+| | Mimic dust | Appearance | Takes on the colour of whatever it touches and behaves like a powder that won't settle: hard to spot until it moves | Sand caught in a phase fault | F |
+| | Watching stone | Attention | Only changes when the brush isn't over it: left alone, it slowly turns its neighbours to more of itself; hover over it and it stops (bounded: it can't cross water or salt) | A transmuter burning out inside obsidian | S |
+| | Wrong water | Direction | A liquid that flows towards the nearest wall instead of down, and climbs | Water passed through linked gates | F |
+| | Tolling glass | Time and sound | Rings softly (a low tone in the soundscape) a few seconds before anything near it changes: a fuse catching, a creature hatching, lightning charging | Glass struck by lightning inside hush | S |
+
 ## Load-bearing materials (design note)
 
 Feasible in its simple form; a session's work.
