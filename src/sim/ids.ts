@@ -164,6 +164,9 @@ export const M = {
   Yeast: 156,
   CoralPolyp: 157,
   CoralRock: 158,
+  Accumulator: 159,
+  Thermocouple: 160,
+  HeatLamp: 161,
 } as const;
 
 export type MaterialId = (typeof M)[keyof typeof M];

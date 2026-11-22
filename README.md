@@ -200,6 +200,9 @@ debris start fresh when a scene loads.
 | | Battery | Sends pulses of electricity into touching metal or salt water | Iron and charcoal in salt water |
 | | Solar cell | Silicon: sends pulses into touching metal while the sun shines on it (works under glass, not in shade) | Lightning through quartz touching graphite |
 | | Dynamo | A magnet in a copper coil: sends pulses into touching metal while the wind turns it (out in the open) or water pours onto it | A magnet touching copper, out in the wind |
+| | Accumulator | A rechargeable battery: stores the pulses fed into it (from a solar cell, say) and pays them out once the supply stops, so a circuit runs on after dark | Pulses from a solar cell or another battery arriving at a battery |
+| | Thermocouple | Copper fused to iron: sends pulses while one side is far hotter than another, so a fire can power a circuit | Molten copper setting against iron |
+| | Heat lamp | A carbon-filament bulb: powered, it shines heat straight down, thawing, drying and burning off cloud and fog beneath it | Graphite carrying a pulse against glass |
 | | Plasma | Glowing gas at 4000° | Lightning through hydrogen, or gas past 2000° |
 | | Briquette | Burns for ages at a steady heat | Charcoal meets clay |
 | | Peat | Slow-burning fuel | Grass or moss buried under earth |
@@ -229,10 +232,10 @@ debris start fresh when a scene loads.
 | | Sawdust | Light, catches fire easily | Termites eating wood |
 | | Earthworm | Creature: burrows through earth, leaving loam; drowns in water | Damp loam |
 | | Termite | Creature: eats wood into sawdust; dies out in the open | Rotting wood (mushrooms) |
-| | Fish | Creature: swims, eats algae, breeds; can't survive out of water | Water under algae |
+| | Fish | Creature: swims, eats algae, breeds; can't survive out of water; stunned by a nearby blast, it floats up and comes round | Water under algae |
 | | Firefly | Creature: drifts over grass, glowing | Grass with open air above |
 | | Bee | Creature: turns honeydew into honey | Flowers draw them |
-| | Snail | Creature: creeps over damp stone eating algae and moss | Moss beside water |
+| | Snail | Creature: creeps over damp stone eating algae and moss; withdraws into its shell in strong dry sun | Moss beside water |
 | | Ant | Digs earth and sand and carries the grains up into anthills; eats sweet things; drowns in water | Sugar on earth |
 | | Yeast | In water, ferments sugar into alcohol and bubbles of carbon dioxide, multiplying while fed | Fruit soaking in water |
 | | Coral polyp | Fixed in salt water, slowly builds a reef of coral rock, faster when warm; bleaches when too hot | Algae on sun-warmed salt water |

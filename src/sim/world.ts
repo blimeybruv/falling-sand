@@ -87,6 +87,9 @@ const EMPTY: number = M.Empty;
 const AMBIENT = AMBIENT_TEMP;
 const MATS = MATERIALS;
 
+/** Frames a fish stays stunned after a blast (counted down in its `vel`). */
+const FISH_STUN = 150;
+
 /** Flight velocities are stored in 1/SUB cells per frame, so they fit an Int8Array. */
 export const SUB = 8;
 /** Downward acceleration of particles in flight, in 1/SUB cells per frame per frame. */
@@ -98,16 +101,9 @@ const N4: readonly (readonly [number, number])[] = [
   [1, 0],
   [0, 1],
 ];
-const N8: readonly (readonly [number, number])[] = [
-  [-1, -1],
-  [0, -1],
-  [1, -1],
-  [-1, 0],
-  [1, 0],
-  [-1, 1],
-  [0, 1],
-  [1, 1],
-];
+/** The eight neighbours as flat offset arrays, for hot loops. */
+const DX8 = Int8Array.of(-1, 0, 1, -1, 1, -1, 0, 1);
+const DY8 = Int8Array.of(-1, -1, -1, 0, 0, 1, 1, 1);
 
 export class World {
   readonly width: number;
@@ -368,6 +364,21 @@ export class World {
     return true;
   }
 
+  /**
+   * Whether a pulse has just arrived beside (x, y): a neighbouring conductor's charge is active,
+   * having reached it in this frame's electricity pass. (A pulse a cell sent out itself has already
+   * cooled a step by its next turn, so this sees only pulses coming in.)
+   */
+  pulseBeside(x: number, y: number): boolean {
+    const { width: w, charge } = this;
+    return (
+      (x > 0 && charge[y * w + x - 1] === CHARGE_ACTIVE) ||
+      (x < w - 1 && charge[y * w + x + 1] === CHARGE_ACTIVE) ||
+      (y > 0 && charge[(y - 1) * w + x] === CHARGE_ACTIVE) ||
+      (y < this.height - 1 && charge[(y + 1) * w + x] === CHARGE_ACTIVE)
+    );
+  }
+
   /** Whether sunlight reaches (x, y): the sun is out and everything above it lets light through. */
   inSunlight(x: number, y: number): boolean {
     if (this.sun <= 0 || !this.inBounds(x, y)) return false;
@@ -377,13 +388,15 @@ export class World {
 
   /** Give each flammable neighbour of (x, y) its own chance (its flammability) of catching fire. */
   igniteNeighbours(x: number, y: number): void {
-    for (const [dx, dy] of N8) {
-      const nx = x + dx;
-      const ny = y + dy;
-      if (!this.inBounds(nx, ny)) continue;
-      const n = ny * this.width + nx;
-      const t = this.mat[n];
-      if (FLAMMABLE[t] && this.burn[n] === 0 && this.rng.chance(MATS[t].flammability)) this.ignite(n);
+    // Plain index loops (no destructuring): this runs for every burning cell, every frame.
+    const { width: w, height: h, mat, burn } = this;
+    for (let k = 0; k < 8; k++) {
+      const nx = x + DX8[k];
+      const ny = y + DY8[k];
+      if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+      const n = ny * w + nx;
+      const t = mat[n];
+      if (FLAMMABLE[t] && burn[n] === 0 && this.rng.chance(MATS[t].flammability)) this.ignite(n);
     }
   }
 
@@ -429,6 +442,8 @@ export class World {
           }
           continue;
         }
+        // Fish at the edge of a blast are stunned: they float up, and come round a little later.
+        if (def.id === M.Fish) this.vel[i] = FISH_STUN;
         if (def.flammability > 0 && this.rng.chance(0.5)) this.ignite(i);
         if (def.kind === 'powder' || def.kind === 'liquid') {
           // Faster nearer the blast, with a kick upwards.

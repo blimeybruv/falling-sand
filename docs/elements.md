@@ -253,7 +253,7 @@ cloud itself coming down, so weather can't make water from nothing.
 | ✅ | Thick clouds pour | A deep cloud rains harder, thinning from the bottom up | `rainCloud` | F |
 | ✅ | Mountains pierce clouds | Blown into anything solid, a cloud rains out on the windward side | `cloudDrift` | F |
 | ✅ | Solar cell | Sends electric pulses while sunlit; silicon from lightning through quartz touching graphite (an arc furnace) | `update` checks `inSunlight` | F |
-| | Heat lamp | A placeable lamp that heats in a straight line (dissipates a cloud locally, warms a greenhouse) | `update` with a ray | F |
+| ✅ | Heat lamp | A placeable lamp that heats in a straight line (dissipates a cloud locally, warms a greenhouse) | `update` with a ray | F |
 | | Burning glass | Sunlight through a glass lens focuses to a hot spot that lights tinder | sunlight pass bends at glass | S |
 | ✅ | Sunny plants | Grass and trees grow faster in sunlight, seeds struggle in deep shade | growth reads a "lit" flag | F |
 | | Rainbow | Sun plus falling rain draws a faint arc (render-only easter egg) | renderer | F |
@@ -275,14 +275,14 @@ standing alone.
 | ✅ | Dunes and snowdrifts | wind + powders | In a strong wind, exposed grains of sand, snow and ash hop downwind, so dunes creep and snow piles into drifts behind walls | (behaviour) | F |
 | ✅ | Sunny plants | sunlight + shade + growth | With the sun out, grass and trees grow faster in sunlight and slower in shade | (behaviour) | F |
 | | Night frost | day and night + sunlight + temperature | On clear nights, exposed surfaces cool and dew freezes into frost; cloud cover keeps the ground warm | (needs day and night) | F |
-| | Accumulator | solar cell + battery + day and night | A battery that stores pulses (from a solar cell by day) and gives them back later, so a lamp can run at night | Battery touching lead or tin in acid | F |
-| | Thermocouple | temperature + electricity | Copper joined to iron sends pulses while one side is much hotter than the other: fire powering a circuit | Molten copper cooling against iron | F |
+| ✅ | Accumulator | solar cell + battery + day and night | A battery that stores pulses (from a solar cell by day) and gives them back once the supply stops, so a lamp can run at night | Pulses from another source arriving at a battery | F |
+| ✅ | Thermocouple | temperature + electricity | Copper joined to iron sends pulses while one side is much hotter than the other: fire powering a circuit | Molten copper cooling against iron | F |
 | ✅ | Bellows effect | wind + fire | Fire spreads faster downwind and struggles upwind, so a blaze races before the wind | (behaviour) | F |
 | ✅ | Seed drift | wind + plants | Flowers in the wind release seeds that blow downwind and sprout where they land on loam | (behaviour) | F |
 | | Rain wakes the soil | rain + creatures + plants | Earthworms come to the surface in rain; mushrooms sprout in damp shade after a storm | (behaviour) | F |
-| | Snails in the sun | sunlight + creatures | Snails withdraw into their shells (stop moving) in strong sun and come out when it's wet | (behaviour) | F |
+| ✅ | Snails in the sun | sunlight + creatures | Snails withdraw into their shells (stop moving) in strong sun and come out when it's wet | (behaviour) | F |
 | | Solar still | sunlight + glass + water vapour | Salt water under a glass roof in the sun: vapour condenses under the glass and drips back fresh, leaving salt (already works: worth a scene and a hint) | (emergent) | T |
-| | Stunned fish | explosions + creatures | Fish caught at the edge of a blast float up, stunned, and may recover | (behaviour) | F |
+| ✅ | Stunned fish | explosions + creatures | Fish caught at the edge of a blast float up, stunned, and may recover | (behaviour) | F |
 | | Lightning feeds the soil | lightning + earth + plants | A strike on loam leaves a little saltpetre (nitrates), so grass flourishes after a storm | (behaviour) | F |
 
 ## Anomalies (design note, 21 Nov)

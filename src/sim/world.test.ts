@@ -1013,6 +1013,94 @@ describe('wind and life', () => {
   });
 });
 
+describe('circuits: accumulator, thermocouple, heat lamp', () => {
+  it('an accumulator charged by a solar cell keeps a wire pulsing after the sun goes', () => {
+    const night = (withAccumulator: boolean): number => {
+      const w = new World(40, 30, 38);
+      w.set(5, 20, M.SolarCell);
+      for (let x = 6; x < 35; x++) w.set(x, 20, M.Copper);
+      if (withAccumulator) w.set(10, 20, M.Accumulator);
+      w.sun = 1;
+      for (let f = 0; f < 2000; f++) w.step();
+      w.sun = 0;
+      let pulses = 0;
+      for (let f = 0; f < 800; f++) {
+        w.step();
+        if (w.charge[w.idx(25, 20)] === CHARGE_ACTIVE) pulses++;
+      }
+      return pulses;
+    };
+    expect(night(true)).toBeGreaterThan(3);
+    expect(night(false)).toBe(0);
+  });
+
+  it('a thermocouple pulses while one side is far hotter than the other', () => {
+    const pulses = (hot: boolean): number => {
+      const w = new World(40, 30, 39);
+      w.set(10, 20, M.Thermocouple);
+      // A cup of lava against its left side (or an empty cup).
+      w.set(8, 20, M.Stone);
+      w.set(8, 21, M.Stone);
+      w.set(9, 21, M.Stone);
+      w.set(10, 21, M.Stone);
+      if (hot) w.set(9, 20, M.Lava);
+      for (let x = 11; x < 35; x++) w.set(x, 20, M.Copper);
+      let n = 0;
+      for (let f = 0; f < 600; f++) {
+        w.step();
+        if (w.charge[w.idx(25, 20)] === CHARGE_ACTIVE) n++;
+      }
+      return n;
+    };
+    expect(pulses(true)).toBeGreaterThan(3);
+    expect(pulses(false)).toBe(0);
+  });
+
+  it('a powered heat lamp melts the ice beneath it; an unpowered one does not', () => {
+    const ice = (powered: boolean): number => {
+      const w = new World(30, 40, 40);
+      w.set(15, 5, M.HeatLamp);
+      if (powered) w.set(14, 5, M.Battery);
+      for (let x = 0; x < 30; x++) w.set(x, 39, M.Stone);
+      for (let y = 36; y < 39; y++) for (let x = 13; x < 18; x++) w.set(x, y, M.Ice);
+      for (let f = 0; f < 2000; f++) w.step();
+      let n = 0;
+      for (let y = 30; y < 39; y++) if (w.mat[w.idx(15, y)] === M.Ice) n++;
+      return n;
+    };
+    expect(ice(true)).toBeLessThan(3);
+    expect(ice(false)).toBe(3);
+  });
+});
+
+describe('creatures and the elements', () => {
+  it('a fish at the edge of a blast is stunned and floats up, then comes round', () => {
+    const w = new World(40, 40, 41);
+    for (let y = 10; y < 40; y++) for (let x = 0; x < 40; x++) w.set(x, y, M.Water);
+    w.set(20, 35, M.Fish);
+    w.explode(20, 26, 6);
+    let fish = -1;
+    for (let i = 0; i < w.size; i++) if (w.mat[i] === M.Fish) fish = i;
+    expect(fish).toBeGreaterThanOrEqual(0);
+    expect(w.vel[fish]).toBeGreaterThan(0);
+    for (let f = 0; f < 300; f++) w.step();
+    for (let i = 0; i < w.size; i++) if (w.mat[i] === M.Fish) expect(w.vel[i]).toBe(0);
+  });
+
+  it('a dry snail in strong sun withdraws into its shell; in shade it crawls', () => {
+    const moved = (sun: number): boolean => {
+      const w = new World(40, 30, 42);
+      for (let x = 0; x < 40; x++) w.set(x, 29, M.Stone);
+      w.set(20, 28, M.Snail);
+      w.sun = sun;
+      for (let f = 0; f < 400; f++) w.step();
+      return w.mat[w.idx(20, 28)] !== M.Snail;
+    };
+    expect(moved(1)).toBe(false);
+    expect(moved(0)).toBe(true);
+  });
+});
+
 describe('rain', () => {
   it('is the cloud itself coming down, never water from nowhere', () => {
     const w = new World(60, 60, 7);

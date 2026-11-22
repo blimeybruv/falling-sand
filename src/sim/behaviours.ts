@@ -482,6 +482,11 @@ export function corrode(w: World, x: number, y: number, i: number): boolean {
  * ice sets it to obsidian; and in open air its surface slowly crusts into basalt.
  */
 export function updateLava(w: World, x: number, y: number, i: number): boolean {
+  // Deep in a lava lake, with lava on every side, there's nothing to set alight or react with:
+  // skip straight on (most of a big lake is interior, so this is most of its cost saved).
+  if (w.get(x, y - 1) === M.Lava && w.get(x, y + 1) === M.Lava && w.get(x - 1, y) === M.Lava && w.get(x + 1, y) === M.Lava) {
+    return false;
+  }
   w.igniteNeighbours(x, y);
   for (let k = 0; k < 4; k++) {
     const nx = k === 0 ? x - 1 : k === 1 ? x + 1 : x;
@@ -885,7 +890,12 @@ export function updateBolt(w: World, x: number, y: number, _i: number): boolean 
 }
 
 /** Battery: now and then sends a pulse into every conductor touching it. */
-export function pulseBattery(w: World, x: number, y: number, _i: number): boolean {
+export function pulseBattery(w: World, x: number, y: number, i: number): boolean {
+  // Fed pulses from another source (a solar cell, another battery), it becomes rechargeable.
+  if (w.pulseBeside(x, y) && w.rng.chance(0.3)) {
+    w.transform(i, M.Accumulator);
+    return true;
+  }
   if (!w.rng.chance(0.02)) return true;
   for (let k = 0; k < 4; k++) {
     const nx = k === 0 ? x - 1 : k === 1 ? x + 1 : x;
@@ -1206,6 +1216,13 @@ export function updateFish(w: World, x: number, y: number, i: number): boolean {
     else if (w.rng.chance(0.02)) w.setCell(i, M.Empty);
     return true;
   }
+  // Stunned by a blast (counted down in `vel`): it floats up, belly first, until it comes round.
+  if (w.vel[i] > 0) {
+    w.vel[i]--;
+    const above = w.get(x, y - 1);
+    if ((above === M.Water || above === M.SaltWater) && w.rng.chance(0.3)) w.swap(i, w.idx(x, y - 1));
+    return true;
+  }
   if (w.rng.chance(0.00003)) {
     w.setCell(i, M.Water);
     return true;
@@ -1242,6 +1259,8 @@ export function updateBee(w: World, x: number, y: number, i: number): boolean {
 
 /** Snail: creeps along solid surfaces, eating algae and moss and breeding when fed; leaves chalk when it dies. */
 export function updateSnail(w: World, x: number, y: number, i: number): boolean {
+  // In strong direct sun, a dry snail withdraws into its shell and waits for shade or rain.
+  if (w.sun >= 1 && neighbourOf(w, x, y, M.Water, M.SaltWater) < 0 && w.inSunlight(x, y)) return true;
   const food = neighbourOf(w, x, y, M.Algae, M.Moss);
   if (food >= 0 && w.rng.chance(0.01)) {
     w.setCell(food, M.Empty);
@@ -1463,5 +1482,96 @@ export function updateCoral(w: World, x: number, y: number, i: number): boolean 
     w.transform(i, M.CoralRock);
   }
   return true;
+}
+
+/** Pulse the conductors beside (x, y). */
+function pulseAround(w: World, x: number, y: number): void {
+  for (let k = 0; k < 4; k++) {
+    const nx = k === 0 ? x - 1 : k === 1 ? x + 1 : x;
+    const ny = k === 2 ? y - 1 : k === 3 ? y + 1 : y;
+    if (w.inBounds(nx, ny)) w.electrify(w.idx(nx, ny));
+  }
+}
+
+/** Pulses an accumulator can store. */
+const ACCUMULATOR_MAX = 400;
+
+/** After the last pulse arrives, an accumulator waits this many frames before paying out. */
+const ACCUMULATOR_WAIT = 150;
+
+/**
+ * Accumulator: a rechargeable battery. Every pulse that arrives beside it is stored (in `life`).
+ * While pulses keep arriving it just charges (`vel` counts down from the last one); once the supply
+ * stops, it pays its store back out as a battery does. So a solar cell charges it by day, and it
+ * keeps a circuit running once the sun has gone.
+ */
+export function accumulate(w: World, x: number, y: number, i: number): boolean {
+  if (w.pulseBeside(x, y)) {
+    if (w.life[i] < ACCUMULATOR_MAX) w.life[i]++;
+    w.vel[i] = ACCUMULATOR_WAIT;
+  } else if (w.vel[i] > 0) {
+    w.vel[i]--;
+  } else if (w.life[i] > 0 && w.rng.chance(0.02)) {
+    pulseAround(w, x, y);
+    w.life[i]--;
+  }
+  return true;
+}
+
+/**
+ * Thermocouple: a copper-iron junction. While one side of it is much hotter than another (by 150°
+ * or more), it sends pulses into touching conductors, more often the bigger the difference: a fire
+ * can power a circuit.
+ */
+export function thermocouple(w: World, x: number, y: number, _i: number): boolean {
+  if (!w.rng.chance(0.05)) return true;
+  const t = w.temp;
+  let hi = -Infinity;
+  let lo = Infinity;
+  for (let k = 0; k < 4; k++) {
+    const nx = k === 0 ? x - 1 : k === 1 ? x + 1 : x;
+    const ny = k === 2 ? y - 1 : k === 3 ? y + 1 : y;
+    if (!w.inBounds(nx, ny)) continue;
+    const v = t[w.idx(nx, ny)];
+    if (v > hi) hi = v;
+    if (v < lo) lo = v;
+  }
+  const diff = hi - lo;
+  if (diff >= 150 && w.rng.chance(Math.min(1, diff / 600) * 0.4)) pulseAround(w, x, y);
+  return true;
+}
+
+/** How far down a heat lamp's beam reaches, and how hot it can make what it lands on. */
+const LAMP_REACH = 150;
+const LAMP_TEMP = 150;
+
+/**
+ * Heat lamp: a carbon filament in glass. For a while after each pulse it shines straight down,
+ * through anything see-through, warming the first thing it reaches and baking it as sunshine does
+ * (thawing, drying, burning off cloud and fog), only harder.
+ */
+export function heatLamp(w: World, x: number, y: number, i: number): boolean {
+  if (w.charge[i] !== 0) w.life[i] = 90;
+  if (w.life[i] <= 0) return true;
+  w.life[i]--;
+  for (let ny = y + 1; ny < w.height && ny <= y + LAMP_REACH; ny++) {
+    const def = w.defAt(x, ny);
+    if (def.transparent ?? (def.kind === 'gas' || def.kind === 'empty')) continue;
+    const n = w.idx(x, ny);
+    if (w.temp[n] < LAMP_TEMP) w.temp[n] = Math.min(LAMP_TEMP, w.temp[n] + 4);
+    const change = def.sunlit;
+    if (change && w.rng.chance(change.chance * 4)) {
+      const other = change.sometimes;
+      w.transform(n, other && w.rng.chance(other.chance) ? other.into : change.into);
+    }
+    break;
+  }
+  return true;
+}
+
+/** Graphite: carrying a pulse while touching glass, it becomes a carbon-filament heat lamp. */
+export function filament(w: World, x: number, y: number, i: number): boolean {
+  if (w.charge[i] !== 0 && w.rng.chance(0.05) && touches(w, x, y, M.Glass)) w.transform(i, M.HeatLamp);
+  return false;
 }
 
