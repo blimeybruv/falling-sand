@@ -161,8 +161,8 @@ debris start fresh when a scene loads.
 | L | Lava | Slow, glowing, very hot liquid; sets things alight, boils water and sets to stone where they meet, and slowly crusts into basalt in open air | Reward for 10 discoveries |
 | 0 | Smoke | Rises and drifts, then fades | Let a fire burn out |
 | - | Steam | Rises; condenses back to water near the top or under a ceiling, sometimes freezing | Fire meets water |
-| V | Cloud | Fair-weather cloud: hangs in puffy heaps below the upper atmosphere, rising as one block, white on top and darker underneath; drizzles now and then (or snows near ice); sails along in the wind as a whole and breaks up, raining out, against mountains and the edge | Steam crowding at the top |
-| | Storm cloud | The dark base of a cloud piled deep: pours, harder the deeper the cloud above, and strikes lightning; clears back into fair-weather cloud once it has rained itself thinner | A cloud 14 or more rows deep |
+| V | Cloud | Fair-weather cumulus: rises or sinks as one block to a level cloud base and gathers into a rounded heap, flat underneath and domed on top, white above and grey below; drizzles now and then (or snows near ice); the sun burns it off only slowly; sails along in the wind as a whole and breaks up, raining out, against mountains and the edge | Steam crowding at the top |
+| | Storm cloud | The dark base of a cloud piled deep: pours, harder the deeper the cloud above, and strikes lightning; clears back into fair-weather cloud once it has rained itself thinner | A cloud 20 or more rows deep |
 | | Cirrus | Thin, high streaks blown along by the wind; never rains, fades in about a minute | Water vapour rising above the cloud layer |
 | | Carbon dioxide | Heavy, faint gas: sinks and pools, puts out flames, smothers what it buries | Burning charcoal or coal; fizz |
 | | Hydrogen | The lightest gas; burns with a bang, leaving water | Electricity through fresh water |

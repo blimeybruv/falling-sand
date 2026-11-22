@@ -284,7 +284,7 @@ when it's heavy, and stay after the rain.
     floats up as one block.
   - At the layer it puffs up into domes, and loose cells settle into gaps beside the body.
   - It drizzles only now and then.
-- **Storm cloud.** Where a cloud is piled 14 or more rows deep, its base darkens into storm cloud.
+- **Storm cloud.** Where a cloud is piled 20 or more rows deep (14 until 22 Nov), its base darkens into storm cloud.
   - Storm cloud pours, harder the deeper the cloud above it.
   - It charges and strikes lightning, the only cloud that does. Strikes come one at a time, at
     least 40 frames apart, however big the storm.
@@ -300,6 +300,23 @@ vanishing. Vapour reaching the cloud layer hangs there until it touches cloud or
 has gathered, then condenses. Clouds keep their water, and condense in clumps rather than as lone
 specks. Cirrus stops climbing about 14 rows above the cloud layer, so it streams across the sky
 rather than piling into a white band along the top.
+
+**Fluffier (22 Nov, evening).** Clouds still looked like wavy ribbons hanging from the cloud
+layer (droopy, with straight slopes), and strong sun burnt them off in seconds.
+
+- **A level base.** Every cloud now sits on a level base just below the cloud layer: columns rise
+  or sink onto it as whole columns.
+- **Heaping.** Each frame, a cloud's target is a half-ellipse 3.5 times as wide as it is tall,
+  holding the same amount of cloud, with broad lumps. Cloud flows from the thin edges towards the
+  middle until it gets there, so a cloud gathers into a cumulus heap: flat underneath, domed on top.
+- **Rounding.** A surface-tension rule melts spikes and corners into the dents beside them.
+- **Bigger heaps tower.** Storm cloud now needs 20 rows of cloud above it, so ordinary heaps stay
+  fair-weather, and it clears below 14.
+- **Slower burn-off.** The sun burns cloud off five times more slowly, so clouds keep their body
+  through a sunny minute.
+- **Gases.** Clouds now move through other gases (lightning's ozone used to jam them).
+- **Shading.** Each cell's depth is blended with its neighbours' above, so light spreads softly
+  down from every bump and the cloud reads as rounded lobes.
 
 **Rendering.** Each cloud material gets its own depth-shading table, a white top darkening
 downwards, so a storm base reads as a different colour, not just as a deep cloud.

@@ -588,9 +588,26 @@ let ceilingFrame = -1;
 let ceilingWidth = 0;
 let ceilingHeight = 0;
 let ceilingRows = new Int16Array(0);
+/** Per column, this frame: how many cells of cloud it holds, and so where its cloud's top may reach (see cloudTop). */
+let cloudCounts = new Int16Array(0);
+let cloudTops = new Int16Array(0);
+/** Per column, this frame: its cloud's level base row, its topmost cloud cell, and the cloud it would hold in a rounded heap. */
+let cloudBases = new Int16Array(0);
+let cloudTopRows = new Int16Array(0);
+let cloudTargets = new Int16Array(0);
+/** Per column, this frame: which way its heap's middle lies (-1 left, 1 right, 0 here or no heap). */
+let cloudPull = new Int8Array(0);
 function cloudCeiling(w: World, x: number): number {
   if (w.frame !== ceilingFrame || w.width !== ceilingWidth || w.height !== ceilingHeight) {
-    if (ceilingRows.length < w.width) ceilingRows = new Int16Array(w.width);
+    if (ceilingRows.length < w.width) {
+      ceilingRows = new Int16Array(w.width);
+      cloudCounts = new Int16Array(w.width);
+      cloudTops = new Int16Array(w.width);
+      cloudBases = new Int16Array(w.width);
+      cloudTopRows = new Int16Array(w.width);
+      cloudTargets = new Int16Array(w.width);
+      cloudPull = new Int8Array(w.width);
+    }
     const base = w.height * 0.22;
     const swell = w.height * 0.03;
     const t = w.frame;
@@ -599,11 +616,152 @@ function cloudCeiling(w: World, x: number): number {
         base + swell * (0.7 * Math.sin(c * 0.043 + t * 0.0011) + Math.sin(c * 0.11 - t * 0.002) + 0.45 * Math.sin(c * 0.29 + t * 0.0037)),
       );
     }
+    // Count the cloud in each column (from the grid as it stands when the first cloud moves this
+    // frame), so a deep column can tower above the cloud layer instead of hanging down below it.
+    cloudCounts.fill(0);
+    cloudTopRows.fill(-1);
+    const mat = w.mat;
+    const width = w.width;
+    const cloud: number = M.Cloud;
+    const storm: number = M.StormCloud;
+    for (let y = 0, i = 0; y < w.height; y++) {
+      for (let c = 0; c < width; c++, i++) {
+        const m = mat[i];
+        if (m === cloud || m === storm) {
+          if (cloudCounts[c]++ === 0) cloudTopRows[c] = y;
+        }
+      }
+    }
+    // Every cloud sits on a level base (rising and falling only with the long swell across the
+    // sky) and heaps upwards from it, so a column's cloud may reach up from that base by however
+    // much cloud the column holds: a deep column towers.
+    for (let c = 0; c < width; c++) {
+      const base = Math.round(w.height * (0.22 + CLOUD_BASE) + w.height * 0.03 * 0.7 * Math.sin(c * 0.043 + t * 0.0011));
+      cloudBases[c] = base;
+      cloudTops[c] = Math.max(1, base - cloudCounts[c]);
+    }
+    heapTargets(width);
     ceilingFrame = w.frame;
     ceilingWidth = w.width;
     ceilingHeight = w.height;
   }
   return ceilingRows[x < 0 ? 0 : x >= w.width ? w.width - 1 : x];
+}
+
+/**
+ * The mirror of riseColumn: the top cell of a column that sits above its base hops to the gap
+ * beneath the column (as long as that's not below the base), so the column sinks a row as one.
+ */
+function sinkColumn(w: World, x: number, y: number, i: number): void {
+  if (roseAt.length < w.width) roseAt = new Int32Array(w.width).fill(-1);
+  if (roseAt[x] === w.frame) return;
+  const base = cloudBases[x];
+  for (let ty = y + 1; ty < base; ty++) {
+    if (cloudPasses(w, x, ty)) {
+      w.swap(i, w.idx(x, ty));
+      roseAt[x] = w.frame;
+      return;
+    }
+    if (!isCloud(w.get(x, ty))) return;
+  }
+}
+
+/**
+ * Clouds' level base lies this far (as a fraction of the sky's height: 10 rows at the default
+ * size) below the cloud layer's mean height. Clouds heap up from
+ * it, flat underneath and domed on top like cumulus (and a deep one towers, like cumulonimbus),
+ * rather than hanging down from the layer like a sack.
+ */
+const CLOUD_BASE = 0.05;
+
+/** A cloud gathers into a heap about this many times as wide as it is tall. */
+const HEAP_ASPECT = 3.5;
+
+/**
+ * For each cloud (a run of columns holding cloud), the rounded heap it would gather into: half an
+ * ellipse HEAP_ASPECT times as wide as it is tall, holding the same amount of cloud, centred where
+ * the cloud's weight is. Small lumps along the top keep heaps from all looking alike. A heap too
+ * tall for the sky above its base widens instead.
+ */
+function heapTargets(width: number): void {
+  cloudTargets.fill(0);
+  cloudPull.fill(0);
+  let c = 0;
+  while (c < width) {
+    if (cloudCounts[c] === 0) {
+      c++;
+      continue;
+    }
+    let n = 0;
+    let moment = 0;
+    let room = 0;
+    const start = c;
+    for (; c < width && cloudCounts[c] > 0; c++) {
+      n += cloudCounts[c];
+      moment += c * cloudCounts[c];
+      room = Math.max(room, cloudBases[c] - 1);
+    }
+    const centre = moment / n;
+    // Half an ellipse of width W and height W / HEAP_ASPECT has area (pi / 4) W^2 / HEAP_ASPECT.
+    let half = Math.sqrt((n * HEAP_ASPECT) / Math.PI);
+    let height = (2 * half) / HEAP_ASPECT;
+    if (height > room) {
+      height = room;
+      half = (2 * n) / (Math.PI * height);
+    }
+    const from = Math.max(0, Math.ceil(centre - half));
+    const to = Math.min(width - 1, Math.floor(centre + half));
+    for (let k = from; k <= to; k++) {
+      const d = (k - centre) / half;
+      // Broad lumps (a couple of dozen columns apart), so a big heap shows separate rounded lobes.
+      const lumps = 1 + 0.1 * Math.sin(k * 0.26 + start);
+      const target = Math.round(height * Math.sqrt(Math.max(0, 1 - d * d)) * lumps);
+      if (target > cloudTargets[k]) cloudTargets[k] = target;
+    }
+    for (let k = start; k < c; k++) cloudPull[k] = k < centre - 0.5 ? 1 : k > centre + 0.5 ? -1 : 0;
+  }
+}
+
+/**
+ * The top cell of a column holding more cloud than its share of the heap hops onto the top of a
+ * neighbouring column holding less, so cloud flows from a cloud's thin, spread-out edges in
+ * towards its middle and piles up there.
+ */
+function heapUp(w: World, x: number, i: number): boolean {
+  const excess = cloudCounts[x] - cloudTargets[x];
+  const pull = cloudPull[x];
+  // Inwards, towards the heap's middle, whenever the next column in holds less than its share;
+  // outwards (a spike slumping) only when the next column out holds at least two less. Either
+  // way the move can't be undone by the opposite one, so cells don't shuttle to and fro.
+  const first = pull === 0 ? w.rng.sign() : pull;
+  const d = heapStep(w, x, excess, first, pull) ? first : heapStep(w, x, excess, -first, pull) ? -first : 0;
+  if (d === 0) return false;
+  const nx = x + d;
+  // It lands on top of the neighbouring column's body, found from the base up (not on a stray
+  // cell higher up, or a chain of them would grow up into the sky).
+  let ny = cloudBases[nx] - 1;
+  for (let k = 0; k < 6 && ny >= 1 && !isCloud(w.get(nx, ny)); k++) ny--;
+  if (isCloud(w.get(nx, ny))) while (ny >= 1 && isCloud(w.get(nx, ny))) ny--;
+  else ny = cloudBases[nx] - 1;
+  if (ny < 1 || !cloudPasses(w, nx, ny)) return false;
+  w.swap(i, w.idx(nx, ny));
+  // Keep this frame's tallies roughly right, so a column doesn't give away more than it should.
+  cloudCounts[x]--;
+  cloudCounts[nx]++;
+  return true;
+}
+
+/** Whether cloud should flow from column x one column in direction `dir` (see heapUp). */
+function heapStep(w: World, x: number, excess: number, dir: number, pull: number): boolean {
+  const nx = x + dir;
+  if (nx < 0 || nx >= w.width) return false;
+  return excess - (cloudCounts[nx] - cloudTargets[nx]) >= (dir === pull ? 1 : 2);
+}
+
+/** The highest row cloud in column x may reach this frame: its base, less the cloud the column holds. */
+function cloudTop(w: World, x: number): number {
+  cloudCeiling(w, x);
+  return cloudTops[x < 0 ? 0 : x >= w.width ? w.width - 1 : x];
 }
 
 /**
@@ -620,6 +778,12 @@ function isCloud(t: number): boolean {
   return t === M.Cloud || t === M.StormCloud;
 }
 
+/** Whether a cloud can move through a cell: open air, or another gas (which it simply displaces). */
+function cloudPasses(w: World, x: number, y: number): boolean {
+  const t = w.get(x, y);
+  return t === M.Empty || (!isCloud(t) && w.defAt(x, y).kind === 'gas');
+}
+
 /** Chance per frame that a cell on the base of a fair-weather cloud turns to rain: now and then. */
 const CLOUD_DRIZZLE = 0.0005;
 /** A storm cloud's base rains far harder, and harder still per CLOUD_DEPTH_STEP rows of cloud above. */
@@ -627,8 +791,8 @@ const STORM_RAIN = 0.004;
 const STORM_POUR = 0.003;
 const CLOUD_DEPTH_STEP = 4;
 /** Rows of cloud above a cell that turn it to storm cloud; fewer than STORM_CLEAR, and it clears. */
-const STORM_DEPTH = 14;
-const STORM_CLEAR = 8;
+const STORM_DEPTH = 20;
+const STORM_CLEAR = 14;
 
 /** How many rows of cloud lie above (x, y), counting up to `limit` (one-cell gaps don't end it). */
 function cloudRowsAbove(w: World, x: number, y: number, limit: number): number {
@@ -684,10 +848,12 @@ function cloudDrift(w: World, x: number, y: number, i: number): boolean {
 
 /**
  * Below the cloud layer, every column of cloud rises a row once every CLOUD_RISE_EVERY frames
- * (about 3 rows a second), all on the same frame, so a cloud floats up as one block: if each column
+ * (about 12 rows a second), all on the same frame, so a cloud floats up as one block: if each column
  * rose at random moments, neighbouring columns would drift rows apart and the cloud would streak.
  */
-const CLOUD_RISE_EVERY = 20;
+const CLOUD_RISE_EVERY = 5;
+/** Per column, the frame it last rose in: once its bottom cell has hopped up, the cell above it (now the bottom) must wait. */
+let roseAt = new Int32Array(0);
 
 /**
  * A column of cloud rises as one: the cell at its bottom hops to the first gap above the column (a
@@ -695,34 +861,38 @@ const CLOUD_RISE_EVERY = 20;
  * the column moves up a row with no gaps opening in it, and holes fill in from below.
  */
 function riseColumn(w: World, x: number, y: number, i: number, ceiling: number): boolean {
+  if (roseAt.length < w.width) roseAt = new Int32Array(w.width).fill(-1);
+  if (roseAt[x] === w.frame) return false;
   for (let ty = y - 1; ty >= ceiling; ty--) {
-    const t = w.get(x, ty);
-    if (t === M.Empty) {
+    if (cloudPasses(w, x, ty)) {
       w.swap(i, w.idx(x, ty));
+      roseAt[x] = w.frame;
       return true;
     }
-    if (!isCloud(t)) return false;
+    if (!isCloud(w.get(x, ty))) return false;
   }
   return false;
 }
 
 /**
- * How a cloud moves: as a body, not a gas. The wind carries it whole (cloudDrift). In the upper
- * atmosphere it sinks back down. Below the cloud layer it floats slowly up to it a whole column at
- * a time (riseColumn), so a cloud drawn low lifts as a block to the billowing ceiling; once there
- * it settles sideways only into gaps beside more cloud, so it stays puffed up instead of spreading
- * thin. At the top a wisp now and then puffs up (a ragged edge); a lone wisp with hardly any cloud
- * around it slowly evaporates (clean edges).
+ * How a cloud moves: as a body, not a gas. The wind carries it whole (cloudDrift). Each column of
+ * cloud settles onto the level cloud base, rising (riseColumn) or sinking (sinkColumn) a whole
+ * column at a time, so a cloud drawn low lifts as a block and one drawn high comes down. On the
+ * base it heaps up: cloud flows from its thin edges towards its middle (heapUp), and spikes and
+ * corners melt into the dents beside them (roundCloud), so it gathers into a cumulus heap, flat
+ * underneath and domed on top. A lone wisp with hardly any cloud around it slowly evaporates back
+ * into vapour (clean edges).
  */
 function moveCloud(w: World, x: number, y: number, i: number): boolean {
   if (w.wind !== 0 && w.rng.chance(Math.abs(w.wind) * CLOUD_DRIFT) && cloudDrift(w, x, y, i)) return true;
-  const ceiling = cloudCeiling(w, x);
-  if (y < ceiling) {
-    if (w.get(x, y + 1) === M.Empty && w.rng.chance(0.3)) w.swap(i, w.idx(x, y + 1));
-    else if (w.rng.chance(0.3)) {
-      const nx = x + w.rng.sign();
-      if (w.get(nx, y) === M.Empty) w.swap(i, w.idx(nx, y));
-    }
+  const ceiling = cloudTop(w, x);
+  // Above where its column's cloud should reach (with a row of slack, so cells at the top don't
+  // bob up and down as the column's count changes): a stray cell sinks, and a whole column sitting
+  // too high, above its base, drops its top cell into the gap beneath it.
+  if (y < ceiling - 1) {
+    if (w.get(x, y + 1) === M.Empty) {
+      if (w.rng.chance(0.3)) w.swap(i, w.idx(x, y + 1));
+    } else if (w.frame % CLOUD_RISE_EVERY === 0 && !isCloud(w.get(x, y - 1))) sinkColumn(w, x, y, i);
     return true;
   }
   if (w.rng.chance(0.005) && countAround(w, x, y, M.Cloud, M.StormCloud) <= 2) {
@@ -731,19 +901,34 @@ function moveCloud(w: World, x: number, y: number, i: number): boolean {
     return true;
   }
   const above = w.get(x, y - 1);
-  // Right at the top, now and then a wisp puffs up a little (and sinks back later).
-  if (above === M.Empty && y <= ceiling + 1) {
-    if (w.rng.chance(0.02)) w.swap(i, w.idx(x, y - 1));
-    return true;
-  }
+  if (!isCloud(above) && w.rng.chance(HEAP_FLOW) && heapUp(w, x, i)) return true;
   // The bottom of a column carries the whole column up a row.
   if (w.frame % CLOUD_RISE_EVERY === 0 && !isCloud(w.get(x, y + 1)) && riseColumn(w, x, y, i, ceiling)) return true;
-  if (w.rng.chance(0.05)) {
-    const nx = x + w.rng.sign();
-    const ny = w.rng.chance(0.5) ? y - 1 : y;
-    if (ny >= ceiling && w.get(nx, ny) === M.Empty && countAround(w, nx, ny, M.Cloud, M.StormCloud) >= 4) w.swap(i, w.idx(nx, ny));
-  }
+  if (w.rng.chance(CLOUD_ROUNDING)) roundCloud(w, x, y, i);
   return true;
+}
+
+/** Chance per frame that the top cell of a column tries to flow towards the middle of its heap (see heapUp). */
+const HEAP_FLOW = 0.4;
+
+/** Chance per frame that a cloud cell tries to settle into a more sheltered spot (see roundCloud). */
+const CLOUD_ROUNDING = 0.08;
+
+/**
+ * Rounds a cloud off, like surface tension: a cell hops to a nearby gap (up to two cells away) if
+ * it would have clearly more cloud around it there than where it is, so spikes and sharp corners
+ * melt into the dents and holes beside them. (Only clearly: a gentler rule would also pull every
+ * cell off the top of a heap into its edges and flatten it.)
+ */
+function roundCloud(w: World, x: number, y: number, i: number): void {
+  const nx = x + w.rng.int(-2, 2);
+  const ny = y + w.rng.int(-2, 2);
+  if ((nx === x && ny === y) || ny < 1 || w.get(nx, ny) !== M.Empty) return;
+  const here = countAround(w, x, y, M.Cloud, M.StormCloud);
+  // Its own cell will be empty once it has moved, so it doesn't count as a neighbour there.
+  const adjacent = Math.abs(nx - x) <= 1 && Math.abs(ny - y) <= 1 ? 1 : 0;
+  const there = countAround(w, nx, ny, M.Cloud, M.StormCloud) - adjacent;
+  if (there >= here + 2) w.swap(i, w.idx(nx, ny));
 }
 
 /** Above this many rows over the cloud layer, rising vapour freezes into cirrus instead of cloud. */
@@ -807,7 +992,10 @@ const STRIKE_CHARGE: readonly [number, number] = [40, 70];
 
 /** Fair-weather cloud: drizzles now and then; piled deep, it darkens into storm cloud. */
 export function rainCloud(w: World, x: number, y: number, i: number): boolean {
-  if (w.rng.chance(0.01) && cloudRowsAbove(w, x, y, STORM_DEPTH) >= STORM_DEPTH) {
+  // (The column's tally, brought up to date by cloudCeiling, rules most cells out cheaply before
+  // counting the rows above.)
+  cloudCeiling(w, x);
+  if (w.rng.chance(0.03) && y - cloudTopRows[x] >= STORM_DEPTH && cloudRowsAbove(w, x, y, STORM_DEPTH) >= STORM_DEPTH) {
     w.transform(i, M.StormCloud);
     return true;
   }

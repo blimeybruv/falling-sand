@@ -163,7 +163,7 @@ export const RECIPES: Readonly<Partial<Record<MaterialId, Recipe>>> = {
   [M.Permafrost]: { hint: 'Freeze the ground.', recipe: 'Earth touching ice or dry ice.' },
   [M.Graphite]: { hint: 'Run lightning through charcoal.', recipe: 'Lightning touching charcoal or coal (an arc furnace).' },
   [M.Fulgurite]: { hint: 'Where lightning meets the beach.', recipe: 'Lightning striking sand.' },
-  [M.StormCloud]: { hint: 'Let a cloud pile up tall and heavy.', recipe: 'A cloud 14 or more rows deep: its base darkens into storm cloud.' },
+  [M.StormCloud]: { hint: 'Let a cloud pile up tall and heavy.', recipe: 'A cloud 20 or more rows deep: its base darkens into storm cloud.' },
   [M.Cirrus]: { hint: 'Let vapour climb higher than the clouds.', recipe: 'Water vapour rising into the upper atmosphere, above the cloud layer.' },
   [M.Accumulator]: { hint: 'Feed a battery from another source of electricity.', recipe: 'Pulses from a solar cell (or another battery) arriving at a battery.' },
   [M.Thermocouple]: { hint: 'Fuse two different metals, then heat one side.', recipe: 'Molten copper setting against iron.' },

@@ -519,7 +519,7 @@ const defs: Record<MaterialId, Def> = {
     reactions: [
       // Hot steam rising through volcanic rock (water seeping onto basalt near lava) opens a fumarole.
       // (Volcanic rock, not just heat: steam off a pot boiled over a wood fire is nearly as hot.)
-      { with: M.Basalt, minTemp: 100, chance: 0.03, otherInto: M.Fumarole },
+      { with: M.Basalt, minTemp: 100, chance: 0.08, otherInto: M.Fumarole },
       { with: M.Snow, chance: 0.05, into: M.Fog },
       { with: M.Ice, chance: 0.05, into: M.Fog },
       // On something as cold as dry ice it freezes straight to frost.
@@ -896,7 +896,7 @@ const defs: Record<MaterialId, Def> = {
     fadeFrames: 0,
     // Sunshine burns clouds off from the top: thin ones go first, thick storm clouds last.
     transparent: false,
-    sunlit: { chance: 0.03, into: M.Empty },
+    sunlit: { chance: 0.006, into: M.Empty },
     description: 'Fair-weather cloud: hangs puffy and white below the upper atmosphere, drifts in the wind, drizzles now and then. Piled deep, its base darkens into storm cloud.',
   },
   [M.Snow]: {
@@ -1856,7 +1856,7 @@ const defs: Record<MaterialId, Def> = {
     // No lifetime, so no fading out (the renderer fades gases over the end of their life).
     fadeFrames: 0,
     transparent: false,
-    sunlit: { chance: 0.01, into: M.Empty },
+    sunlit: { chance: 0.002, into: M.Empty },
     description: 'The dark base of a cloud piled deep: it pours with rain and makes the lightning. Rained out, it clears back into fair-weather cloud.',
   },
   [M.Cirrus]: {
@@ -1866,7 +1866,8 @@ const defs: Record<MaterialId, Def> = {
     category: 'fluid',
     kind: 'gas',
     density: 0.2,
-    colour: [206, 216, 234],
+    // Faint: thin, high ice cloud the sky shows through.
+    colour: [128, 140, 168],
     colourJitter: 0.06,
     lifetime: [2400, 4800],
     fadeFrames: 600,

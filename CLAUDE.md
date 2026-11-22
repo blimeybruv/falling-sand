@@ -94,7 +94,9 @@ Movement is density-based: a mover can swap with an empty, liquid or gas cell th
 - Weather conserves water: rain is the cloud itself coming down (a cloud cell turns into the drop),
   never water from nowhere, or the sun's water cycle would slowly flood a scene.
 - Clouds come in three kinds (see "Clouds, redesigned" in `docs/elements.md`):
-  - Cloud: persistent fair-weather cumulus.
+  - Cloud: persistent fair-weather cumulus. Each cloud sits on a level base and gathers into a
+    rounded heap (`heapTargets`, `heapUp`, `roundCloud` in `behaviours.ts`, from a per-column tally
+    cached once a frame).
   - Storm cloud: the base of a deep cloud, which pours and strikes.
   - Cirrus: high and fading, never rains.
 

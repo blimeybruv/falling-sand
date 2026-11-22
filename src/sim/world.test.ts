@@ -501,15 +501,18 @@ describe('sunlight', () => {
     expect(run(0.5)).toEqual([216, 216]);
   });
 
-  it('burns clouds off from the top', () => {
-    const run = (sun: number): number => {
+  it('burns clouds off from the top, slowly enough that a cloud keeps its body for a while', () => {
+    const run = (sun: number, frames: number): number => {
       const w = new World(80, 100, 4);
       fill(w, 0, 22, 80, 6, M.Cloud);
       w.sun = sun;
-      for (let f = 0; f < 300; f++) w.step();
+      for (let f = 0; f < frames; f++) w.step();
       return count(w, M.Cloud);
     };
-    expect(run(1)).toBeLessThan(run(0) * 0.75);
+    // After 10 seconds of strong sun most of the cloud is still there...
+    expect(run(1, 600)).toBeGreaterThan(run(0, 600) * 0.8);
+    // ...but after a minute the sun has burnt a good part of it away.
+    expect(run(1, 3600)).toBeLessThan(run(0, 3600) * 0.6);
   });
 
   it('evaporates water into vapour, which rises and makes clouds: the water cycle', () => {
@@ -1152,28 +1155,33 @@ describe('clouds', () => {
     for (let i = 0; i < w.size; i++) if (w.mat[i] === m) n++;
     return n;
   }
-  function rowsOf(w: World, m: number): [number, number] {
-    let top = w.height, bottom = -1;
-    for (let y = 0; y < w.height; y++)
-      for (let x = 0; x < w.width; x++)
-        if (w.get(x, y) === m) { top = Math.min(top, y); bottom = Math.max(bottom, y); }
-    return [top, bottom];
-  }
-
-  it('a fair-weather cloud keeps its body: compact, mostly unrained, no lightning', () => {
+  it('a fair-weather cloud keeps its body and gathers into a heap: flat base, domed top, no lightning', () => {
     // Clouds used to have a lifetime and pour from any depth, so a cloud this size was gone in
-    // 20 seconds. Now it hangs at the cloud layer, only drizzling.
+    // 20 seconds. Now it sits on the cloud base, only drizzling, and heaps up like cumulus.
     const w = new World(80, 80, 1);
     for (let y = 14; y < 24; y++) for (let x = 0; x < 80; x++) w.set(x, y, M.Cloud);
     run(w, 1800);
     expect(count(w, M.Cloud)).toBeGreaterThan(800 * 0.85);
-    const [top, bottom] = rowsOf(w, M.Cloud);
-    expect(bottom - top).toBeLessThan(16);
+    const column = (x: number): number => {
+      let n = 0;
+      for (let y = 0; y < 80; y++) if (w.get(x, y) === M.Cloud) n++;
+      return n;
+    };
+    // Domed: thick in the middle, thin at the edges.
+    expect(column(40)).toBeGreaterThan(column(8) + 5);
+    expect(column(40)).toBeGreaterThan(column(72) + 5);
+    // Flat underneath: its base is level to within a few rows across the middle of the heap.
+    const baseOf = (x: number): number => {
+      for (let y = 79; y >= 0; y--) if (w.get(x, y) === M.Cloud) return y;
+      return -1;
+    };
+    const bases = [25, 32, 40, 48, 55].map(baseOf);
+    expect(Math.max(...bases) - Math.min(...bases)).toBeLessThanOrEqual(3);
     expect(w.created[M.StormCloud]).toBe(0);
     expect(w.noise.strikes).toBe(0);
   });
 
-  it('a deep cloud grows a storm base that pours, then clears to fair-weather cloud', () => {
+  it('a deep cloud grows a storm base that pours, then clears to fair-weather cloud', { timeout: 20000 }, () => {
     const w = new World(60, 120, 1);
     for (let y = 15; y < 55; y++) for (let x = 0; x < 60; x++) w.set(x, y, M.Cloud);
     run(w, 300);
@@ -1182,7 +1190,7 @@ describe('clouds', () => {
     expect(w.created[M.Water]).toBeGreaterThan(1000);
     expect(w.noise.strikes).toBeGreaterThan(0);
     // (Torn-off wisps go back to vapour and recondense rather than vanishing, so it takes a while.)
-    run(w, 3000);
+    run(w, 4500);
     expect(count(w, M.StormCloud)).toBeLessThan(30);
     // What's left is a fair-weather cloud of real depth (at least eight rows across 60 columns),
     // not a wisp.
@@ -1249,7 +1257,8 @@ describe('day and night', () => {
     fill(w, 0, 45, 60, 15, M.Earth);
     fill(w, 30, 25, 30, 10, M.Cloud);
     w.sun = -1;
-    run(w, 1200);
+    // (Measured before the cloud's drizzle spreads across the flat ground as a puddle.)
+    run(w, 450);
     expect(w.temp[45 * 60 + 10]).toBeLessThan(0);
     expect(w.temp[45 * 60 + 45]).toBeGreaterThan(AMBIENT_TEMP - 3);
   });

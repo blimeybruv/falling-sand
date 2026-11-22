@@ -70,6 +70,8 @@ export class Renderer {
   /** Per column while drawing: the row of the last cloud cell seen, and how deep into cloud it was. */
   private readonly cloudRow: Int32Array;
   private readonly cloudDepth: Uint16Array;
+  /** Per cloud cell while drawing: how far it is from open sky above it (or to its left), for shading. */
+  private readonly cloudDist: Uint8Array;
   private frame = 0;
   /** Air's own colour (Sun off, no day and night): the sky is tinted from this. */
   private readonly background: readonly [number, number, number];
@@ -164,6 +166,7 @@ export class Renderer {
     });
     this.cloudRow = new Int32Array(world.width);
     this.cloudDepth = new Uint16Array(world.width);
+    this.cloudDist = new Uint8Array(world.size);
   }
 
   render(world: World, options: RenderOptions = { heatView: false, cursor: null }): void {
@@ -176,7 +179,7 @@ export class Renderer {
 
   private renderMaterials(world: World): void {
     const { mat, shade, life, burn, charge, size, width } = world;
-    const { pixels, lut, lutR, lutG, lutB, fadeFrames, flickers, isGlow, cloudLut, cloudBase, cloudRow, cloudDepth, chargeHead, chargeTail, litLut } = this;
+    const { pixels, lut, lutR, lutG, lutB, fadeFrames, flickers, isGlow, cloudLut, cloudBase, cloudRow, cloudDepth, cloudDist, chargeHead, chargeTail, litLut } = this;
     // Thick clouds are lit from above: they darken the deeper a cell is below the cloud's top.
     cloudRow.fill(-100);
     const glowShift = this.frame >> 3;
@@ -227,9 +230,22 @@ export class Renderer {
       } else if (cloudBase[m] >= 0) {
         const x = i % width;
         const y = (i - x) / width;
-        // Small gaps (raindrops, holes, wind) don't count as the cloud ending, or every hole
-        // would draw a bright streak down its column.
-        const depth = y - cloudRow[x] <= CLOUD_GAP ? Math.min(cloudDepth[x] + 1, 255) : 1;
+        // Lit from above: a cell's depth is one more than a blend of the depths above it and
+        // diagonally above it, so light spreads softly down from every bump on top and the cloud
+        // reads as rounded lobes rather than flat bands or vertical stripes. A small gap above (a
+        // raindrop, a hole) doesn't count as open sky, or every hole would draw a bright streak.
+        let up = 0;
+        let upLeft = 0;
+        let upRight = 0;
+        if (y > 0) {
+          const u = i - width;
+          up = cloudBase[mat[u]] >= 0 ? cloudDist[u] : y - cloudRow[x] <= CLOUD_GAP ? cloudDepth[x] : 0;
+          upLeft = x === 0 ? up : cloudBase[mat[u - 1]] >= 0 ? cloudDist[u - 1] : y - cloudRow[x - 1] <= CLOUD_GAP ? cloudDepth[x - 1] : 0;
+          upRight = x === width - 1 ? up : cloudBase[mat[u + 1]] >= 0 ? cloudDist[u + 1] : y - cloudRow[x + 1] <= CLOUD_GAP ? cloudDepth[x + 1] : 0;
+        }
+        let depth = 1 + ((upLeft + 2 * up + upRight) >> 2);
+        if (depth > 255) depth = 255;
+        cloudDist[i] = depth;
         cloudDepth[x] = depth;
         cloudRow[x] = y;
         const level = depth <= CLOUD_LIT ? 0 : Math.min(CLOUD_LEVELS - 1, (((depth - CLOUD_LIT) * (CLOUD_LEVELS - 1)) / CLOUD_DEEP) | 0);
