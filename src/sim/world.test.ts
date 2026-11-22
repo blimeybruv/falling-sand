@@ -47,7 +47,8 @@ describe('material table', () => {
         expect(def.flammability, where).toBeGreaterThan(0);
       }
       expect(def.conductivity, where).toBeGreaterThanOrEqual(0);
-      expect(def.conductivity, where).toBeLessThanOrEqual(0.25); // higher makes diffusion unstable
+      // Above 0.5 a cell overshoots its neighbours' average, and heat sloshes back and forth between them.
+      expect(def.conductivity, where).toBeLessThanOrEqual(0.5);
       expect(inRange(def.cooling), where).toBe(true);
       expect(inRange(def.wind), where).toBe(true);
       if (def.drifts !== undefined) expect(inRange(def.drifts) && def.kind === 'powder', where).toBe(true);
@@ -1396,5 +1397,26 @@ describe('open edges', () => {
     expect(windy.count(M.Cloud)).toBeLessThan(40);
     // Blown off the edge, not rained out against it.
     expect(windy.created[M.Water]).toBeLessThan(100);
+  });
+});
+
+describe('heat conduction', () => {
+  it('metals carry heat through a thick plate better than stone, and brick hardly at all', () => {
+    const topOf = (m: MaterialId): number => {
+      const w = new World(40, 40, 1);
+      for (let y = 34; y < 40; y++) for (let x = 0; x < 40; x++) w.set(x, y, M.Lava);
+      for (let y = 29; y < 34; y++) for (let x = 0; x < 40; x++) w.set(x, y, m);
+      run(w, 1800);
+      return w.temp[29 * 40 + 20];
+    };
+    const copper = topOf(M.Copper);
+    const tin = topOf(M.Tin);
+    const stone = topOf(M.Stone);
+    const brick = topOf(M.Brick);
+    expect(copper).toBeGreaterThan(tin);
+    expect(tin).toBeGreaterThan(stone + 20);
+    // Five cells of tin over lava is still hot enough to pop seeds (180°) on top.
+    expect(tin).toBeGreaterThan(180);
+    expect(brick).toBeLessThan(AMBIENT_TEMP + 40);
   });
 });

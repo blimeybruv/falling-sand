@@ -585,6 +585,8 @@ export function freezeWater(w: World, x: number, y: number, i: number): boolean 
  * column per frame and cached (a cloud bank asks for it once per cell).
  */
 let ceilingFrame = -1;
+/** The world the cached values belong to (tests make many worlds of the same size). */
+let ceilingWorld: World | null = null;
 let ceilingWidth = 0;
 let ceilingHeight = 0;
 let ceilingRows = new Int16Array(0);
@@ -598,7 +600,7 @@ let cloudTargets = new Int16Array(0);
 /** Per column, this frame: which way its heap's middle lies (-1 left, 1 right, 0 here or no heap). */
 let cloudPull = new Int8Array(0);
 function cloudCeiling(w: World, x: number): number {
-  if (w.frame !== ceilingFrame || w.width !== ceilingWidth || w.height !== ceilingHeight) {
+  if (w !== ceilingWorld || w.frame !== ceilingFrame || w.width !== ceilingWidth || w.height !== ceilingHeight) {
     if (ceilingRows.length < w.width) {
       ceilingRows = new Int16Array(w.width);
       cloudCounts = new Int16Array(w.width);
@@ -641,6 +643,8 @@ function cloudCeiling(w: World, x: number): number {
       cloudTops[c] = Math.max(1, base - cloudCounts[c]);
     }
     heapTargets(width);
+    if (w !== ceilingWorld) roseAt.fill(-1);
+    ceilingWorld = w;
     ceilingFrame = w.frame;
     ceilingWidth = w.width;
     ceilingHeight = w.height;

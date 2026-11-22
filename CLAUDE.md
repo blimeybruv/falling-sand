@@ -115,7 +115,11 @@ survives). Strong sun warms a
 surface to 33–48° (weak sun about half that above ambient): it thaws snow, frost and permafrost but
 shouldn't cook fish (50°) or melt wax (60°). The clearest night chills open earth to about −8°
 within 10 s (bare stone stays above freezing: it holds more heat), and a pond's surface to −1° (thin ice)
-within a few seconds where fog doesn't cover it. Add a test that the recipe works and,
+within a few seconds where fog doesn't cover it. Heat conductivity follows real materials in order, squeezed into 0.01–0.5 (above 0.5 heat sloshes
+between neighbours): copper and diamond 0.5, gold 0.45, iron and bronze 0.35, tin 0.3, steel 0.28, stone
+0.12, basalt 0.1, concrete 0.07, obsidian 0.06, glass 0.05, brick 0.02. Any face touching open air
+loses heat fast, so the top of a plate over lava depends on its thickness as much as its metal: five
+cells thick, copper reaches about 215°, tin 200°, stone 165°, brick 40°. Add a test that the recipe works and,
 where it matters, one that an ordinary situation does *not* trigger it (see "an ordinary wood fire
 does not melt sand into glass").
 
