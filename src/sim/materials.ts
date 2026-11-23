@@ -1335,7 +1335,7 @@ const defs: Record<MaterialId, Def> = {
     flammability: 0.02,
     burnTime: [20, 40],
     update: growSeaweed,
-    description: 'Grows upward through salt water.',
+    description: 'Kelp: grows up through salt water in wavering stalks of mixed heights, putting out fronds.',
   },
   [M.Cactus]: {
     ...base,

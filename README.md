@@ -220,7 +220,7 @@ debris start fresh when a scene loads.
 | | Flower | Blooms on trees grown in loam; now and then drops a seed | A tree rooted in loam |
 | | Mushroom | Grows in buried damp wood and slowly eats through wood and leaves; sprouts on loam in damp shade after rain; rots into compost after a minute or so | Wood buried in damp ground, or rain on loam in the shade |
 | | Vine | Climbs wood, stone and brick walls | Grass meets wood |
-| | Seaweed | Grows upward through salt water | Grass meets salt water |
+| | Seaweed | Kelp: grows up through salt water in wavering stalks of mixed heights, putting out fronds | Grass meets salt water |
 | | Cactus | Grows in the desert; burning releases water | A seed on dry sand far from water |
 | | Sap | Slow, sticky amber liquid | Wood tapped with iron |
 | | Sugar | Sweet white powder | Sap heated past 120° |
@@ -249,7 +249,7 @@ debris start fresh when a scene loads.
 | | Yeast | In water, ferments sugar into alcohol and bubbles of carbon dioxide, multiplying while fed | Fruit soaking in water |
 | | Coral polyp | Fixed in salt water, slowly builds a reef of coral rock, faster when warm; bleaches when too hot | Algae on sun-warmed salt water |
 | R | Moss | Creeps over damp stone and brick | Grass touching stone |
-| Y | Algae | Floats and spreads across water | Weeds reaching the surface |
+| Y | Algae | Floats and spreads across the surface of water in drifting rafts (never a solid mat), now and then dying back; fish eat it | Weeds reaching the surface |
 | | **Tools** | | |
 | E | Eraser | Clears cells | Always available |
 
@@ -307,6 +307,7 @@ chains (neon, toffee, popcorn, icicles, fertiliser, compost...), with recipes an
 estimates.
 
 - [ ] **A primordial wilderness map**: a pre-generated starting world (from a seed, so it can be shared and regenerated) that looks like untouched prehistoric land: layered rock with ore veins and a buried oil pocket, a smouldering volcano with a lava chamber, a salt-water sea with sandy shores and seaweed, caves with stalactites, loam hills with grass and trees, a peat bog, and storm clouds over it all. Offered from the Scene menu. Loading it shouldn't count as discoveries (scenes already don't), so it doubles as a sandbox for Discovery mode.
+- [ ] **Fix crumbly materials in place**: a toggle that makes powders (sand, earth, gunpowder...) stay where they're drawn instead of falling, for building shapes out of them. A player's suggestion.
 - [ ] **Load-bearing materials**: see the design note in [`docs/elements.md`](docs/elements.md). (Vents are built.)
 - [ ] **More materials**: pick one from [`docs/elements.md`](docs/elements.md). Each is a table entry, usually a `Reaction`, and a line in `RECIPES`; the tests check every one can be discovered.
 - [ ] **Discovery goals**: small challenges once everything is unlocked ("grow a forest of 5 trees", "boil a whole pond").

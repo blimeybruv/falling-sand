@@ -78,6 +78,13 @@ function thrives(w: World, x: number, y: number, base: number, shadeLoving = fal
   return w.inSunlight(x, y) !== shadeLoving || w.rng.chance(SHADE_GROWTH / (1 + sun));
 }
 
+/** Whether a weed stem grows within WEED_SPACING cells either side of (x, y): stems stand apart, with water between. */
+function weedBeside(w: World, x: number, y: number): boolean {
+  for (let dx = -WEED_SPACING; dx <= WEED_SPACING; dx++) if (dx !== 0 && w.get(x + dx, y) === M.Grass) return true;
+  return false;
+}
+const WEED_SPACING = 3;
+
 /** Grass: now and then spreads into neighbouring water, or over neighbouring open ground (see below). */
 export function growGrass(w: World, x: number, y: number, _i: number): boolean {
   // Fed by fertiliser, saltpetre (nitrate) or ash (potash) beside or beneath it, grass spreads twice as fast.
@@ -86,8 +93,12 @@ export function growGrass(w: World, x: number, y: number, _i: number): boolean {
   const ny = y + w.rng.int(-1, 1);
   const t = w.get(nx, ny);
   if (t === M.Water) {
-    // Weeds that reach the surface spread across it as algae.
-    w.set(nx, ny, w.get(nx, ny - 1) === M.Empty ? M.Algae : M.Grass);
+    // Weeds spread across the surface as algae. Under water they only grow straight up, single
+    // stems towards the light with water between them (spreading every way, they used to fill a
+    // whole pond and wall its fish in; a flooded meadow sent up a solid wall), until they too reach
+    // the surface.
+    if (w.get(nx, ny - 1) === M.Empty) w.set(nx, ny, M.Algae);
+    else if (nx === x && ny === y - 1 && w.rng.chance(0.3) && !weedBeside(w, nx, ny)) w.set(nx, ny, M.Grass);
   } else if ((t === M.Sand || t === M.Earth || t === M.Loam || t === M.Fertiliser) && w.get(nx, ny - 1) === M.Empty) {
     // Creeps over open ground: loam and fertiliser always, sand and earth only where it's damp.
     if (t === M.Loam || t === M.Fertiliser || w.near(nx, ny, DAMP_RANGE, M.Water)) w.set(nx, ny, M.Grass);
@@ -1095,13 +1106,38 @@ export function releaseGas(w: World, x: number, y: number, _i: number): boolean 
   return false;
 }
 
-/** Seaweed: now and then grows up into the salt water above it, swaying a little. */
-export function growSeaweed(w: World, x: number, y: number, _i: number): boolean {
-  if (!w.rng.chance(0.01)) return true;
+/**
+ * Seaweed (kelp): only the tip of each stalk grows, up into the salt water above, wavering a little
+ * as it goes and now and then putting out a frond to the side. The taller it is, the likelier it
+ * stops (for good), so stalks reach mixed heights instead of every cell sprouting and the whole bed
+ * filling out into a solid wedge. Its height is kept in `life`; -1 means it has stopped (or is a
+ * frond, which never grows).
+ */
+export function growSeaweed(w: World, x: number, y: number, i: number): boolean {
+  if (!w.rng.chance(0.01) || w.life[i] < 0) return true;
+  // Not the tip: something of the stalk already grows above it.
+  if (w.get(x, y - 1) === M.Seaweed || w.get(x - 1, y - 1) === M.Seaweed || w.get(x + 1, y - 1) === M.Seaweed) return true;
+  const height = w.life[i];
+  if (w.rng.chance(height / KELP_REACH)) {
+    w.life[i] = -1;
+    return true;
+  }
   const nx = w.rng.chance(0.3) ? x + w.rng.sign() : x;
-  if (w.get(nx, y - 1) === M.SaltWater) w.set(nx, y - 1, M.Seaweed);
+  if (w.get(nx, y - 1) !== M.SaltWater) return true;
+  w.set(nx, y - 1, M.Seaweed);
+  w.life[w.idx(nx, y - 1)] = height + 1;
+  // Now and then a frond to one side, which doesn't grow on.
+  if (height > 2 && w.rng.chance(0.25)) {
+    const fx = x + w.rng.sign();
+    if (w.get(fx, y) === M.SaltWater) {
+      w.set(fx, y, M.Seaweed);
+      w.life[w.idx(fx, y)] = -1;
+    }
+  }
   return true;
 }
+/** Each growth step, a stalk this tall stops for good with chance height / KELP_REACH (most reach 12-30). */
+const KELP_REACH = 250;
 
 function isClimbable(t: number): boolean {
   return t === M.Wood || t === M.Stone || t === M.Brick;
@@ -1144,12 +1180,23 @@ export function growMoss(w: World, x: number, y: number, _i: number): boolean {
   return true;
 }
 
-/** Algae: floats; now and then spreads into a neighbouring water cell at the surface. */
-export function spreadAlgae(w: World, x: number, y: number, _i: number): boolean {
-  if (!w.rng.chance(0.01)) return false;
+/**
+ * Algae: floats; now and then spreads into a neighbouring water cell at the surface, in patches
+ * (not where the surface nearby is already mostly algae), and now and then dies back. So a pond
+ * keeps open water between drifting rafts, and its fish keep their water to breathe.
+ */
+export function spreadAlgae(w: World, x: number, y: number, i: number): boolean {
+  if (w.rng.chance(0.0003) && w.get(x, y + 1) === M.Water) {
+    w.setCell(i, M.Water);
+    return true;
+  }
+  if (!w.rng.chance(0.005)) return false;
   const nx = x + w.rng.sign();
   const ny = y + w.rng.int(0, 1);
-  if (w.get(nx, ny) === M.Water && w.get(nx, ny - 1) === M.Empty) w.set(nx, ny, M.Algae);
+  if (w.get(nx, ny) !== M.Water || w.get(nx, ny - 1) !== M.Empty) return false;
+  let crowd = 0;
+  for (let dx = -4; dx <= 4; dx++) if (w.get(nx + dx, ny) === M.Algae || w.get(nx + dx, ny - 1) === M.Algae) crowd++;
+  if (crowd < 5) w.set(nx, ny, M.Algae);
   return false;
 }
 

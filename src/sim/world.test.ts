@@ -1601,3 +1601,37 @@ describe('after a fire', () => {
     expect(grows(M.Earth)).toBe(0);
   });
 });
+
+describe('water plants keep their place', () => {
+  it('a pond keeps its water and its fish: weeds and algae stay at the surface, in patches', { timeout: 30000 }, () => {
+    // A pond dug into loam, its surface level with grassy banks.
+    const w = new World(160, 90, 1);
+    for (let y = 70; y < 90; y++) for (let x = 0; x < 160; x++) w.set(x, y, M.Loam);
+    for (let y = 70; y < 86; y++) for (let x = 30; x < 130; x++) w.set(x, y, M.Water);
+    for (let x = 0; x < 30; x++) w.set(x, 70, M.Grass);
+    for (let x = 130; x < 160; x++) w.set(x, 70, M.Grass);
+    for (let x = 35; x < 125; x += 10) {
+      w.set(x, 70, M.Algae);
+      w.set(x + 3, 78, M.Fish);
+    }
+    const water = w.count(M.Water);
+    run(w, 7200);
+    expect(w.count(M.Water)).toBeGreaterThan(water * 0.9);
+    expect(w.count(M.Fish)).toBeGreaterThan(3);
+    // Algae drifts in rafts: well short of covering the whole 100-cell surface.
+    expect(w.count(M.Algae)).toBeLessThan(70);
+  });
+
+  it('kelp grows in slender stalks of mixed heights, not a solid bed', { timeout: 30000 }, () => {
+    const w = new World(120, 100, 2);
+    for (let y = 30; y < 100; y++) for (let x = 0; x < 120; x++) w.set(x, y, M.SaltWater);
+    for (let y = 96; y < 100; y++) for (let x = 0; x < 120; x++) w.set(x, y, M.Sand);
+    for (let x = 15; x < 120; x += 18) w.set(x, 95, M.Seaweed);
+    run(w, 9000);
+    // Six stalks with their fronds: a few hundred cells at most, not the thousands of a solid bed.
+    expect(w.count(M.Seaweed)).toBeLessThan(400);
+    let tallest = 0;
+    for (let x = 0; x < 120; x++) for (let y = 30; y < 96; y++) if (w.get(x, y) === M.Seaweed) { tallest = Math.max(tallest, 95 - y); break; }
+    expect(tallest).toBeGreaterThan(15);
+  });
+});
