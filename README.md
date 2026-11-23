@@ -308,6 +308,7 @@ chains (neon, toffee, popcorn, icicles, fertiliser, compost...), with recipes an
 estimates.
 
 - [ ] **A primordial wilderness map**: a pre-generated starting world (from a seed, so it can be shared and regenerated) that looks like untouched prehistoric land: layered rock with ore veins and a buried oil pocket, a smouldering volcano with a lava chamber, a salt-water sea with sandy shores and seaweed, caves with stalactites, loam hills with grass and trees, a peat bog, and storm clouds over it all. Offered from the Scene menu. Loading it shouldn't count as discoveries (scenes already don't), so it doubles as a sandbox for Discovery mode.
+- [ ] **A wind pass over every material** (later, no hurry): go through the table and give each material wind values that match how it really behaves (`wind` for things in the air, `drifts` and `lofts` for powders on the ground), measured in the sim, so seeds, leaves, feathers, flour-like powders, smoke and spray all respond in proportion. A player's suggestion.
 - [ ] **Fix crumbly materials in place**: a toggle that makes powders (sand, earth, gunpowder...) stay where they're drawn instead of falling, for building shapes out of them. A player's suggestion.
 - [ ] **Load-bearing materials**: see the design note in [`docs/elements.md`](docs/elements.md). (Vents are built.)
 - [ ] **More materials**: pick one from [`docs/elements.md`](docs/elements.md). Each is a table entry, usually a `Reaction`, and a line in `RECIPES`; the tests check every one can be discovered.
