@@ -26,10 +26,12 @@ describe('example scenes', () => {
     }
   });
 
-  it('fuse and charges: the battery lights the fuse and the charges go off', { timeout: 30000 }, () => {
+  it('fuse and charges: the battery lights the fuse and all three charges go off', { timeout: 30000 }, () => {
     const w = load('charges');
-    run(w, 1500);
-    expect(w.noise.blasts).toBeGreaterThan(0);
+    expect(w.count(M.Dynamite)).toBeGreaterThan(0);
+    run(w, 600);
+    // The dynamite itself, not just the fuse's own little pops (which once passed for it).
+    expect(w.count(M.Dynamite)).toBe(0);
   });
 
   it('volcano island: lava meets the sea, boiling it and crusting', { timeout: 30000 }, () => {

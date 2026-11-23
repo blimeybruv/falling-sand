@@ -77,19 +77,15 @@ export const EXAMPLES: readonly Example[] = [
   {
     id: 'charges',
     name: 'Fuse and charges',
-    hint: 'A battery sends a pulse down the copper wire, which lights a gunpowder fuse leading to three charges. Stand back.',
+    hint: 'A battery sends a pulse down the copper wire, which lights a gunpowder fuse running to three charges of dynamite. Stand back.',
     build(w) {
       box(w, 0, 0.92, 1, 1, M.Stone);
-      // Three pillars, each with a charge of dynamite on top.
-      for (const fx of [0.45, 0.62, 0.79]) {
-        box(w, fx - 0.03, 0.72, fx + 0.03, 0.92, M.Stone);
-        box(w, fx - 0.025, 0.64, fx + 0.025, 0.72, M.Dynamite);
-      }
-      // The battery, a long copper wire, and the fuse along the ground and up to each charge.
+      // The battery, a long copper wire, then a gunpowder fuse along the floor (it's a powder, so it
+      // has to lie on something) running into each of three charges of dynamite.
       box(w, 0.06, 0.84, 0.1, 0.92, M.Battery);
       box(w, 0.1, 0.9, 0.38, 0.92, M.Copper);
-      box(w, 0.38, 0.905, 0.82, 0.92, M.Gunpowder);
-      for (const fx of [0.45, 0.62, 0.79]) box(w, fx + 0.03, 0.66, fx + 0.035, 0.905, M.Gunpowder);
+      box(w, 0.38, 0.9, 0.84, 0.92, M.Gunpowder);
+      for (const fx of [0.5, 0.66, 0.82]) box(w, fx - 0.025, 0.8, fx + 0.025, 0.92, M.Dynamite);
     },
   },
   {
