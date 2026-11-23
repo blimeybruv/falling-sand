@@ -348,6 +348,12 @@ describe('every recipe works in the simulation', () => {
       fillRect(w, 0, 28, 40, 12, M.Loam);
       for (let x = 2; x < 40; x += 4) w.set(x, 28, M.Earthworm);
     }],
+    ['pine cone: a tree crown burning', M.PineCone, 900, (w) => {
+      fillRect(w, 0, 36, 40, 4, M.Earth);
+      fillRect(w, 19, 20, 2, 16, M.Wood);
+      fillRect(w, 8, 8, 24, 12, M.Leaf);
+      for (let x = 8; x < 32; x++) w.ignite(w.idx(x, 19));
+    }],
     ['fog: steam meets snow', M.Fog, 300, (w) => {
       fillRect(w, 0, 36, 40, 4, M.Snow);
       fillRect(w, 0, 30, 40, 6, M.Steam);

@@ -825,7 +825,11 @@ export class World {
         this.detonate(x, y, i, def);
       } else {
         const residue = def.residue;
-        this.setCell(i, residue && this.rng.chance(residue.chance) ? residue.into : def.burnsInto);
+        const other = residue?.sometimes;
+        this.setCell(
+          i,
+          other && this.rng.chance(other.chance) ? other.into : residue && this.rng.chance(residue.chance) ? residue.into : def.burnsInto,
+        );
       }
       return true;
     }

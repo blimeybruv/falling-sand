@@ -1539,3 +1539,45 @@ describe('birds', () => {
     expect(w.created[M.Seagull] + w.created[M.Crow]).toBe(0);
   });
 });
+
+describe('after a fire', () => {
+  function fill(w: World, x0: number, y0: number, wd: number, ht: number, m: MaterialId): void {
+    for (let y = y0; y < y0 + ht; y++) for (let x = x0; x < x0 + wd; x++) w.set(x, y, m);
+  }
+
+  it('a burning tree crown drops pine cones, which ride out the fire and open into seeds once it has passed', () => {
+    const w = new World(60, 50, 1);
+    fill(w, 0, 44, 60, 6, M.Earth);
+    fill(w, 29, 26, 2, 18, M.Wood);
+    fill(w, 14, 10, 32, 16, M.Leaf);
+    for (let x = 14; x < 46; x++) w.ignite(w.idx(x, 25));
+    run(w, 600);
+    expect(w.created[M.PineCone]).toBeGreaterThan(3);
+    run(w, 1800);
+    // Every cone has opened by now, and the seeds didn't pop in the heat.
+    expect(w.count(M.PineCone)).toBe(0);
+    expect(w.created[M.Seed]).toBeGreaterThan(3);
+  });
+
+  it('wood (a plank, a house) burning drops no cones: only a crown does', () => {
+    const w = new World(40, 40, 2);
+    fill(w, 0, 36, 40, 4, M.Stone);
+    fill(w, 5, 26, 30, 10, M.Wood);
+    for (let x = 5; x < 35; x++) w.ignite(w.idx(x, 26));
+    run(w, 2000);
+    expect(w.created[M.PineCone]).toBe(0);
+  });
+
+  it('a seed on ash grows into a tree without water (the ash bed); on dry earth it does not', () => {
+    const grows = (ground: MaterialId): number => {
+      const w = new World(30, 40, 3);
+      fill(w, 0, 34, 30, 6, M.Earth);
+      fill(w, 0, 33, 30, 1, ground);
+      for (let x = 3; x < 30; x += 6) w.set(x, 32, M.Seed);
+      run(w, 1500);
+      return w.created[M.Wood];
+    };
+    expect(grows(M.Ash)).toBeGreaterThan(10);
+    expect(grows(M.Earth)).toBe(0);
+  });
+});

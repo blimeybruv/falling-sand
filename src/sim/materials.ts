@@ -50,6 +50,7 @@ import {
   sproutMushroom,
   updateSeagull,
   updateCrow,
+  openCone,
   thickenIce,
   solarCell,
   spinDynamo,
@@ -147,8 +148,11 @@ export interface MaterialDef {
   extinguishChance: number;
   /** What a burning cell becomes once its burn time runs out. */
   burnsInto: MaterialId;
-  /** Sometimes leaves this instead of `burnsInto` when it burns out (e.g. ash). */
-  residue?: { into: MaterialId; chance: number };
+  /**
+   * Sometimes leaves this instead of `burnsInto` when it burns out (e.g. ash); with `sometimes`,
+   * now and then something else again (a leaf leaving a pine cone).
+   */
+  residue?: { into: MaterialId; chance: number; sometimes?: { into: MaterialId; chance: number } };
   /** How hot it burns (default BURNING_TEMP). */
   burnTemp?: number;
   /** Chance per frame a burning cell throws off a flame above it (default 0.25). */
@@ -622,7 +626,8 @@ const defs: Record<MaterialId, Def> = {
     ...base,
     name: 'Leaf',
     reactions: [{ with: M.Earth, chance: 0.004, into: M.Saltpetre }],
-    residue: { into: M.Ash, chance: 0.2 },
+    // Now and then a burning crown drops a cone, which the fire's heat opens (serotiny).
+    residue: { into: M.Ash, chance: 0.2, sometimes: { into: M.PineCone, chance: 0.05 } },
     category: 'life',
     key: '',
     kind: 'static',
@@ -3036,6 +3041,21 @@ const defs: Record<MaterialId, Def> = {
     update: updateCrow,
     description: 'Creature: drawn by earthworms out on the surface (rain brings them up). Flies low, perches, and swoops on worms. Starves without them.',
   },
+  [M.PineCone]: {
+    ...base,
+    name: 'Pine cone',
+    key: '',
+    category: 'life',
+    kind: 'powder',
+    density: 9,
+    colour: [128, 84, 46],
+    colourEnd: [92, 58, 32],
+    colourJitter: 0.1,
+    // Sealed with resin, it doesn't burn: the heat is what opens it.
+    flammability: 0,
+    update: openCone,
+    description: 'Drops from a tree crown as it burns. Fireproof: once the fire has passed and it has cooled, it opens and drops a seed onto the ash.',
+  },
   [M.Vapour]: {
     ...base,
     name: 'Water vapour',
@@ -3075,7 +3095,7 @@ export const PALETTE: readonly MaterialDef[] = [
   // life
   M.Seed, M.Grass, M.Wood, M.Flower, M.Mushroom, M.Moss, M.Algae, M.Vine, M.Seaweed, M.Cactus, M.Sap, M.Sugar, M.Caramel, M.Toffee, M.CandyFloss, M.Popcorn, M.Fruit, M.Pulp, M.Paper, M.Bamboo, M.Amber, M.Honeydew, M.Honey, M.Sawdust,
   // creatures
-  M.Earthworm, M.Termite, M.Fish, M.Firefly, M.Bee, M.Snail, M.Ant, M.Yeast, M.CoralPolyp, M.Seagull, M.Crow,
+  M.Earthworm, M.Termite, M.Fish, M.Firefly, M.Bee, M.Snail, M.Ant, M.Yeast, M.CoralPolyp, M.Seagull, M.Crow, M.PineCone,
 ].map((id) => MATERIALS[id]);
 
 /** Room temperature. Cells drift back towards it when nothing heats or cools them. */

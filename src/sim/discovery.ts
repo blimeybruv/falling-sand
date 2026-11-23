@@ -78,6 +78,7 @@ export const RECIPES: Readonly<Partial<Record<MaterialId, Recipe>>> = {
   [M.Fireworks]: { hint: 'Gunpowder with a pinch of metal salts.', recipe: 'Gunpowder meets salt or rust.' },
   [M.Seagull]: { hint: 'Something in the sea is worth diving for.', recipe: 'A fish near the surface of open water draws a seagull.' },
   [M.Crow]: { hint: 'What comes up when it rains?', recipe: 'An earthworm out on the surface (rain brings them up) draws a crow.' },
+  [M.PineCone]: { hint: 'Some trees only let go of their seeds in a fire.', recipe: 'A tree crown burning now and then drops a pine cone.' },
   [M.Mushroom]: { hint: 'Bury wood somewhere dark and damp.', recipe: 'Wood buried in damp ground, or rain on loam in the shade.' },
   [M.Flower]: { hint: 'Grow a tree in the richest soil.', recipe: 'Trees rooted in loam flower.' },
   [M.Dynamite]: { hint: 'Make the touchiest explosive safe to handle.', recipe: 'Nitroglycerin soaked into clay.' },

@@ -80,8 +80,8 @@ function thrives(w: World, x: number, y: number, base: number, shadeLoving = fal
 
 /** Grass: now and then spreads into neighbouring water, or over neighbouring open ground (see below). */
 export function growGrass(w: World, x: number, y: number, _i: number): boolean {
-  // Fed by fertiliser or saltpetre (nitrate) beside or beneath it, grass spreads twice as fast.
-  if (!thrives(w, x, y, 0.03) && !(thrives(w, x, y, 0.03) && (touches(w, x, y, M.Fertiliser) || touches(w, x, y, M.Saltpetre)))) return true;
+  // Fed by fertiliser, saltpetre (nitrate) or ash (potash) beside or beneath it, grass spreads twice as fast.
+  if (!thrives(w, x, y, 0.03) && !(thrives(w, x, y, 0.03) && (touches(w, x, y, M.Fertiliser) || touches(w, x, y, M.Saltpetre) || touches(w, x, y, M.Ash)))) return true;
   const nx = x + w.rng.int(-1, 1);
   const ny = y + w.rng.int(-1, 1);
   const t = w.get(nx, ny);
@@ -140,7 +140,8 @@ export function updateSeed(w: World, x: number, y: number, i: number): boolean {
     w.noise.pops++;
     return true;
   }
-  if (!thrives(w, x, y, 0.02)) return false;
+  // On ash it sprouts three times as readily.
+  if (!thrives(w, x, y, w.get(x, y + 1) === M.Ash ? 0.06 : 0.02)) return false;
   if (w.get(x, y - 1) !== M.Empty) return false;
   const below = w.get(x, y + 1);
   if (below === M.Loam) {
@@ -148,8 +149,8 @@ export function updateSeed(w: World, x: number, y: number, i: number): boolean {
     w.life[i] = w.near(x, y, 2, M.Water) ? BAMBOO_TIP + w.rng.int(20, 40) : w.rng.int(28, 46) + LOAM_TREE;
     return true;
   }
-  // On fertiliser, or damp ground, it grows into a tree.
-  if (below === M.Fertiliser || ((below === M.Sand || below === M.Earth || below === M.Grass) && w.near(x, y, DAMP_RANGE, M.Water))) {
+  // On fertiliser or ash (rich in potash, the ash-bed after a fire), or damp ground, it grows into a tree.
+  if (below === M.Fertiliser || below === M.Ash || ((below === M.Sand || below === M.Earth || below === M.Grass) && w.near(x, y, DAMP_RANGE, M.Water))) {
     w.life[i] = w.rng.int(18, 34);
     return true;
   }
@@ -2173,4 +2174,22 @@ export function updateCrow(w: World, x: number, y: number, i: number): boolean {
   const want = drop > 12 ? 1 : drop > 3 && w.rng.chance(0.3) ? 1 : w.rng.int(-1, 1);
   flyTowards(w, x, y, i, x + w.rng.sign(), y + want, false);
   return true;
+}
+
+/** A pine cone opens once it has been cool (under this temperature) for CONE_OPEN frames. */
+const CONE_COOL = 60;
+const CONE_OPEN = 240;
+
+/**
+ * Pine cone: sealed with resin, it rides out the fire. Once it has been cool for a few seconds (the
+ * fire has passed), it opens into a seed, which can sprout in the ash around it. (Opening any
+ * earlier, the seed would pop in the heat.) The time cool is counted in `life`.
+ */
+export function openCone(w: World, _x: number, _y: number, i: number): boolean {
+  if (w.temp[i] >= CONE_COOL) w.life[i] = 0;
+  else if (++w.life[i] >= CONE_OPEN) {
+    w.setCell(i, M.Seed);
+    return true;
+  }
+  return false;
 }

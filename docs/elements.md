@@ -338,6 +338,14 @@ applies to Neon.
 | ✅ | Fog bank | Mist rising off water on clear nights, hanging low and pooling in hollows (fog is now a very light liquid, like CO2) | `night` change on Water | F |
 | | Rain shafts | Rain from a storm drawn as faint grey streaks, not separate drops | renderer | F |
 
+## Fire ecology (built 23 Nov, at the player's suggestion)
+
+| | Idea | Mechanics | What it does | Recipe | Effort |
+|---|---|---|---|---|---|
+| ✅ | Fire-opened cones (serotiny) | fire + trees + temperature | A burning crown now and then drops a pine cone. Cones don't burn, and they open into a seed once they've been cool for a few seconds, so the seeds don't pop in the heat. Only leaves drop cones, so a burning wooden house sows nothing | A tree crown burning | F |
+| ✅ | Ash-bed effect | fire + plants | Ash is fertile (potash): seeds sprout three times as readily on it and grow into trees there without water; grass spreads faster beside it | (behaviour) | T |
+| | Smoke-cued germination | fire + plants | Seeds lying in smoke sprout faster for a while (real seeds respond to karrikins in smoke) | (behaviour) | T |
+
 ## Interplay ideas, round 8 (brainstormed 21 Nov)
 
 Features that come from systems the game already has meeting each other, rather than new materials

@@ -190,7 +190,7 @@ debris start fresh when a scene loads.
 | 7 | Fire | Short-lived; rises and flickers; ignites flammable neighbours | Starter |
 | K | Charcoal | Burns slowly and very hot, glowing rather than flaming; hot enough to make glass | Smother a wood fire with sand |
 | | Coal | Burns for a very long time, very hot | Charcoal buried with no air and baked past 200° |
-| X | Ash | Light powder left by fires; floats on water and blows in the wind | Wood, leaves or grass burning out |
+| X | Ash | Light powder left by fires; floats on water and blows in the wind. Rich in potash: seeds grow into trees on it without water, and grass spreads faster beside it | Wood, leaves or grass burning out |
 | U | Sulfur | Yellow powder; burns with choking smoke; slowly turns water acidic | Lava meets water (now and then) |
 | P | Saltpetre | White crystals (nitrate): grass spreads faster on it. Lightning striking soil leaves some | Leaves buried in earth, or lightning striking soil |
 | G | Gunpowder | Powder; burns very fast with small blasts, so a line of it works as a fuse | Charcoal with sulfur and saltpetre |
@@ -214,7 +214,7 @@ debris start fresh when a scene loads.
 | | Peat | Slow-burning fuel | Grass or moss buried under earth |
 | | Smoke bomb | Lit, it pours out smoke | Saltpetre meets sugar |
 | **Life** | | | |
-| S | Seed | Falls; on loam, or on damp sand or earth, it grows into a tree (wood trunk, branches, leaves); on dry sand far from water, a cactus | Starter |
+| S | Seed | Falls; on loam, ash or fertiliser, or on damp sand or earth, it grows into a tree (wood trunk, branches, leaves); on dry sand far from water, a cactus. Sprouts fastest on ash, as after a forest fire | Starter |
 | 5 | Grass | Weeds and grass: spreads over damp ground and loam, and into water; burns | A sandy shore |
 | 4 | Wood | Static; burns slowly; buried under sand it slowly turns to oil | Grow a tree |
 | | Flower | Blooms on trees grown in loam; now and then drops a seed | A tree rooted in loam |
@@ -243,6 +243,7 @@ debris start fresh when a scene loads.
 | | Bee | Creature: turns honeydew into honey | Flowers draw them |
 | | Snail | Creature: creeps over damp stone eating algae and moss; withdraws into its shell in strong dry sun | Moss beside water |
 | | Seagull | Creature: wheels over open water, floats on it and dives for fish; cries now and then. Starves without fish | A fish near the surface of open water |
+| | Pine cone | Drops from a tree crown as it burns; fireproof, it opens into a seed once the fire has passed and it has cooled | A tree crown burning |
 | | Crow | Creature: flies low over the land, perches, and swoops on earthworms out on the surface; caws. Starves without worms | An earthworm out on the surface (rain brings them up) |
 | | Ant | Digs earth and sand and carries the grains up into anthills; eats sweet things; drowns in water | Sugar on earth |
 | | Yeast | In water, ferments sugar into alcohol and bubbles of carbon dioxide, multiplying while fed | Fruit soaking in water |
