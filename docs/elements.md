@@ -338,6 +338,31 @@ applies to Neon.
 | ✅ | Fog bank | Mist rising off water on clear nights, hanging low and pooling in hollows (fog is now a very light liquid, like CO2) | `night` change on Water | F |
 | | Rain shafts | Rain from a storm drawn as faint grey streaks, not separate drops | renderer | F |
 
+## Trees (design note, 23 Nov): planned for a session of its own
+
+The player's suggestion. Today every seed grows the same tree: a thin trunk, a few branches and a
+round crown (on loam, a flowering one). That proves the idea. A trees session would give each tree a
+species whose shape and needs follow from what it grew from and where. A seed would carry its
+species in `life`, as it already carries its height.
+
+**Shape first.**
+- Trunks thick at the base and thinner up the tree (2-3 cells wide in big trees).
+- Branches that fork and taper.
+- Roots spreading a little into the soil below.
+- Crowns built from leaf clusters at the branch tips, not one round blob.
+- Growth on a budget (a tree's size set when it sprouts), so a forest stays affordable.
+
+| | Idea | Mechanics | What it does | How it grows | Effort |
+|---|---|---|---|---|---|
+| | Pine | trees + fire | Tall and narrow: a straight trunk under a stacked, triangular crown of dark needles. Drops pine cones now and then, and many in a fire | From a pine cone | F |
+| | Broadleaf (oak) | trees | Today's tree, done properly: a stout trunk, forking boughs, a wide crown | From a seed on damp ground | F |
+| | Fruit tree | trees + creatures | The flowering tree on loam: blossom, then fruit, which bees and birds visit | From a seed on loam | T |
+| | Willow | trees + water | Leans over water, its crown hanging down in curtains | From a seed beside water | F |
+| | Palm | trees + salt water + sand | A tall bare trunk with a tuft of fronds on top, on sandy shores by the sea; drops coconuts | From a seed on sand near salt water | F |
+| | Giant tree | trees | Rarely (one seed in a few hundred, on rich ground), a tree that grows far bigger and thicker than the rest and lives for ages | Rare variant of a pine or broadleaf | F |
+| | Autumn | trees + seasons | Leaves turn yellow and red and fall, then grow back (needs seasons) | | S |
+| | Worldtree (eldritch) | see the eldritch table | A tree that grows to the size of the map | | S |
+
 ## Fire ecology (built 23 Nov, at the player's suggestion)
 
 | | Idea | Mechanics | What it does | Recipe | Effort |
@@ -412,6 +437,7 @@ after the anomalies. Best built after the anomalies.
 | | Watching stone | Attention | Only changes when the brush isn't over it: left alone, it slowly turns its neighbours to more of itself; hover over it and it stops (bounded: it can't cross water or salt) | A transmuter burning out inside obsidian | S |
 | | Wrong water | Direction | A liquid that flows towards the nearest wall instead of down, and climbs | Water passed through linked gates | F |
 | | Tolling glass | Time and sound | Rings softly (a low tone in the soundscape) a few seconds before anything near it changes: a fuse catching, a creature hatching, lightning charging | Glass struck by lightning inside hush | S |
+| | Worldtree | Growth limits | A giant tree that never stops: a thick trunk winding up to the top of the map, roots spreading through the ground, boughs wide enough to stand a forest on. It needs no water and won't burn down. A beanstalk is its climbing cousin | Very rarely, a pine cone opened by a lightning-struck fire on fertiliser | S |
 
 ## Figures (design note, 22 Nov): only if the rule changes
 
