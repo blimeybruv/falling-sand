@@ -1568,6 +1568,26 @@ describe('after a fire', () => {
     expect(w.created[M.PineCone]).toBe(0);
   });
 
+  it('seeds in smoke sprout sooner (smoke-cued germination)', () => {
+    const sprouted = (smoky: boolean): number => {
+      let n = 0;
+      for (let seed = 5; seed < 9; seed++) {
+        const w = new World(30, 30, seed);
+        fill(w, 0, 26, 30, 4, M.Loam);
+        for (let x = 2; x < 30; x += 4) w.set(x, 25, M.Seed);
+        for (let f = 0; f < 15; f++) {
+          // Keep a haze of smoke beside each seed.
+          if (smoky) for (let x = 2; x < 30; x += 4) if (w.get(x + 1, 25) === M.Empty) w.set(x + 1, 25, M.Smoke);
+          w.step();
+        }
+        // Seeds that have started to grow: no longer a dormant seed (one with no height yet).
+        for (let x = 2; x < 30; x += 4) if (w.get(x, 25) !== M.Seed || w.life[w.idx(x, 25)] > 0) n++;
+      }
+      return n;
+    };
+    expect(sprouted(true)).toBeGreaterThan(sprouted(false));
+  });
+
   it('a seed on ash grows into a tree without water (the ash bed); on dry earth it does not', () => {
     const grows = (ground: MaterialId): number => {
       const w = new World(30, 40, 3);

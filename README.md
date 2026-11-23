@@ -66,7 +66,7 @@ Discovery progress is kept for when you switch back.
 | Edges button | Walls (the default: things pile up against the edges) or open: sand, liquids and creatures fall off the bottom, liquids and gases flow out of the sides and rise out of the top, and clouds sail off with the wind. Solid things you draw stay put, so you can build a floor |
 | Speaker button | Sound on or off. Wind (following the Wind setting, gusting), crackling fire, booming explosions, thunder after lightning (with a corona sizzle as the charge builds before a near strike), hissing steam and acid, rain and pouring sand, bubbling lava, humming electricity, fireworks, buzzing bees, crying gulls and cawing crows, and a chime for each discovery. All made live with the Web Audio API, no sound files |
 | Sun menu | Sunlight from above warms whatever it reaches first: it evaporates water (which rises and makes clouds), dries mud and salt water, burns off clouds and melts snow, but not in the shade. Glass lets it through. Plants grow faster in sunlight and slower in shade (moss the other way round). Sun on falling rain draws a faint rainbow. Vapour rising against a roof condenses on it, so salt water under glass in the sun makes a solar still: fresh water drips back, salt is left behind. Day/night runs a three-minute day: the sky brightens, warms at dawn and dusk and fills with stars; clear nights chill whatever is open to the sky (a cloud or a roof keeps it warm), mist rises off water, ponds skin over with thin ice, and fog settling on frozen ground leaves frost. The morning sun melts it all |
-| Scene menu | Save in this browser, load it again, download or open a scene file, or copy a share link |
+| Scene menu | Undo and redo, save in this browser, load it again, download or open a scene file, or copy a share link. Also five example scenes: a volcano island, a fuse and charges, pond life, a thunderstorm and a forest to set alight |
 | `J` or Journal button | Discovery journal: what you've found, and hints for the rest |
 | Mode menu | Discovery or Sandbox |
 | Clear button | Empty the whole grid |
@@ -214,7 +214,7 @@ debris start fresh when a scene loads.
 | | Peat | Slow-burning fuel | Grass or moss buried under earth |
 | | Smoke bomb | Lit, it pours out smoke | Saltpetre meets sugar |
 | **Life** | | | |
-| S | Seed | Falls; on loam, ash or fertiliser, or on damp sand or earth, it grows into a tree (wood trunk, branches, leaves); on dry sand far from water, a cactus. Sprouts fastest on ash, as after a forest fire | Starter |
+| S | Seed | Falls; on loam, ash or fertiliser, or on damp sand or earth, it grows into a tree (wood trunk, branches, leaves); on dry sand far from water, a cactus. Sprouts fastest on ash or in smoke, as after a forest fire | Starter |
 | 5 | Grass | Weeds and grass: spreads over damp ground and loam, and into water; burns | A sandy shore |
 | 4 | Wood | Static; burns slowly; buried under sand it slowly turns to oil | Grow a tree |
 | | Flower | Blooms on trees grown in loam; now and then drops a seed | A tree rooted in loam |
@@ -311,7 +311,6 @@ estimates.
 - [ ] **More materials**: pick one from [`docs/elements.md`](docs/elements.md). Each is a table entry, usually a `Reaction`, and a line in `RECIPES`; the tests check every one can be discovered.
 - [ ] **Discovery goals**: small challenges once everything is unlocked ("grow a forest of 5 trees", "boil a whole pond").
 - [ ] **Metal and electricity**: a conductive solid, plus a spark that travels through connected metal and ignites or explodes what it reaches.
-- [ ] **Example scenes**: a handful of built-in scenes (a volcano, a fuse and charges, a pond with plants) in a menu, stored as share-link text.
 - [ ] **Run the simulation in a Web Worker**: move `World.step()` off the main thread and pass the arrays across, so bigger grids stay smooth.
 - [ ] **More sound**: a volume slider; ice cracking, glass shattering.
 - [ ] **Smarter liquids**: pressure, so water rises to the same level in connected containers (a U-bend).

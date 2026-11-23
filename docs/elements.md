@@ -344,7 +344,7 @@ applies to Neon.
 |---|---|---|---|---|---|
 | ✅ | Fire-opened cones (serotiny) | fire + trees + temperature | A burning crown now and then drops a pine cone. Cones don't burn, and they open into a seed once they've been cool for a few seconds, so the seeds don't pop in the heat. Only leaves drop cones, so a burning wooden house sows nothing | A tree crown burning | F |
 | ✅ | Ash-bed effect | fire + plants | Ash is fertile (potash): seeds sprout three times as readily on it and grow into trees there without water; grass spreads faster beside it | (behaviour) | T |
-| | Smoke-cued germination | fire + plants | Seeds lying in smoke sprout faster for a while (real seeds respond to karrikins in smoke) | (behaviour) | T |
+| ✅ | Smoke-cued germination | fire + plants | Seeds in smoke sprout three times as readily, as real seeds do for karrikins in smoke | (behaviour) | T |
 
 ## Interplay ideas, round 8 (brainstormed 21 Nov)
 

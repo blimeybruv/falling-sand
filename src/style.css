@@ -151,7 +151,8 @@ input:focus-visible {
 .menu {
   position: absolute;
   top: calc(100% + 4px);
-  left: 0;
+  /* Opens leftwards from the button, which sits near the right of the toolbar. */
+  right: 0;
   z-index: 5;
   display: flex;
   flex-direction: column;
@@ -192,6 +193,22 @@ input:focus-visible {
 
 .toast[hidden] {
   display: none;
+}
+
+.toast {
+  z-index: 2;
+  max-width: min(560px, 90%);
+  text-align: center;
+}
+
+.menu-heading {
+  margin: 6px 8px 2px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
 }
 
 .help-button {

@@ -2,7 +2,7 @@
  * Toolbar, scene menu, Discovery mode (journal, mode switch, unlock messages), help panel and
  * keyboard shortcuts. The palette itself is in palette.ts.
  */
-import { M, PALETTE, type Discovery, type MaterialId, type World } from '../sim';
+import { EXAMPLES, M, PALETTE, type Discovery, type MaterialId, type World } from '../sim';
 import { Journal } from './journal';
 import { ERASER_KEY, Palette } from './palette';
 import { saveDiscovery, saveMode, type Mode } from './progress';
@@ -21,13 +21,13 @@ function byId<T extends HTMLElement>(id: string): T {
 }
 
 let toastTimer = 0;
-/** Show a short message at the bottom of the canvas. */
-export function toast(message: string): void {
+/** Show a short message at the bottom of the canvas (for `ms` milliseconds). */
+export function toast(message: string, ms = 2600): void {
   const el = byId<HTMLElement>('toast');
   el.textContent = message;
   el.hidden = false;
   clearTimeout(toastTimer);
-  toastTimer = window.setTimeout(() => (el.hidden = true), 2600);
+  toastTimer = window.setTimeout(() => (el.hidden = true), ms);
 }
 
 export interface Controls {
@@ -332,6 +332,21 @@ export function setupControls(state: GameState, world: World, discovery: Discove
       }
     },
   };
+  // Example scenes, listed under their heading at the bottom of the menu. Loading one can be undone.
+  const examplesHeading = byId<HTMLElement>('examples-heading');
+  for (const example of [...EXAMPLES].reverse()) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = example.name;
+    b.addEventListener('click', () => {
+      setMenu(false);
+      history.push();
+      world.clear();
+      example.build(world);
+      toast(example.hint, 8000);
+    });
+    examplesHeading.after(b);
+  }
   for (const item of sceneMenu.querySelectorAll<HTMLButtonElement>('button[data-action]')) {
     const action = actions[item.dataset.action ?? ''];
     if (action) item.addEventListener('click', () => void run(action));

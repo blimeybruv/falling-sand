@@ -140,9 +140,11 @@ export function updateSeed(w: World, x: number, y: number, i: number): boolean {
     w.noise.pops++;
     return true;
   }
-  // On ash it sprouts three times as readily.
-  if (!thrives(w, x, y, w.get(x, y + 1) === M.Ash ? 0.06 : 0.02)) return false;
-  if (w.get(x, y - 1) !== M.Empty) return false;
+  // On ash it sprouts three times as readily, and in smoke too (real seeds answer to chemicals in
+  // smoke, karrikins, which tell them a fire has cleared the ground).
+  if (!thrives(w, x, y, w.get(x, y + 1) === M.Ash || touches(w, x, y, M.Smoke) ? 0.06 : 0.02)) return false;
+  const up = w.get(x, y - 1);
+  if (up !== M.Empty && up !== M.Smoke) return false;
   const below = w.get(x, y + 1);
   if (below === M.Loam) {
     // Right beside water, loam grows bamboo; otherwise a flowering tree.

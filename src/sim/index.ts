@@ -16,3 +16,4 @@ export { captureScene, encodeScene, decodeScene, applyScene, type Scene } from '
 export { Rng } from './rng';
 export { Discovery, RECIPES, REWARD, STARTERS, type Recipe } from './discovery';
 export { rasterShape, type Shape } from './shapes';
+export { EXAMPLES, type Example } from './examples';
