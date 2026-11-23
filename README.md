@@ -54,6 +54,7 @@ Discovery progress is kept for when you switch back.
 | Right-drag | Erase (on a touch screen, pick the eraser) |
 | Mouse wheel, or pinch | Zoom in (up to 8×) and out, around the pointer; `=` / `+` and `_` too. Drag with the middle button or two fingers, or use the arrow keys, to look around. While zoomed, a readout in the corner shows the zoom: click it to see the whole grid again. Only the view changes, so the simulation runs as fast as ever |
 | Number and letter keys | Pick a material (the key is shown on its palette button; a few have none) |
+| A–Z button (beside the material tabs) | Sort the materials by name; press again for the usual order, grouped by kind. Remembered next time. In Discovery mode, materials not yet found stay after the rest, so it gives nothing away |
 | `E` | Eraser |
 | `[` and `]` | Smaller / bigger brush (or the Brush slider) |
 | Drawing tools (beside the material tabs) | Brush (`Shift+B`), line (`Shift+L`), box (`Shift+R`), circle (`Shift+O`) and replace (`Shift+X`). Drag a line, box or circle out, with a preview, and let go to draw it; the brush size sets how thick it is, and the square button (`Shift+F`) fills boxes and circles. A circle is centred where you start. Replace swaps the material you start on for the selected one (water for oil, say, leaving the tank alone). Right-drag erases with any tool |

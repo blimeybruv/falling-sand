@@ -4,6 +4,7 @@ import { Discovery } from '../sim';
 export type Mode = 'discovery' | 'sandbox';
 
 const MODE_KEY = 'falling-sand.mode';
+const SORT_KEY = 'falling-sand.sort';
 const PROGRESS_KEY = 'falling-sand.discovered';
 
 function read(key: string): string | null {
@@ -42,4 +43,13 @@ export function loadDiscovery(): Discovery {
 
 export function saveDiscovery(discovery: Discovery): void {
   write(PROGRESS_KEY, JSON.stringify(discovery.toJSON()));
+}
+
+/** Whether the palette is sorted A-Z (otherwise it's in its usual order, grouped by kind). */
+export function loadSortAZ(): boolean {
+  return read(SORT_KEY) === 'az';
+}
+
+export function saveSortAZ(az: boolean): void {
+  write(SORT_KEY, az ? 'az' : 'default');
 }

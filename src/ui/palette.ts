@@ -1,11 +1,13 @@
 /**
  * The material palette. Built from the material table, so new materials appear automatically.
  * Tabs filter it by category (the eraser is always shown). In Discovery mode, materials not yet
- * discovered show as locked "?" slots that give a hint.
+ * discovered show as locked "?" slots that give a hint. The A-Z button sorts it by name (locked
+ * slots stay after the rest, in their usual order, so the sorting gives nothing away).
  */
 import { CATEGORIES, M, MATERIALS, PALETTE, type Category, type Discovery, type MaterialId } from '../sim';
 import { swatchColour } from '../render/renderer';
 import type { GameState } from './state';
+import { loadSortAZ, saveSortAZ } from './progress';
 
 export const ERASER_KEY = 'e';
 const ERASER_SWATCH = 'repeating-conic-gradient(#444 0 25%, #222 0 50%) 0 0 / 8px 8px';
@@ -14,6 +16,8 @@ export class Palette {
   private readonly buttons = new Map<MaterialId, HTMLButtonElement>();
   private readonly tabs = new Map<Category | 'all', HTMLButtonElement>();
   private readonly tools: HTMLElement;
+  private readonly sortBtn: HTMLButtonElement;
+  private sortAZ = loadSortAZ();
 
   constructor(
     el: HTMLElement,
@@ -34,7 +38,18 @@ export class Palette {
     drawTools.className = 'draw-tools';
     drawTools.setAttribute('role', 'toolbar');
     drawTools.setAttribute('aria-label', 'Drawing tools');
-    head.append(tabRow, drawTools);
+    this.sortBtn = document.createElement('button');
+    this.sortBtn.type = 'button';
+    this.sortBtn.className = 'sort-toggle';
+    this.sortBtn.textContent = 'A–Z';
+    this.sortBtn.title = 'Sort materials by name (press again for the usual order)';
+    this.sortBtn.setAttribute('aria-label', 'Sort materials A to Z');
+    this.sortBtn.addEventListener('click', () => {
+      this.sortAZ = !this.sortAZ;
+      saveSortAZ(this.sortAZ);
+      this.arrange();
+    });
+    head.append(tabRow, this.sortBtn, drawTools);
     el.append(head, this.tools);
     for (const [id, label] of [['all', 'All'], ...CATEGORIES] as const) {
       const t = document.createElement('button');
@@ -95,8 +110,27 @@ export class Palette {
         ? `${id === M.Empty ? 'Clears cells.' : (def?.description ?? '')}${key ? ` (${key.toUpperCase()})` : ''}`
         : `Not discovered yet. Hint: ${this.discovery.describe(id)}`;
     }
+    this.arrange();
     if (!this.isAvailable(this.state.tool)) this.select(M.Sand);
     else this.select(this.state.tool);
+  }
+
+  /**
+   * Put the buttons in order: the usual order (grouped by kind), or A-Z by name with locked slots
+   * after the rest. The eraser always comes last.
+   */
+  private arrange(): void {
+    this.sortBtn.setAttribute('aria-pressed', String(this.sortAZ));
+    const ids = PALETTE.map((d) => d.id);
+    if (this.sortAZ) {
+      const open = ids.filter((id) => this.isAvailable(id)).sort((a, b) => MATERIALS[a].name.localeCompare(MATERIALS[b].name));
+      const locked = ids.filter((id) => !this.isAvailable(id));
+      ids.splice(0, ids.length, ...open, ...locked);
+    }
+    for (const id of [...ids, M.Empty]) {
+      const b = this.buttons.get(id);
+      if (b) this.tools.append(b);
+    }
   }
 
   /** Briefly highlight a newly discovered material. */
