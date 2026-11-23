@@ -1568,6 +1568,8 @@ export function updateWorm(w: World, x: number, y: number, i: number): boolean {
     return true;
   }
   if (!soil) return false; // in the open: it falls
+  // Out at the surface (rain brings worms up), it now and then draws a crow.
+  if (w.rng.chance(BIRD_DRAW) && touches(w, x, y, M.Empty)) drawBird(w, x, y, M.Crow);
   if (!w.rng.chance(0.3)) return true;
   if (rainAbove(w, x, y)) {
     // Rain: head up towards the surface, and stay there while the ground is wet.
@@ -1657,6 +1659,8 @@ export function updateFish(w: World, x: number, y: number, i: number): boolean {
     }
   }
   if (w.rng.chance(0.4)) crawl(w, x, y, i, M.Water, M.SaltWater);
+  // Swimming near the surface of open water, it now and then draws a seagull down from the sky.
+  if (w.rng.chance(BIRD_DRAW) && w.get(x, y - 1) === M.Empty) drawBird(w, x, y, M.Seagull);
   return true;
 }
 
@@ -2022,5 +2026,151 @@ export function updateFog(w: World, x: number, y: number, i: number): boolean {
 export function thickenIce(w: World, x: number, y: number, i: number): boolean {
   if (w.temp[i] > -4 || !w.rng.chance(0.004)) return true;
   if (w.get(x, y + 1) === M.Water && w.temp[w.idx(x, y + 1)] < 0) w.transform(w.idx(x, y + 1), M.ThinIce);
+  return true;
+}
+
+// ---------------------------------------------------------------- birds
+
+/** Chance per frame that a fish at the surface, or a worm out on the ground, draws a bird. */
+const BIRD_DRAW = 0.0004;
+/** A bird is only drawn if there isn't already one of its kind within this many cells. */
+const BIRD_SPACING = 24;
+/** Hunger is counted in `vel`, one a frame every 16 frames: a bird that hasn't eaten for this long (about a minute) dies. */
+const BIRD_STARVE = 220;
+/** How far a bird can spot its prey. */
+const BIRD_SIGHT = 8;
+
+/**
+ * A fish or worm at (x, y) draws a bird of `kind`: it arrives in the open sky above, as long as
+ * there's room up there and no other bird of its kind nearby.
+ */
+function drawBird(w: World, x: number, y: number, kind: MaterialId): void {
+  if (w.near(x, y, BIRD_SPACING, kind)) return;
+  let top = y - 1;
+  while (top > 0 && y - top < 14 && w.get(x, top - 1) === M.Empty) top--;
+  if (y - top < 6) return; // not enough open sky
+  w.set(x, top, kind);
+}
+
+/** A bird grows hungrier; starved, it drops dead. Returns true if it died. */
+function birdHunger(w: World, i: number): boolean {
+  if (w.frame % 16 !== 0 || ++w.vel[i] < BIRD_STARVE) return false;
+  w.transform(i, M.Compost);
+  return true;
+}
+
+/** Whether a bird can fly into (x, y): open air, or for a diving gull, water. */
+function birdCanEnter(w: World, x: number, y: number, water: boolean): boolean {
+  const t = w.get(x, y);
+  return t === M.Empty || (water && (t === M.Water || t === M.SaltWater));
+}
+
+/** Step bird i one cell towards (tx, ty), into a cell it can fly (or dive) through. */
+function flyTowards(w: World, x: number, y: number, i: number, tx: number, ty: number, water: boolean): void {
+  const dx = Math.sign(tx - x);
+  const dy = Math.sign(ty - y);
+  if ((dx !== 0 || dy !== 0) && birdCanEnter(w, x + dx, y + dy, water)) w.swap(i, w.idx(x + dx, y + dy));
+  else if (dx !== 0 && birdCanEnter(w, x + dx, y, water)) w.swap(i, w.idx(x + dx, y));
+  else if (dy !== 0 && birdCanEnter(w, x, y + dy, water)) w.swap(i, w.idx(x, y + dy));
+}
+
+/** Where spotPrey found its prey. */
+let preyX = 0;
+let preyY = 0;
+
+/**
+ * Look for the nearest cell of `prey` within BIRD_SIGHT (in squares of growing size); with
+ * `inOpen`, only one out in the open (touching air). Found: true, with its place in preyX, preyY.
+ */
+function spotPrey(w: World, x: number, y: number, prey: MaterialId, inOpen: boolean): boolean {
+  for (let r = 1; r <= BIRD_SIGHT; r++) {
+    for (let dy = -r; dy <= r; dy++) {
+      for (let dx = -r; dx <= r; dx++) {
+        if (Math.abs(dx) !== r && Math.abs(dy) !== r) continue;
+        if (w.get(x + dx, y + dy) !== prey || (inOpen && !touches(w, x + dx, y + dy, M.Empty))) continue;
+        preyX = x + dx;
+        preyY = y + dy;
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+/** A fed bird now and then raises another (in open air beside it). */
+function birdBreeds(w: World, x: number, y: number, kind: MaterialId): void {
+  if (!w.rng.chance(0.15)) return;
+  const k = w.rng.int(0, 3);
+  if (w.get(dirX(k, x), dirY(k, y)) === M.Empty) w.set(dirX(k, x), dirY(k, y), kind);
+}
+
+/**
+ * Seagull: drawn by fish near the surface of open water. It wheels over water a little way up,
+ * now and then floats on the surface, and dives for any fish it spots, eating it. Well fed it
+ * raises another now and then; without fish it starves within a minute or so, falling as compost.
+ */
+export function updateSeagull(w: World, x: number, y: number, i: number): boolean {
+  if (birdHunger(w, i)) return true;
+  const above = w.get(x, y - 1);
+  // Under water after a dive: swim back up.
+  if (above === M.Water || above === M.SaltWater) {
+    if (w.rng.chance(0.4)) w.swap(i, w.idx(x, y - 1));
+    return true;
+  }
+  if (w.rng.chance(0.3)) {
+    if (spotPrey(w, x, y, M.Fish, false)) {
+      if (Math.abs(preyX - x) <= 1 && Math.abs(preyY - y) <= 1) {
+        w.setCell(w.idx(preyX, preyY), M.Water);
+        w.vel[i] = 0;
+        birdBreeds(w, x, y, M.Seagull);
+      } else {
+        flyTowards(w, x, y, i, preyX, preyY, true);
+      }
+      return true;
+    }
+  }
+  // How high above water (or anything) it is.
+  let drop = 1;
+  while (drop < 40 && w.get(x, y + drop) === M.Empty) drop++;
+  const below = w.get(x, y + drop);
+  const overWater = below === M.Water || below === M.SaltWater;
+  // Floating on the water: mostly it bobs there, now and then it takes off.
+  if (overWater && drop === 1 && !w.rng.chance(0.01)) return true;
+  if (!w.rng.chance(0.5)) return true;
+  // Wheel about: drift sideways, keeping 5-14 cells up over water (lower over land, looking for it).
+  const nx = x + w.rng.sign();
+  const want = overWater ? (drop < 5 ? -1 : drop > 14 ? 1 : w.rng.int(-1, 1)) : drop > 20 ? 1 : drop < 3 ? -1 : w.rng.int(-1, 1);
+  flyTowards(w, x, y, i, nx, y + (overWater && drop === 1 && w.rng.chance(0.5) ? 1 : want), false);
+  return true;
+}
+
+/**
+ * Crow: drawn by earthworms out on the surface (rain brings them up). It flies low over the
+ * ground, perches on anything solid for a while, and swoops on any worm it spots out in the open,
+ * eating it. Well fed it raises another now and then; without worms it starves within a minute or
+ * so, falling as compost.
+ */
+export function updateCrow(w: World, x: number, y: number, i: number): boolean {
+  if (birdHunger(w, i)) return true;
+  if (w.rng.chance(0.3)) {
+    if (spotPrey(w, x, y, M.Earthworm, true)) {
+      if (Math.abs(preyX - x) <= 1 && Math.abs(preyY - y) <= 1) {
+        w.transform(w.idx(preyX, preyY), M.Loam);
+        w.vel[i] = 0;
+        birdBreeds(w, x, y, M.Crow);
+      } else {
+        flyTowards(w, x, y, i, preyX, preyY, false);
+      }
+      return true;
+    }
+  }
+  // Perched on something solid: it mostly sits, now and then it flies off.
+  if (w.isSolid(x, y + 1) && !w.rng.chance(0.01)) return true;
+  if (!w.rng.chance(0.5)) return true;
+  let drop = 1;
+  while (drop < 30 && w.get(x, y + drop) === M.Empty) drop++;
+  // Flap about, drifting down towards the ground (crows fly low, and land).
+  const want = drop > 12 ? 1 : drop > 3 && w.rng.chance(0.3) ? 1 : w.rng.int(-1, 1);
+  flyTowards(w, x, y, i, x + w.rng.sign(), y + want, false);
   return true;
 }

@@ -48,6 +48,8 @@ import {
   updateVapour,
   updateFog,
   sproutMushroom,
+  updateSeagull,
+  updateCrow,
   thickenIce,
   solarCell,
   spinDynamo,
@@ -2997,6 +2999,43 @@ const defs: Record<MaterialId, Def> = {
     update: thickenIce,
     description: 'The skin of ice a clear night leaves on a pond. Thickens through a cold night; melts in the morning sun.',
   },
+  [M.Seagull]: {
+    ...base,
+    name: 'Seagull',
+    key: '',
+    category: 'life',
+    kind: 'static',
+    density: 100,
+    colour: [240, 242, 238],
+    colourEnd: [200, 204, 210],
+    colourJitter: 0.04,
+    lifetime: [10800, 18000],
+    decay: { into: M.Compost, chance: 1 },
+    flammability: 0.6,
+    burnTime: [2, 4],
+    burnsInto: M.Ash,
+    update: updateSeagull,
+    description: 'Creature: drawn by fish near the surface of open water. Wheels over the water, floats on it, and dives for fish. Starves without them.',
+  },
+  [M.Crow]: {
+    ...base,
+    name: 'Crow',
+    key: '',
+    category: 'life',
+    kind: 'static',
+    density: 100,
+    // Blue-black, a shade lighter than the night sky so it can still be seen against it.
+    colour: [74, 76, 96],
+    colourEnd: [52, 54, 70],
+    colourJitter: 0.05,
+    lifetime: [10800, 18000],
+    decay: { into: M.Compost, chance: 1 },
+    flammability: 0.6,
+    burnTime: [2, 4],
+    burnsInto: M.Ash,
+    update: updateCrow,
+    description: 'Creature: drawn by earthworms out on the surface (rain brings them up). Flies low, perches, and swoops on worms. Starves without them.',
+  },
   [M.Vapour]: {
     ...base,
     name: 'Water vapour',
@@ -3036,7 +3075,7 @@ export const PALETTE: readonly MaterialDef[] = [
   // life
   M.Seed, M.Grass, M.Wood, M.Flower, M.Mushroom, M.Moss, M.Algae, M.Vine, M.Seaweed, M.Cactus, M.Sap, M.Sugar, M.Caramel, M.Toffee, M.CandyFloss, M.Popcorn, M.Fruit, M.Pulp, M.Paper, M.Bamboo, M.Amber, M.Honeydew, M.Honey, M.Sawdust,
   // creatures
-  M.Earthworm, M.Termite, M.Fish, M.Firefly, M.Bee, M.Snail, M.Ant, M.Yeast, M.CoralPolyp,
+  M.Earthworm, M.Termite, M.Fish, M.Firefly, M.Bee, M.Snail, M.Ant, M.Yeast, M.CoralPolyp, M.Seagull, M.Crow,
 ].map((id) => MATERIALS[id]);
 
 /** Room temperature. Cells drift back towards it when nothing heats or cools them. */

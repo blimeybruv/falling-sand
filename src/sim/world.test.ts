@@ -1494,3 +1494,48 @@ describe('after the storm', () => {
     expect(w.count(M.Salt)).toBeGreaterThan(5);
   });
 });
+
+describe('birds', () => {
+  function fill(w: World, x0: number, y0: number, wd: number, ht: number, m: MaterialId): void {
+    for (let y = y0; y < y0 + ht; y++) for (let x = x0; x < x0 + wd; x++) w.set(x, y, m);
+  }
+
+  it('a seagull dives for fish and eats them', () => {
+    const w = new World(40, 40, 1);
+    fill(w, 0, 28, 40, 12, M.Water);
+    for (let x = 3; x < 40; x += 5) w.set(x, 29, M.Fish);
+    w.set(20, 18, M.Seagull);
+    const fish = w.count(M.Fish);
+    run(w, 1500);
+    expect(w.count(M.Fish)).toBeLessThan(fish);
+    expect(w.count(M.Seagull)).toBeGreaterThan(0);
+  });
+
+  it('a crow swoops on a worm out on the surface and eats it', () => {
+    const w = new World(40, 40, 2);
+    fill(w, 0, 30, 40, 10, M.Loam);
+    for (let x = 4; x < 40; x += 8) w.set(x, 30, M.Earthworm);
+    w.set(20, 22, M.Crow);
+    run(w, 1500);
+    expect(w.count(M.Earthworm)).toBeLessThan(5);
+  });
+
+  it('with nothing to eat, a bird starves within a minute or so and falls as compost', () => {
+    for (const bird of [M.Seagull, M.Crow]) {
+      const w = new World(30, 30, 3);
+      fill(w, 0, 28, 30, 2, M.Stone);
+      w.set(15, 10, bird);
+      run(w, 3700);
+      expect(w.count(bird)).toBe(0);
+      expect(w.count(M.Compost)).toBe(1);
+    }
+  });
+
+  it('no birds come to plain water or bare soil', () => {
+    const w = new World(40, 40, 4);
+    fill(w, 0, 30, 20, 10, M.Water);
+    fill(w, 20, 30, 20, 10, M.Loam);
+    run(w, 3000);
+    expect(w.created[M.Seagull] + w.created[M.Crow]).toBe(0);
+  });
+});

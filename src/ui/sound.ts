@@ -15,6 +15,7 @@
  *   fireworks    a pop, then tinkling sparks
  *   popcorn      little pops as seeds burst in the heat
  *   bees         a faint wavering buzz
+ *   birds        now and then, a seagull's cry or a crow's caw
  *   discovery    a bright chime (a longer one for the reward)
  *
  * Browsers only allow audio after the player's first tap or key press, so nothing starts before
@@ -42,6 +43,8 @@ const EMPTY: number = M.Empty;
 const FIRE: number = M.Fire;
 const LAVA: number = M.Lava;
 const BEE: number = M.Bee;
+const SEAGULL: number = M.Seagull;
+const CROW: number = M.Crow;
 const SPARK: number = M.Spark;
 const BOLT: number = M.Lightning;
 const LIQUID = Uint8Array.from(MATERIALS, (d) => (d.kind === 'liquid' ? 1 : 0));
@@ -94,6 +97,8 @@ interface Heard {
   lava: number;
   charged: number;
   bees: number;
+  gulls: number;
+  crows: number;
   sparks: number;
   bolts: number;
 }
@@ -126,7 +131,7 @@ export class Sound {
   private offset = 0;
   private lastSample = 0;
   private lastSteam = 0;
-  private heard: Heard = { fire: 0, fallingLiquid: 0, fallingPowder: 0, lava: 0, charged: 0, bees: 0, sparks: 0, bolts: 0 };
+  private heard: Heard = { fire: 0, fallingLiquid: 0, fallingPowder: 0, lava: 0, charged: 0, bees: 0, gulls: 0, crows: 0, sparks: 0, bolts: 0 };
   private lastBoom = 0;
   private pendingBoom = 0;
   private lastThunder = 0;
@@ -189,7 +194,7 @@ export class Sound {
 
     const h = this.heard;
     if (running) this.sample(world);
-    else h.fire = h.fallingLiquid = h.fallingPowder = h.lava = h.charged = h.bees = h.sparks = h.bolts = 0;
+    else h.fire = h.fallingLiquid = h.fallingPowder = h.lava = h.charged = h.bees = h.gulls = h.crows = h.sparks = h.bolts = 0;
 
     const loud = (n: number, full: number): number => Math.min(1, Math.sqrt(n / full));
     const loops = this.loops;
@@ -205,9 +210,12 @@ export class Sound {
     const drips = Math.min(70, h.fallingLiquid * 0.2);
     const bubbles = Math.min(2.5, h.lava * 0.004);
     const pings = Math.min(25, h.sparks * 0.5);
+    // Each bird calls every 15 seconds or so (a whole flock no more than a couple of times a second).
+    const cries = Math.min(0.6, h.gulls * 0.07);
+    const caws = Math.min(0.6, h.crows * 0.06);
     const busy =
       strength > 0 ||
-      crackles + drips + bubbles + pings > 0 ||
+      crackles + drips + bubbles + pings + cries + caws > 0 ||
       blasts + strikes + bursts + pops + corona + h.bolts > 0 ||
       (loops !== null && Object.values(loops).some((l) => l.target > 0.001));
 
@@ -233,6 +241,8 @@ export class Sound {
     for (let k = events(drips, dt, 8); k > 0; k--) this.drip(ahead + Math.random() * dt);
     for (let k = events(bubbles, dt, 1); k > 0; k--) this.bubble(ahead + Math.random() * dt);
     for (let k = events(pings, dt, 4); k > 0; k--) this.ping(ahead + Math.random() * dt);
+    if (events(cries, dt, 1) > 0) this.gullCry(ahead);
+    if (events(caws, dt, 1) > 0) this.crowCaw(ahead);
 
     // Explosions: one boom at a time (a few frames apart), as big as the biggest blast since.
     if (blasts > 0) this.pendingBoom = Math.max(this.pendingBoom, blastRadius + Math.min(4, blasts - 1));
@@ -274,6 +284,8 @@ export class Sound {
     let lava = 0;
     let charged = 0;
     let bees = 0;
+    let gulls = 0;
+    let crows = 0;
     let sparks = 0;
     let bolts = 0;
     for (let i = this.offset; i < size; i += STRIDE) {
@@ -286,6 +298,8 @@ export class Sound {
       }
       if (m === LAVA) lava++;
       else if (m === BEE) bees++;
+      else if (m === SEAGULL) gulls++;
+      else if (m === CROW) crows++;
       else if (m === SPARK) sparks++;
       else if (m === BOLT) bolts++;
       if (charge[i] !== 0) charged++;
@@ -298,6 +312,8 @@ export class Sound {
     h.lava = lava * STRIDE;
     h.charged = charged * STRIDE;
     h.bees = bees * STRIDE;
+    h.gulls = gulls * STRIDE;
+    h.crows = crows * STRIDE;
     h.sparks = sparks * STRIDE;
     h.bolts = bolts * STRIDE;
   }
@@ -480,6 +496,54 @@ export class Sound {
     osc.stop(t + 1.4);
     this.rumble(t, 0.25 + 0.3 * k, 0.6 + 1.6 * k, 1400);
     this.burst(this.crackleBus!, t, 0.2 + 0.2 * k, 0.04, 0.6);
+  }
+
+  /** A seagull's cry: a reedy "kee-ow", rising, then falling away. */
+  private gullCry(t: number): void {
+    const ctx = this.ctx!;
+    const osc = ctx.createOscillator();
+    osc.type = 'sawtooth';
+    const pitch = 1 + (Math.random() - 0.5) * 0.15;
+    osc.frequency.setValueAtTime(1250 * pitch, t);
+    osc.frequency.linearRampToValueAtTime(1750 * pitch, t + 0.09);
+    osc.frequency.exponentialRampToValueAtTime(820 * pitch, t + 0.45);
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.value = 1700;
+    filter.Q.value = 2.5;
+    const env = ctx.createGain();
+    env.gain.setValueAtTime(0.0001, t);
+    env.gain.exponentialRampToValueAtTime(0.07, t + 0.05);
+    env.gain.exponentialRampToValueAtTime(0.0005, t + 0.5);
+    osc.connect(filter).connect(env).connect(this.out!);
+    osc.start(t);
+    osc.stop(t + 0.55);
+  }
+
+  /** A crow's caw: two or three harsh, hoarse calls. */
+  private crowCaw(t: number): void {
+    const ctx = this.ctx!;
+    const calls = Math.random() < 0.5 ? 2 : 3;
+    for (let k = 0; k < calls; k++) {
+      const s = t + k * 0.26;
+      const osc = ctx.createOscillator();
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(460, s);
+      osc.frequency.exponentialRampToValueAtTime(340, s + 0.16);
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.value = 1100;
+      filter.Q.value = 1.4;
+      const env = ctx.createGain();
+      env.gain.setValueAtTime(0.0001, s);
+      env.gain.exponentialRampToValueAtTime(0.06, s + 0.03);
+      env.gain.exponentialRampToValueAtTime(0.0005, s + 0.18);
+      osc.connect(filter).connect(env).connect(this.out!);
+      osc.start(s);
+      osc.stop(s + 0.2);
+      // A breath of noise for the hoarseness.
+      this.burst(this.crackleBus!, s, 0.05, 0.12, 0.4);
+    }
   }
 
   /** A firework bursting: a small, bright pop. */

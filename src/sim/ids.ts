@@ -170,6 +170,8 @@ export const M = {
   StormCloud: 162,
   Cirrus: 163,
   ThinIce: 164,
+  Seagull: 165,
+  Crow: 166,
 } as const;
 
 export type MaterialId = (typeof M)[keyof typeof M];

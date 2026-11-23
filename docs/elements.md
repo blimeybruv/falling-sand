@@ -208,6 +208,8 @@ The more "advanced" ones refine materials.
 | ✅ | Yeast | In water, from fruit soaking in it; feeds on sugar | Ferments sugar into alcohol and carbon dioxide, multiplying while there's sugar; settles to the bottom | Water when the sugar runs out, or in heat | F |
 | ✅ | Snail | Creeps over solid surfaces; appears on moss beside water | Eats algae and moss, breeds when fed | Chalk (its shell), which fizzes in acid and burns to quicklime | F |
 | ✅ | Coral polyp | Fixed in salt water, from algae on sun-warmed salt water | Slowly builds coral rock from the salt water (faster from 25°): refining sea into stone | Coral rock (bleaches over 40°, or out of salt water) | F |
+| ✅ | Seagull | Open air over water; drawn by fish near the surface; eats fish | Wheels over the water, floats on it, dives for fish; raises another now and then when fed; cries | Compost (starves within a minute without fish, or old age); ash if it burns | F |
+| ✅ | Crow | Open air over land; drawn by earthworms out on the surface (rain brings them up); eats worms | Flies low, perches on anything solid, swoops on worms in the open; raises another now and then when fed; caws | Compost (starves within a minute without worms, or old age); ash if it burns | F |
 
 Also built with the creatures: **Sawdust** (termite leavings; light, burns easily), **Honey** (thick
 golden liquid from bees) and **Chalk** (snail shells; fizzes in acid or vinegar, burns to quicklime).

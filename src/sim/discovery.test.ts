@@ -340,6 +340,14 @@ describe('every recipe works in the simulation', () => {
       fillRect(w, 0, 20, 40, 10, M.Hydrogen);
       fillRect(w, 20, 20, 1, 10, M.Lightning);
     }],
+    ['seagull: a fish near the surface of open water', M.Seagull, 3000, (w) => {
+      fillRect(w, 0, 30, 40, 10, M.Water);
+      for (let x = 4; x < 40; x += 6) w.set(x, 30, M.Fish);
+    }],
+    ['crow: earthworms out on the surface', M.Crow, 4000, (w) => {
+      fillRect(w, 0, 28, 40, 12, M.Loam);
+      for (let x = 2; x < 40; x += 4) w.set(x, 28, M.Earthworm);
+    }],
     ['fog: steam meets snow', M.Fog, 300, (w) => {
       fillRect(w, 0, 36, 40, 4, M.Snow);
       fillRect(w, 0, 30, 40, 6, M.Steam);
