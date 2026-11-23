@@ -317,6 +317,8 @@ const defs: Record<MaterialId, Def> = {
     conductivity: 0.06,
     wind: 0.1,
     drifts: 0.015,
+    // A strong wind strips a heap of it grain by grain.
+    lofts: 0.08,
     key: '1',
     kind: 'powder',
     density: 20,
@@ -733,7 +735,7 @@ const defs: Record<MaterialId, Def> = {
     colourJitter: 0.12,
     wind: 0.4,
     drifts: 0.05,
-    lofts: 0.03,
+    lofts: 0.2,
     reactions: [
       { with: M.Water, chance: 0.003, into: M.Lye },
       // Potash meets acid: it fizzes.
@@ -929,6 +931,8 @@ const defs: Record<MaterialId, Def> = {
     above: { temp: 2, into: M.Water },
     wind: 0.5,
     drifts: 0.04,
+    // Powder snow, lighter than sand, blows off a heap even more readily.
+    lofts: 0.15,
     description: 'Light, cold powder. Melts into water near anything warm.',
   },
   [M.Moss]: {
@@ -2962,10 +2966,10 @@ const defs: Record<MaterialId, Def> = {
     burnTime: [5, 12],
     ignitesAt: 230,
     residue: { into: M.Ash, chance: 0.3 },
-    wind: 0.3,
+    wind: 0.8,
     drifts: 0.03,
-    // So light that the wind sweeps it up into the air, nearly all of it.
-    lofts: 0.08,
+    // So light that a gust sends nearly all of it flying.
+    lofts: 0.35,
     description: 'What termites leave of wood. Light, so the wind sweeps it up and away; catches fire easily.',
   },
   [M.Honey]: {

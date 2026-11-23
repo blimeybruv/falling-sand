@@ -1637,21 +1637,38 @@ describe('water plants keep their place', () => {
 });
 
 describe('light powders in the wind', () => {
-  const leftInPlace = (m: MaterialId, wind: number): number => {
+  const leftInPlace = (m: MaterialId, wind: number, frames: number): number => {
     const w = new World(160, 60, 1);
     for (let x = 0; x < 160; x++) w.set(x, 59, M.Stone);
     for (let y = 47; y < 59; y++) for (let x = 20; x < 32; x++) w.set(x, y, m);
     w.wind = wind;
-    run(w, 600);
+    run(w, frames);
     let home = 0;
     for (let y = 0; y < 60; y++) for (let x = 18; x < 34; x++) if (w.get(x, y) === m) home++;
     return home;
   };
 
-  it('a strong wind sweeps up a whole pile of sawdust, not just its surface; sand mostly stays', () => {
-    expect(leftInPlace(M.Sawdust, 1)).toBeLessThan(144 * 0.1);
-    expect(leftInPlace(M.Sawdust, 0.4)).toBeLessThan(144 * 0.6);
-    expect(leftInPlace(M.Sand, 1)).toBeGreaterThan(144 * 0.5);
-    expect(leftInPlace(M.Sawdust, 0)).toBeGreaterThan(144 * 0.6);
+  it('a strong wind sweeps up a whole pile of sand, not just its surface; a light one some of it', () => {
+    expect(leftInPlace(M.Sand, 1, 600)).toBeLessThan(144 * 0.1);
+    expect(leftInPlace(M.Sand, 0.4, 600)).toBeLessThan(144 * 0.6);
+    expect(leftInPlace(M.Sand, 0.4, 600)).toBeGreaterThan(144 * 0.1);
+    expect(leftInPlace(M.Sand, 0, 600)).toBeGreaterThan(144 * 0.6);
+  });
+
+  it('sawdust flies: a gust clears a whole pile in a couple of seconds and carries it far further than sand', () => {
+    expect(leftInPlace(M.Sawdust, 1, 120)).toBeLessThan(144 * 0.1);
+    const reach = (m: MaterialId): number => {
+      const w = new World(300, 60, 1);
+      for (let x = 0; x < 300; x++) w.set(x, 59, M.Stone);
+      for (let y = 47; y < 59; y++) for (let x = 20; x < 32; x++) w.set(x, y, m);
+      w.wind = 1;
+      run(w, 120);
+      let sx = 0;
+      let n = 0;
+      for (let i = 0; i < w.size; i++) if (w.mat[i] === m) { sx += i % 300; n++; }
+      return sx / n;
+    };
+    // Measured: sawdust ends up about 265 cells downwind (at the far wall), sand about 55.
+    expect(reach(M.Sawdust)).toBeGreaterThan(reach(M.Sand) + 100);
   });
 });

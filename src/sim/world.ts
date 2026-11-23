@@ -937,7 +937,8 @@ export class World {
       if ((this.get(x, y - 1) === EMPTY || this.get(x - d, y) === EMPTY) && this.get(x + d, y - 1) === EMPTY) {
         const n = this.idx(x + d, y - 1);
         this.swap(i, n);
-        const w = Math.abs(this.wind);
+        // The lighter the powder (the more readily it lofts), the higher and further it's thrown.
+        const w = Math.abs(this.wind) * (1 + LOFTS[def.id] * 4);
         this.launch(n, d * w * (1 + this.rng.next() * 2), -(0.4 + this.rng.next() * 0.8) * w);
         return;
       }
