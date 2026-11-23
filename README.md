@@ -51,7 +51,8 @@ Discovery progress is kept for when you switch back.
 | Input | Action |
 |---|---|
 | Left-drag, or a finger | Draw the selected material (an outline shows the brush) |
-| Right-drag, or two fingers | Erase |
+| Right-drag | Erase (on a touch screen, pick the eraser) |
+| Mouse wheel, or pinch | Zoom in (up to 8×) and out, around the pointer; `=` / `+` and `_` too. Drag with the middle button or two fingers, or use the arrow keys, to look around. While zoomed, a readout in the corner shows the zoom: click it to see the whole grid again. Only the view changes, so the simulation runs as fast as ever |
 | Number and letter keys | Pick a material (the key is shown on its palette button; a few have none) |
 | `E` | Eraser |
 | `[` and `]` | Smaller / bigger brush (or the Brush slider) |
@@ -308,7 +309,6 @@ estimates.
 - [ ] **Discovery goals**: small challenges once everything is unlocked ("grow a forest of 5 trees", "boil a whole pond").
 - [ ] **Metal and electricity**: a conductive solid, plus a spark that travels through connected metal and ignites or explodes what it reaches.
 - [ ] **Example scenes**: a handful of built-in scenes (a volcano, a fuse and charges, a pond with plants) in a menu, stored as share-link text.
-- [ ] **Zoom and pan**: zoom into part of the grid (mouse wheel or keys on a desktop, pinch on touch) and pan around it (drag with the middle button, or two fingers, which erase today). The grid stays the same size; only the view changes, so the simulation cost doesn't.
 - [ ] **Run the simulation in a Web Worker**: move `World.step()` off the main thread and pass the arrays across, so bigger grids stay smooth.
 - [ ] **More sound**: a volume slider; ice cracking, glass shattering.
 - [ ] **Smarter liquids**: pressure, so water rises to the same level in connected containers (a U-bend).

@@ -11,6 +11,7 @@ import { heatColour } from '../render/renderer';
 import { DAY_LENGTH, MAX_BRUSH, MIN_BRUSH, SPEEDS, SUNS, WINDS, type GameState } from './state';
 import type { Sound } from './sound';
 import type { History } from './history';
+import type { View } from './view';
 import type { DrawTool } from './state';
 
 function byId<T extends HTMLElement>(id: string): T {
@@ -34,7 +35,7 @@ export interface Controls {
   checkDiscoveries(): void;
 }
 
-export function setupControls(state: GameState, world: World, discovery: Discovery, sound: Sound, history: History): Controls {
+export function setupControls(state: GameState, world: World, discovery: Discovery, sound: Sound, history: History, view: View): Controls {
   const toolbar = byId<HTMLElement>('toolbar');
   const playBtn = byId<HTMLButtonElement>('play');
   const stepBtn = byId<HTMLButtonElement>('step');
@@ -58,6 +59,17 @@ export function setupControls(state: GameState, world: World, discovery: Discove
 
   const palette = new Palette(byId<HTMLElement>('palette'), state, discovery, toast);
   const selectTool = (id: MaterialId): void => void palette.select(id);
+
+  // --- zoom: a small readout in the corner while zoomed in (click the number to see the whole grid)
+  const zoomBox = byId<HTMLDivElement>('zoom');
+  const zoomReset = byId<HTMLButtonElement>('zoom-reset');
+  byId<HTMLButtonElement>('zoom-in').addEventListener('click', () => view.zoomIn());
+  byId<HTMLButtonElement>('zoom-out').addEventListener('click', () => view.zoomOut());
+  zoomReset.addEventListener('click', () => view.reset());
+  view.onChange(() => {
+    zoomBox.hidden = view.zoom === 1;
+    zoomReset.textContent = `${view.zoom < 10 ? view.zoom.toFixed(1).replace(/\.0$/, '') : Math.round(view.zoom)}×`;
+  });
 
   // --- drawing tools, beside the material tabs
   const svg = (body: string): string =>
@@ -369,7 +381,14 @@ export function setupControls(state: GameState, world: World, discovery: Discove
     }
     const key = e.key.toLowerCase();
     const tool = keyToTool.get(key);
-    if (e.shiftKey && shiftKeys[key]) {
+    if (key === '=' || key === '+') {
+      view.zoomIn();
+    } else if (key === '_') {
+      view.zoomOut();
+    } else if (view.zoom > 1 && key.startsWith('arrow')) {
+      const d = 40;
+      view.panBy(key === 'arrowleft' ? d : key === 'arrowright' ? -d : 0, key === 'arrowup' ? d : key === 'arrowdown' ? -d : 0);
+    } else if (e.shiftKey && shiftKeys[key]) {
       setDrawTool(shiftKeys[key]);
     } else if (e.shiftKey && key === 'f') {
       setFill(!state.fill);

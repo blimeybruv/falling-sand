@@ -4,12 +4,14 @@
  *   right button erases with it.
  * - Brush and replace strokes are applied once per animation frame (see `apply`), so holding still
  *   keeps pouring. Line, box and circle are dragged out with a preview and drawn when let go.
- * - Two fingers on the canvas erase (both strokes switch to the eraser brush).
+ * - Zoom and pan (see View): the mouse wheel zooms at the pointer, the middle button drags the view,
+ *   and two fingers pinch to zoom and drag to pan (a stroke the first finger began is dropped).
  * Before each change it asks for an undo snapshot (`onChange`).
  * Also tracks where the pointer is, so the renderer can show the brush outline or the preview.
  */
 import { M, rasterShape, type MaterialId, type Shape, type World } from '../sim';
 import type { GameState } from './state';
+import type { View } from './view';
 
 interface Stroke {
   x: number;
@@ -29,6 +31,10 @@ interface Stroke {
 
 export class PointerInput {
   private readonly strokes = new Map<number, Stroke>();
+  /** Pointers moving the view (middle button, or two fingers), by id, at their last position. */
+  private readonly panning = new Map<number, { x: number; y: number }>();
+  /** Touch pointers currently down (to spot a second finger). */
+  private readonly touches = new Set<number>();
   private hover: { x: number; y: number } | null = null;
   private readonly mark: Uint8Array;
   private readonly cells: Int32Array;
@@ -39,9 +45,20 @@ export class PointerInput {
     private readonly world: World,
     private readonly state: GameState,
     private readonly onChange: () => void,
+    private readonly view: View,
   ) {
     this.mark = new Uint8Array(world.size);
     this.cells = new Int32Array(world.size);
+    canvas.addEventListener(
+      'wheel',
+      (e) => {
+        e.preventDefault();
+        // Smooth on trackpads (many small deltas), a notch at a time on wheels.
+        const lines = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
+        view.zoomBy(Math.exp(-lines * 0.0015), e.clientX, e.clientY);
+      },
+      { passive: false },
+    );
     canvas.addEventListener('pointerdown', this.onDown);
     canvas.addEventListener('pointermove', this.onMove);
     canvas.addEventListener('pointerup', this.onUp);
@@ -92,15 +109,34 @@ export class PointerInput {
   }
 
   private readonly onDown = (e: PointerEvent): void => {
-    if (e.button !== 0 && e.button !== 2) return;
+    if (e.button !== 0 && e.button !== 1 && e.button !== 2) return;
     e.preventDefault();
     try {
       this.canvas.setPointerCapture(e.pointerId);
     } catch {
       // Not an active pointer (e.g. a synthetic event); drawing still works without capture.
     }
-    const [x, y] = this.toGrid(e);
     const touch = e.pointerType === 'touch';
+    if (touch) this.touches.add(e.pointerId);
+    // Middle button: drag the view.
+    if (e.button === 1) {
+      this.panning.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      return;
+    }
+    // A second finger: both fingers now pinch and pan the view; the first finger's stroke stops.
+    if (touch && this.touches.size >= 2) {
+      for (const [id, s] of this.strokes) {
+        if (!s.touch) continue;
+        if (s.shape) this.previewCount = 0;
+        this.strokes.delete(id);
+      }
+      this.panning.clear();
+      for (const id of this.touches) this.panning.set(id, id === e.pointerId ? { x: e.clientX, y: e.clientY } : (this.lastTouch.get(id) ?? { x: e.clientX, y: e.clientY }));
+      this.hover = null;
+      return;
+    }
+    if (this.panning.size > 0) return;
+    const [x, y] = this.toGrid(e);
     // One snapshot per change: when the first pointer goes down.
     if (this.strokes.size === 0) this.onChange();
     const tool = this.state.drawTool;
@@ -111,18 +147,35 @@ export class PointerInput {
     }
     this.strokes.set(e.pointerId, { x, y, lastX: x, lastY: y, startX: x, startY: y, erase: e.button === 2, touch, shape, replace });
     this.hover = { x, y };
-    // A second finger turns every touch stroke into an eraser brush (and drops a half-drawn shape).
-    const touches = [...this.strokes.values()].filter((s) => s.touch);
-    if (touches.length >= 2) {
-      for (const s of touches) {
-        s.erase = true;
-        s.shape = null;
-        s.replace = null;
-      }
-    }
   };
 
+  /** Where each touch pointer last was (client pixels), so a pinch can start from the first finger's position. */
+  private readonly lastTouch = new Map<number, { x: number; y: number }>();
+
+  /** Move the view with the panning pointers: one drags it; two pinch (zoom about their midpoint) and drag. */
+  private movePan(e: PointerEvent): void {
+    const prev = this.panning.get(e.pointerId);
+    if (!prev) return;
+    const others = [...this.panning.entries()].filter(([id]) => id !== e.pointerId);
+    if (others.length === 0) {
+      this.view.panBy(e.clientX - prev.x, e.clientY - prev.y);
+    } else {
+      const o = others[0][1];
+      const before = Math.hypot(prev.x - o.x, prev.y - o.y);
+      const after = Math.hypot(e.clientX - o.x, e.clientY - o.y);
+      // The midpoint moves half as far as this finger did.
+      this.view.panBy((e.clientX - prev.x) / 2, (e.clientY - prev.y) / 2);
+      if (before > 10) this.view.zoomBy(after / before, (e.clientX + o.x) / 2, (e.clientY + o.y) / 2);
+    }
+    this.panning.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  }
+
   private readonly onMove = (e: PointerEvent): void => {
+    if (e.pointerType === 'touch') this.lastTouch.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (this.panning.has(e.pointerId)) {
+      this.movePan(e);
+      return;
+    }
     const [x, y] = this.toGrid(e);
     const s = this.strokes.get(e.pointerId);
     if (!s) {
@@ -143,6 +196,7 @@ export class PointerInput {
   };
 
   private readonly onUp = (e: PointerEvent): void => {
+    this.releaseTouch(e);
     const s = this.strokes.get(e.pointerId);
     if (!s) return;
     if (s.shape) {
@@ -159,6 +213,7 @@ export class PointerInput {
 
   /** A cancelled pointer (the browser took over the gesture) doesn't draw its half-dragged shape. */
   private readonly onCancel = (e: PointerEvent): void => {
+    this.releaseTouch(e);
     const s = this.strokes.get(e.pointerId);
     if (!s) return;
     if (!s.shape) this.apply();
@@ -166,4 +221,12 @@ export class PointerInput {
     this.strokes.delete(e.pointerId);
     if (s.touch) this.hover = null;
   };
+
+  /** A pointer lifted: it stops panning (when one finger of a pinch lifts, the other can go on dragging the view). */
+  private releaseTouch(e: PointerEvent): void {
+    this.touches.delete(e.pointerId);
+    this.lastTouch.delete(e.pointerId);
+    this.panning.delete(e.pointerId);
+    if (this.touches.size === 0 && e.pointerType === 'touch') this.panning.clear();
+  }
 }

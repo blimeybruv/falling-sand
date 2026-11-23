@@ -15,7 +15,8 @@ build must stay a fully static `dist/` with relative paths (`base: './'` in `vit
 src/sim/     simulation: pure logic, no DOM, unit-tested with Vitest (incl. scene.ts, the save format,
              and shapes.ts, the cells the line/box/circle tools cover, shared by preview and drawing)
 src/render/  turns the sim's arrays into pixels (one ImageData buffer)
-src/ui/      palette, toolbar, keyboard, pointer/touch input and drawing tools, undo history, game
+src/ui/      palette, toolbar, keyboard, pointer/touch input and drawing tools, undo history, zoom and
+             pan (view.ts: a CSS transform on the canvas, so the sim and renderer never see it), game
              state, scene storage and links, sound (synthesised live with Web Audio: no sound files)
 src/main.ts  creates World + Renderer + UI and runs the requestAnimationFrame loop
 ```

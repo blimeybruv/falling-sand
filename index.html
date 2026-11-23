@@ -68,6 +68,11 @@
       <main id="stage">
         <canvas id="canvas" aria-label="Sandbox: draw materials here"></canvas>
         <div id="fps" aria-hidden="true"></div>
+        <div id="zoom" class="zoom" hidden>
+          <button id="zoom-out" type="button" aria-label="Zoom out" title="Zoom out (_)">−</button>
+          <button id="zoom-reset" type="button" title="Back to the whole grid">1×</button>
+          <button id="zoom-in" type="button" aria-label="Zoom in" title="Zoom in (= or +)">+</button>
+        </div>
         <div id="heat-legend" hidden><div class="heat-bar"></div><div class="heat-labels"></div></div>
         <div id="toast" class="toast" role="status" hidden></div>
       </main>
@@ -81,7 +86,8 @@
         <table>
           <tbody>
             <tr><th>Left-drag / finger</th><td>Draw the selected material</td></tr>
-            <tr><th>Right-drag / two fingers</th><td>Erase</td></tr>
+            <tr><th>Right-drag</th><td>Erase (on a touch screen, pick the eraser)</td></tr>
+            <tr><th>Mouse wheel / pinch</th><td>Zoom in and out (also = and _); drag with the middle button or two fingers, or use the arrow keys, to look around</td></tr>
             <tr><th>Number and letter keys</th><td>Pick a material (the key is shown on each button)</td></tr>
             <tr><th>E</th><td>Eraser</td></tr>
             <tr><th>[ and ]</th><td>Smaller / bigger brush</td></tr>

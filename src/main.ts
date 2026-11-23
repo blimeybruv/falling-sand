@@ -8,6 +8,7 @@ import { createState } from './ui/state';
 import { loadDiscovery, loadMode } from './ui/progress';
 import { Sound } from './ui/sound';
 import { History } from './ui/history';
+import { View } from './ui/view';
 
 /** The grid is sized to the window at load, up to roughly this many cells (the performance budget). */
 const TARGET_CELLS = 80_000;
@@ -35,9 +36,10 @@ const renderer = new Renderer(canvas, world);
 const state = createState(loadMode());
 const discovery = loadDiscovery();
 const history = new History(world);
-const input = new PointerInput(canvas, world, state, () => history.push());
+const view = new View(stage, canvas, cols, rows);
+const input = new PointerInput(canvas, world, state, () => history.push(), view);
 const sound = new Sound();
-const controls = setupControls(state, world, discovery, sound, history);
+const controls = setupControls(state, world, discovery, sound, history, view);
 loadFromHash(world).then(
   (loaded) => loaded && toast('Loaded shared scene'),
   (err: unknown) => toast(`Couldn't load the shared scene: ${err instanceof Error ? err.message : err}`),
@@ -48,6 +50,7 @@ function fit(): void {
   const scale = Math.min(stage.clientWidth / cols, stage.clientHeight / rows);
   canvas.style.width = `${Math.floor(cols * scale)}px`;
   canvas.style.height = `${Math.floor(rows * scale)}px`;
+  view.apply();
 }
 // The stage changes size with the window and when the mobile toolbar folds open.
 new ResizeObserver(fit).observe(stage);
