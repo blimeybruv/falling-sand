@@ -151,8 +151,10 @@ input:focus-visible {
 .menu {
   position: absolute;
   top: calc(100% + 4px);
-  /* Opens leftwards from the button, which sits near the right of the toolbar. */
-  right: 0;
+  /* Lined up with the button; when it opens, the controls nudge it to stay on screen (the button
+     moves about as the toolbar wraps), and it scrolls if the window is too short for it. */
+  left: 0;
+  overflow-y: auto;
   z-index: 5;
   display: flex;
   flex-direction: column;
@@ -614,10 +616,6 @@ button.quiet {
     gap: 6px 10px;
     width: 100%;
     order: 10;
-  }
-  .menu {
-    left: auto;
-    right: 0;
   }
   .tool {
     min-height: 44px;

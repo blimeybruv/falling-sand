@@ -292,7 +292,24 @@ export function setupControls(state: GameState, world: World, discovery: Discove
   const setMenu = (open: boolean): void => {
     sceneMenu.hidden = !open;
     sceneBtn.setAttribute('aria-expanded', String(open));
+    if (open) placeMenu();
   };
+  // Keep the open menu on screen: start lined up with the button's left edge, then shift it left
+  // if it would run off the right (the button sits anywhere along the toolbar, which wraps on
+  // narrower windows and in Discovery mode), and cap its height to the room below.
+  const placeMenu = (): void => {
+    const margin = 8;
+    sceneMenu.style.left = '0px';
+    sceneMenu.style.maxHeight = '';
+    const rect = sceneMenu.getBoundingClientRect();
+    const overflow = rect.right - (window.innerWidth - margin);
+    const shift = overflow > 0 ? Math.min(overflow, rect.left - margin) : 0;
+    sceneMenu.style.left = `${-Math.max(0, shift)}px`;
+    sceneMenu.style.maxHeight = `${Math.max(120, window.innerHeight - rect.top - margin)}px`;
+  };
+  window.addEventListener('resize', () => {
+    if (!sceneMenu.hidden) placeMenu();
+  });
   sceneBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     setMenu(sceneMenu.hidden !== false);
