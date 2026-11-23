@@ -1635,3 +1635,23 @@ describe('water plants keep their place', () => {
     expect(tallest).toBeGreaterThan(15);
   });
 });
+
+describe('light powders in the wind', () => {
+  const leftInPlace = (m: MaterialId, wind: number): number => {
+    const w = new World(160, 60, 1);
+    for (let x = 0; x < 160; x++) w.set(x, 59, M.Stone);
+    for (let y = 47; y < 59; y++) for (let x = 20; x < 32; x++) w.set(x, y, m);
+    w.wind = wind;
+    run(w, 600);
+    let home = 0;
+    for (let y = 0; y < 60; y++) for (let x = 18; x < 34; x++) if (w.get(x, y) === m) home++;
+    return home;
+  };
+
+  it('a strong wind sweeps up a whole pile of sawdust, not just its surface; sand mostly stays', () => {
+    expect(leftInPlace(M.Sawdust, 1)).toBeLessThan(144 * 0.1);
+    expect(leftInPlace(M.Sawdust, 0.4)).toBeLessThan(144 * 0.6);
+    expect(leftInPlace(M.Sand, 1)).toBeGreaterThan(144 * 0.5);
+    expect(leftInPlace(M.Sawdust, 0)).toBeGreaterThan(144 * 0.6);
+  });
+});

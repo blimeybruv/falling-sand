@@ -79,6 +79,7 @@ const HOLD_RATE = Float32Array.from(MATERIALS, (d) => (d.heat ? d.heat.rate : d.
 const BURN_TEMP = Float32Array.from(MATERIALS, (d) => d.burnTemp ?? BURNING_TEMP);
 const WIND = Float32Array.from(MATERIALS, (d) => d.wind);
 const DRIFTS = Float32Array.from(MATERIALS, (d) => d.drifts ?? 0);
+const LOFTS = Float32Array.from(MATERIALS, (d) => d.lofts ?? 0);
 /** Sunlight shines through these (air, gases, glass) and stops at the first thing that isn't. */
 const TRANSPARENT = Uint8Array.from(MATERIALS, (d) => ((d.transparent ?? (d.kind === 'gas' || d.kind === 'empty')) ? 1 : 0));
 const SUNLIT_CHANCE = Float32Array.from(MATERIALS, (d) => d.sunlit?.chance ?? 0);
@@ -929,6 +930,18 @@ export class World {
 
   private movePowder(x: number, y: number, i: number, def: MaterialDef): void {
     if (this.fall(x, y, i, def)) return;
+    // In the wind, a light grain on top of a pile or on its windward face is now and then blown up
+    // into the air and carried off downwind (sawdust, ash), stripping the pile grain by grain.
+    if (this.wind !== 0 && LOFTS[def.id] > 0 && this.rng.chance(LOFTS[def.id] * Math.abs(this.wind))) {
+      const d = this.wind > 0 ? 1 : -1;
+      if ((this.get(x, y - 1) === EMPTY || this.get(x - d, y) === EMPTY) && this.get(x + d, y - 1) === EMPTY) {
+        const n = this.idx(x + d, y - 1);
+        this.swap(i, n);
+        const w = Math.abs(this.wind);
+        this.launch(n, d * w * (1 + this.rng.next() * 2), -(0.4 + this.rng.next() * 0.8) * w);
+        return;
+      }
+    }
     // In the wind, an exposed grain is now and then lifted a cell downwind: dunes creep, snow drifts.
     if (this.wind !== 0 && DRIFTS[def.id] > 0 && this.rng.chance(DRIFTS[def.id] * Math.abs(this.wind))) {
       const d = this.wind > 0 ? 1 : -1;

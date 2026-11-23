@@ -234,6 +234,12 @@ export interface MaterialDef {
    * downwind, so dunes creep and snow piles into drifts.
    */
   drifts?: number;
+  /**
+   * Light powders: 0..1, the chance per frame (in a full wind) that a grain on top of a pile, or on
+   * its windward face, is blown up into the air and carried off downwind. As the top grains go, the
+   * ones beneath are laid bare, so the wind strips a whole pile, not just its surface.
+   */
+  lofts?: number;
   /** Renderer: the colour shimmers over time (lava). */
   glow?: boolean;
   /** Renderer: fade out over this many final frames of its lifetime (gases default to 40). */
@@ -727,6 +733,7 @@ const defs: Record<MaterialId, Def> = {
     colourJitter: 0.12,
     wind: 0.4,
     drifts: 0.05,
+    lofts: 0.03,
     reactions: [
       { with: M.Water, chance: 0.003, into: M.Lye },
       // Potash meets acid: it fizzes.
@@ -2957,7 +2964,9 @@ const defs: Record<MaterialId, Def> = {
     residue: { into: M.Ash, chance: 0.3 },
     wind: 0.3,
     drifts: 0.03,
-    description: 'What termites leave of wood. Light, and catches fire easily.',
+    // So light that the wind sweeps it up into the air, nearly all of it.
+    lofts: 0.08,
+    description: 'What termites leave of wood. Light, so the wind sweeps it up and away; catches fire easily.',
   },
   [M.Honey]: {
     ...base,
