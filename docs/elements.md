@@ -333,10 +333,10 @@ applies to Neon.
 | ✅ | Storm cloud | Deep clouds grow a dark base that pours and strikes, then clears | `stormCloud`, rows-above test with hysteresis | F |
 | ✅ | Cirrus | High, thin, wind-blown streaks from vapour above the cloud layer | `updateCirrus`, `updateVapour` | F |
 | ✅ | Strikes one at a time | However big the storm, bolts come a second or two apart | `STRIKE_GAP` | T |
-| | Anvil | A very tall storm cloud spreads sideways where it meets the top of the sky (cumulonimbus) | spread rule at the ceiling | F |
-| | Mammatus | Pouches hanging under a storm base as it decays | renderer, or a sag rule | F |
+| | Anvil | A very tall storm cloud spreads sideways where it meets the top of the sky (cumulonimbus) | spread rule at the ceiling. Not yet: clouds are built column by column on a level base, and an overhanging top needs cells with no column under them | F |
+| ✅ | Mammatus | Pouches hanging under a storm base as it decays | renderer: rounded pouches drawn under a storm base no more than 20 deep (raining itself out) | F |
 | ✅ | Fog bank | Mist rising off water on clear nights, hanging low and pooling in hollows (fog is now a very light liquid, like CO2) | `night` change on Water | F |
-| | Rain shafts | Rain from a storm drawn as faint grey streaks, not separate drops | renderer | F |
+| ✅ | Rain shafts | Rain from a storm drawn as faint grey streaks, not separate drops | renderer: a per-column veil started by a storm base, fed by each drop falling through it, thinning row by row, stopped by the ground | F |
 
 ## Trees (design note, 23 Nov; built 26 Nov)
 

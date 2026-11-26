@@ -281,7 +281,13 @@ export function setupControls(state: GameState, world: World, discovery: Discove
   });
   syncEdges();
 
-  const syncSound = (): void => soundBtn.setAttribute('aria-pressed', String(sound.enabled));
+  const volume = byId<HTMLInputElement>('volume');
+  volume.value = String(Math.round(sound.volume * 100));
+  volume.addEventListener('input', () => sound.setVolume(Number(volume.value) / 100));
+  const syncSound = (): void => {
+    soundBtn.setAttribute('aria-pressed', String(sound.enabled));
+    volume.disabled = !sound.enabled;
+  };
   soundBtn.addEventListener('click', () => {
     sound.setEnabled(!sound.enabled);
     syncSound();

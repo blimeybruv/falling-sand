@@ -54,7 +54,149 @@ function tree(w: World, x: number, ground: number, height: number): void {
   for (let dy = -r; dy <= r; dy++) for (let dx = -r - 1; dx <= r + 1; dx++) if (dx * dx * 0.8 + dy * dy * 1.3 <= r * r) cell(w, x + dx, cy + dy, M.Leaf);
 }
 
+/** Fill an ellipse centred at (cx, cy) with radii (rx, ry), in grid cells, where `only` (if given) is. */
+function blob(w: World, cx: number, cy: number, rx: number, ry: number, m: MaterialId, only?: MaterialId): void {
+  for (let y = Math.floor(cy - ry); y <= Math.ceil(cy + ry); y++) {
+    for (let x = Math.floor(cx - rx); x <= Math.ceil(cx + rx); x++) {
+      const dx = (x - cx) / rx;
+      const dy = (y - cy) / ry;
+      if (dx * dx + dy * dy > 1 || !w.inBounds(x, y)) continue;
+      if (only !== undefined && w.mat[w.idx(x, y)] !== only) continue;
+      w.setCell(w.idx(x, y), m);
+    }
+  }
+}
+
+/**
+ * The primordial wilderness: untouched prehistoric land, different each time it loads (it's drawn
+ * from the world's random numbers; share it with a link to keep one). From left to right: a sea with
+ * a sandy shore and seaweed, rolling loam hills with grass and trees around a peat bog, and a
+ * smouldering volcano. Beneath: layered rock with ore veins, a coal seam, a buried oil pocket and a
+ * cave with stalactites, on basalt bedrock. Storm clouds gather over it all.
+ */
+function wilderness(w: World): void {
+  const { width: W, height: H, rng } = w;
+  // Rolling hills: a few random sine waves.
+  const waves = [0, 1, 2].map(() => ({ k: (1 + rng.next() * 3) * Math.PI * 2, p: rng.next() * Math.PI * 2, a: 0.012 + rng.next() * 0.02 }));
+  const sea = 0.26 + rng.next() * 0.04;
+  const shore = sea + 0.08;
+  const volcanoAt = 0.78 + rng.next() * 0.06;
+  const bogAt = shore + 0.12 + rng.next() * (volcanoAt - shore - 0.36);
+  const seaLevel = Math.round(H * 0.66);
+  // The ground's surface row at column x.
+  const surface = (x: number): number => {
+    const f = x / W;
+    let g = 0.62;
+    for (const { k, p, a } of waves) g += Math.sin(f * k + p) * a;
+    if (f < sea) g = 0.8;
+    else if (f < shore) g = 0.8 + ((f - sea) / (shore - sea)) * (g - 0.8);
+    // The bog: a hollow in the hills.
+    const b = Math.abs(f - bogAt) / 0.06;
+    if (b < 1) g += 0.025 * (1 - b * b);
+    return Math.round(g * H);
+  };
+  const rock = new Int32Array(W);
+  for (let x = 0; x < W; x++) {
+    const top = surface(x);
+    const f = x / W;
+    const soil = f < shore ? 0 : 5 + Math.round(rng.next() * 2);
+    rock[x] = top + soil;
+    for (let y = top; y < H; y++) {
+      let m: MaterialId = M.Stone;
+      if (y >= H - Math.max(3, Math.round(H * 0.04))) m = M.Basalt;
+      else if (y < top + soil) m = y === top ? M.Grass : y < top + 3 ? M.Loam : M.Earth;
+      else if (f < shore + 0.02 && y < top + 4) m = M.Sand;
+      // Strata: wavy bands of basalt through the stone.
+      else if (Math.abs(((y + Math.sin(f * 9) * 4) % 23) - 11) < 1) m = M.Basalt;
+      cell(w, x, y, m);
+    }
+    if (f < shore) for (let y = seaLevel; y < top; y++) cell(w, x, y, M.SaltWater);
+  }
+  // A sandy sea floor, with seaweed.
+  for (let x = 0; x < Math.round(sea * W); x++) {
+    const top = surface(x);
+    for (let y = top; y < top + 3; y++) cell(w, x, y, M.Sand);
+    if (rng.chance(0.06)) cell(w, x, top - 1, M.Seaweed);
+  }
+  const deep = (fy: number): number => Math.round(fy * H);
+  // Ore veins, coal and gold flecks, a diamond or two deep down: only ever in the stone.
+  for (let k = 0; k < Math.max(4, Math.round(W / 40)); k++) {
+    const x = rng.int(0, W - 1);
+    const y = rock[x] + 6 + rng.int(0, Math.max(1, H - rock[x] - 14));
+    const ore = rng.chance(0.5) ? M.IronOre : M.CopperOre;
+    blob(w, x, y, 2 + rng.next() * 5, 1 + rng.next() * 2, ore, M.Stone);
+  }
+  for (let k = 0; k < Math.max(3, Math.round(W / 60)); k++) {
+    const x = rng.int(0, W - 1);
+    blob(w, x, Math.min(H - 6, rock[x] + rng.int(8, Math.max(9, Math.round(H * 0.15)))), 1 + rng.next() * 2, 1 + rng.next(), M.Gold, M.Stone);
+  }
+  for (let k = 0; k < 2; k++) {
+    const x = rng.int(0, W - 1);
+    cell(w, x, H - Math.max(5, Math.round(H * 0.06)), M.Diamond);
+  }
+  // A coal seam under the hills.
+  {
+    const x0 = Math.round((shore + 0.05) * W);
+    const x1 = Math.round((bogAt + 0.1) * W);
+    const y0 = Math.min(H - 8, deep(0.78));
+    for (let x = x0; x < x1; x++) for (let y = y0; y < y0 + 3; y++) if (w.inBounds(x, y) && w.mat[w.idx(x, y)] === M.Stone) cell(w, x, y + Math.round(Math.sin(x / 9) * 2), M.Coal);
+  }
+  // A buried oil pocket.
+  blob(w, (shore + 0.08) * W, Math.min(H - 8, deep(0.88)), Math.max(4, W * 0.04), Math.max(2, H * 0.025), M.Oil, M.Stone);
+  // A cave with stalactites and a small pool.
+  {
+    const cx = Math.round(((bogAt + volcanoAt) / 2) * W);
+    const cy = Math.min(H - 10, Math.max(rock[cx] + 8, deep(0.8)));
+    const rx = Math.max(6, W * 0.06);
+    const ry = Math.max(3, H * 0.04);
+    blob(w, cx, cy, rx, ry, M.Empty);
+    for (let x = Math.round(cx - rx); x <= cx + rx; x++) {
+      // The ceiling: the first empty cell from the top of the cave.
+      let y = Math.floor(cy - ry);
+      while (y < cy && w.get(x, y) !== M.Empty) y++;
+      if (y < cy && rng.chance(0.3)) for (let k = rng.int(1, 3); k > 0; k--) cell(w, x, y++, M.Stalactite);
+    }
+    blob(w, cx, cy + ry - 1, rx * 0.4, 1.5, M.Water, M.Empty);
+  }
+  // The peat bog: peat in the hollow, water standing on it up to the lower rim, moss round the edge.
+  {
+    const x0 = Math.round((bogAt - 0.06) * W);
+    const x1 = Math.round((bogAt + 0.06) * W);
+    const rim = Math.max(surface(x0), surface(x1)) + 1;
+    for (let x = x0; x < x1; x++) {
+      const top = surface(x);
+      for (let y = top; y < top + 4; y++) cell(w, x, y, M.Peat);
+      for (let y = rim; y < top; y++) cell(w, x, y, M.Water);
+      if (top <= rim && rng.chance(0.5)) cell(w, x, top - 1, M.Moss);
+    }
+  }
+  // Trees on the hills, away from the bog.
+  const step = Math.max(9, Math.round(W / 24));
+  for (let x = Math.round((shore + 0.04) * W); x < (volcanoAt - 0.19) * W; x += step + rng.int(-3, 3)) {
+    if (Math.abs(x / W - bogAt) < 0.065) continue;
+    tree(w, x, surface(x), Math.round(H * (0.07 + rng.next() * 0.06)));
+  }
+  // The volcano, on the rock, with a lava chamber beneath it and a throat up to the crater.
+  const base = Math.max(...Array.from({ length: 9 }, (_, k) => surface(Math.round((volcanoAt - 0.08 + k * 0.02) * W)))) / H;
+  mound(w, volcanoAt, 0.15, 0.36, base, M.Stone);
+  mound(w, volcanoAt, 0.09, 0.33, base, M.Basalt);
+  box(w, volcanoAt - 0.04, base + 0.02, volcanoAt + 0.04, base + 0.14, M.Lava);
+  box(w, volcanoAt - 0.01, 0.36, volcanoAt + 0.01, base + 0.02, M.Lava);
+  box(w, volcanoAt - 0.025, 0.31, volcanoAt + 0.025, 0.37, M.Empty);
+  box(w, volcanoAt - 0.01, 0.35, volcanoAt + 0.01, 0.37, M.Lava);
+  cell(w, Math.round(volcanoAt * W), Math.round(0.38 * H), M.VolcanicVent);
+  // Storm clouds gathering.
+  box(w, 0.04, 0.06, 0.5, 0.06 + Math.max(0.12, 26 / H), M.Cloud);
+  box(w, 0.55, 0.1, 0.7, 0.18, M.Cloud);
+}
+
 export const EXAMPLES: readonly Example[] = [
+  {
+    id: 'wilderness',
+    name: 'Primordial wilderness',
+    hint: 'Untouched land, different every time: a sea, hills and a peat bog, a smouldering volcano, and ore, coal, oil and a cave in the rock below. Dig in.',
+    build: wilderness,
+  },
   {
     id: 'volcano',
     name: 'Volcano island',

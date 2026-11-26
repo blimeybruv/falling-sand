@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { EXAMPLES, M, World, type Example } from './index';
+import { EXAMPLES, M, MATERIALS, World, type Example } from './index';
 
 function load(id: string, width = 373, height = 214): World {
   const w = new World(width, height, 1);
@@ -51,6 +51,47 @@ describe('example scenes', () => {
     for (let i = 0; i < w.size; i++) if (w.mat[i] === M.Leaf && w.rng.chance(0.05)) w.ignite(i);
     run(w, 900);
     expect(w.created[M.PineCone]).toBeGreaterThan(0);
+  });
+
+  it('primordial wilderness: every part is there at every size, and it differs each time', () => {
+    for (const [width, height] of [[130, 190], [373, 214], [420, 110]]) {
+      const w = load('wilderness', width, height);
+      for (const m of [M.SaltWater, M.Sand, M.Seaweed, M.Grass, M.Loam, M.Peat, M.Wood, M.Lava, M.VolcanicVent, M.Coal, M.Oil, M.Stalactite, M.Cloud, M.Basalt]) {
+        expect(w.count(m), `${MATERIALS[m].name} at ${width}×${height}`).toBeGreaterThan(0);
+      }
+      expect(w.count(M.IronOre) + w.count(M.CopperOre)).toBeGreaterThan(0);
+    }
+    const a = new World(373, 214, 1);
+    const b = new World(373, 214, 2);
+    (EXAMPLES.find((e) => e.id === 'wilderness') as Example).build(a);
+    (EXAMPLES.find((e) => e.id === 'wilderness') as Example).build(b);
+    let differ = 0;
+    for (let i = 0; i < a.size; i++) if (a.mat[i] !== b.mat[i]) differ++;
+    expect(differ).toBeGreaterThan(a.size * 0.05);
+  });
+
+  it('primordial wilderness: it runs, and the volcano smoulders', { timeout: 30000 }, () => {
+    const w = load('wilderness');
+    run(w, 900);
+    expect(w.count(M.Lava)).toBeGreaterThan(0);
+    expect(w.created[M.Steam] + w.created[M.Smoke] + w.created[M.Basalt] + w.created[M.StormCloud]).toBeGreaterThan(0);
+  });
+
+  it('primordial wilderness: lightning striking the sea crosses it and dies out, and the sea stays', { timeout: 60000 }, () => {
+    // Once, a pulse could circle round the grains and weed in a struck sea for ever, and its heat
+    // boiled the whole sea away into salt within a few seconds.
+    const w = new World(373, 214, 5);
+    (EXAMPLES.find((e) => e.id === 'wilderness') as Example).build(w);
+    const sea = w.count(M.SaltWater);
+    let strikes = 0;
+    for (let f = 0; f < 1200; f++) {
+      w.step();
+      strikes += w.noise.strikes;
+      w.noise.strikes = 0;
+    }
+    expect(strikes).toBeGreaterThan(3);
+    expect(w.count(M.SaltWater)).toBeGreaterThan(sea * 0.9);
+    expect(w.count(M.Salt)).toBeLessThan(30);
   });
 
   it('pond life: the fish and worms are there to draw birds', () => {

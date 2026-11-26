@@ -34,7 +34,8 @@ src/main.ts  creates World + Renderer + UI and runs the requestAnimationFrame lo
   fresh each time instead of keeping a reference.
 - Each `step()` first spreads heat (`updateTemperature`), then moves electricity
   (`updateElectricity`: a conductor's charge is `CHARGE_ACTIVE` for one frame, when it passes to idle
-  conducting neighbours, then cools down, so pulses travel one cell a frame and never flow back),
+  conducting neighbours, then cools down, so pulses travel one cell a frame and never flow back; a conducting liquid rests
+  `LIQUID_REST` frames instead, or a pulse could circle round obstacles in a pool for ever),
   then, if `world.sun` isn't 0, shines sunlight (`updateSunlight`: straight down every 4th column in
   turn, warming the first cell that isn't `transparent` and applying its `sunlit` change; when
   `sun` is below 0 it's a clear night, which instead chills that cell and applies its `night`

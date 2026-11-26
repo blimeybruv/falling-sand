@@ -98,6 +98,41 @@ input:focus-visible {
   accent-color: var(--accent);
 }
 
+/* The volume slider pops up under the speaker button on hover or keyboard focus (inline on phones). */
+.sound-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.volume-pop {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  display: none;
+  padding: 8px 10px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.4);
+}
+
+.sound-wrap:hover .volume-pop,
+.sound-wrap:focus-within .volume-pop {
+  display: block;
+}
+
+.volume {
+  display: block;
+  width: 110px;
+  accent-color: var(--accent);
+}
+
+.volume:disabled {
+  opacity: 0.4;
+}
+
 .brush output {
   min-width: 2ch;
   color: var(--text);
@@ -618,6 +653,21 @@ button.quiet {
   }
   .help-button {
     margin-left: 0;
+  }
+  .volume-pop,
+  .sound-wrap:hover .volume-pop,
+  .sound-wrap:focus-within .volume-pop {
+    position: static;
+    display: block;
+    transform: none;
+    padding: 0 0 0 8px;
+    background: none;
+    border: 0;
+    box-shadow: none;
+    align-self: center;
+  }
+  .volume {
+    width: 90px;
   }
   /* Secondary controls fold away: a downward chevron in the first row opens them, and an upward
      one along the bottom of the open bar folds it back to the first row. */

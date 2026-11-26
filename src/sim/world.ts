@@ -70,8 +70,22 @@ const INERT = Uint8Array.from(MATERIALS, (d) =>
 export const CHARGE_ACTIVE = 4;
 /** Marks a cell that will become active at the end of this frame's electricity pass. */
 const CHARGE_PENDING = 255;
-/** How much an active conductor warms up per pulse. */
-const CHARGE_HEAT = 20;
+/**
+ * How much an active conductor warms up per pulse: a wire a lot, a conducting liquid (salt water,
+ * mercury) hardly at all, as it carries the heat away. At the wire's rate, the few pulses of one
+ * lightning strike into the sea boiled the whole sea away into salt.
+ */
+const CHARGE_HEAT = Float32Array.from(MATERIALS, (d) => (d.kind === 'liquid' ? 1 : 20));
+/**
+ * After carrying a pulse, a conducting liquid rests this long before it can carry another (a wire
+ * only CHARGE_ACTIVE - 1 frames). Its charge counts down from CHARGE_ACTIVE + LIQUID_REST and skips
+ * straight to 0 below CHARGE_ACTIVE + 1, so it never passes through "active" again. Without the long
+ * rest a pulse could run round and round any obstacle in a body of salt water (a grain of salt, a
+ * strand of seaweed), so a sea struck once by lightning kept pulsing for ever. A wire, a cell
+ * wide, can't loop like that.
+ */
+const LIQUID_REST = 90;
+const RESTS = Uint8Array.from(MATERIALS, (d) => (d.kind === 'liquid' && d.conducts ? 1 : 0));
 const CONDUCTIVITY = Float32Array.from(MATERIALS, (d) => d.conductivity);
 /** The temperature each material drifts towards, and how fast (its heat source, or ambient cooling). */
 const HOLD_TEMP = Float32Array.from(MATERIALS, (d) => (d.heat ? d.heat.temp : AMBIENT_TEMP));
@@ -748,7 +762,7 @@ export class World {
       if (c === CHARGE_ACTIVE) {
         const x = i % w;
         const y = (i - x) / w;
-        this.temp[i] += CHARGE_HEAT;
+        this.temp[i] += CHARGE_HEAT[mat[i]];
         for (let k = 0; k < 4; k++) {
           const nx = k === 0 ? x - 1 : k === 1 ? x + 1 : x;
           const ny = k === 2 ? y - 1 : k === 3 ? y + 1 : y;
@@ -770,8 +784,10 @@ export class World {
         if (mat[i] === M.SaltWater && y > 0 && mat[i - w] === EMPTY && this.rng.chance(0.05)) {
           this.setCell(i - w, M.Chlorine);
         }
+        charge[i] = RESTS[mat[i]] ? CHARGE_ACTIVE + LIQUID_REST : c - 1;
+        continue;
       }
-      charge[i] = c - 1;
+      charge[i] = c === CHARGE_ACTIVE + 1 ? 0 : c - 1;
     }
     if (pending === 0) return;
     for (let i = 0; i < this.size; i++) if (charge[i] === CHARGE_PENDING) charge[i] = CHARGE_ACTIVE;

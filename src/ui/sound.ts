@@ -23,9 +23,12 @@
  * that. The player can switch sound off (saved). The audio context is suspended whenever there's
  * nothing to hear, while the game is paused, and while the tab is hidden.
  */
-import { M, MATERIALS, type World } from '../sim';
+import { CHARGE_ACTIVE as CHARGE_ACTIVE_IMPORTED, M, MATERIALS, type World } from '../sim';
+/** Module-local copy for the per-cell loop (see CLAUDE.md on imported bindings in hot loops). */
+const CHARGE_ACTIVE = CHARGE_ACTIVE_IMPORTED;
 
 const SOUND_KEY = 'falling-sand.sound';
+const VOLUME_KEY = 'falling-sand.volume';
 /** Overall volume (before the compressor that keeps stacked booms from clipping). */
 const MASTER = 0.5;
 /** Wind volume at full strength (before gusts). */
@@ -56,6 +59,16 @@ function readEnabled(): boolean {
     return localStorage.getItem(SOUND_KEY) !== 'off';
   } catch {
     return true;
+  }
+}
+
+/** The saved volume, 0..1 (default: full, which is MASTER at the output). */
+function readVolume(): number {
+  try {
+    const v = Number(localStorage.getItem(VOLUME_KEY) ?? '1');
+    return Number.isFinite(v) ? Math.max(0, Math.min(1, v)) : 1;
+  } catch {
+    return 1;
   }
 }
 
@@ -112,6 +125,8 @@ interface Loop {
 
 export class Sound {
   enabled = readEnabled();
+  /** 0..1, from the volume slider. */
+  volume = readVolume();
   private ctx: AudioContext | null = null;
   private out: GainNode | null = null;
   private white: AudioBuffer | null = null;
@@ -164,6 +179,17 @@ export class Sound {
     saveEnabled(on);
     if (on) this.start();
     else void this.ctx?.suspend();
+  }
+
+  /** Set the volume (0..1). Loudness follows its square, so the slider feels even across its range. */
+  setVolume(v: number): void {
+    this.volume = Math.max(0, Math.min(1, v));
+    try {
+      localStorage.setItem(VOLUME_KEY, String(this.volume));
+    } catch {
+      // Storage blocked: the choice just won't persist.
+    }
+    if (this.ctx && this.out) this.out.gain.setTargetAtTime(MASTER * this.volume * this.volume, this.ctx.currentTime, 0.05);
   }
 
   /** Call once per animation frame, with whether the simulation is running (not paused). */
@@ -312,7 +338,8 @@ export class Sound {
       else if (m === CROW) crows++;
       else if (m === SPARK) sparks++;
       else if (m === BOLT) bolts++;
-      if (charge[i] !== 0) charged++;
+      // (Above CHARGE_ACTIVE: a conducting liquid resting after a pulse, which is quiet.)
+      if (charge[i] !== 0 && charge[i] <= CHARGE_ACTIVE) charged++;
     }
     this.offset = (this.offset + 1) % STRIDE;
     const h = this.heard;
@@ -362,7 +389,7 @@ export class Sound {
     compressor.release.value = 0.25;
     compressor.connect(ctx.destination);
     this.out = ctx.createGain();
-    this.out.gain.value = MASTER;
+    this.out.gain.value = MASTER * this.volume * this.volume;
     this.out.connect(compressor);
     this.white = noiseBuffer(ctx, false);
     this.brown = noiseBuffer(ctx, true);

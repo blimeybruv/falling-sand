@@ -44,6 +44,27 @@ const RAINBOW_RAIN = 150;
 /** At full strength the rainbow is this see-through: faint, as real ones are. */
 const RAINBOW_ALPHA = 0.32;
 
+/**
+ * Rain shafts: under a storm cloud, the air in a column where rain is falling is veiled a faint grey,
+ * so a downpour reads as streaks hanging from the base rather than scattered drops. A storm cloud
+ * starts a shaft at SHAFT_START, every drop falling through it adds SHAFT_DROP (up to 1), and each
+ * row of air it passes thins it by SHAFT_FADE; anything solid or a pool stops it.
+ */
+const SHAFT_START = 0.25;
+const SHAFT_DROP = 0.3;
+const SHAFT_FADE = 0.975;
+const SHAFT_LEVELS = 16;
+/** At full strength a shaft blends this far from the sky towards SHAFT_GREY. */
+const SHAFT_ALPHA = 0.24;
+const SHAFT_GREY = [128, 136, 150] as const;
+/**
+ * Mammatus: a storm raining itself out (no more than MAMMATUS_DEPTH deep where it ends) hangs
+ * rounded pouches under its base, MAMMATUS_WIDTH columns apart and up to MAMMATUS_DROP rows deep.
+ */
+const MAMMATUS_DEPTH = 20;
+const MAMMATUS_WIDTH = 7;
+const MAMMATUS_DROP = 3;
+
 const LITTLE_ENDIAN = new Uint8Array(new Uint32Array([0x0a0b0c0d]).buffer)[0] === 0x0d;
 
 function pack(r: number, g: number, b: number): number {
@@ -88,6 +109,14 @@ export class Renderer {
   private readonly cloudDepth: Uint16Array;
   /** Per cloud cell while drawing: how far it is from open sky above it (or to its left), for shading. */
   private readonly cloudDist: Uint8Array;
+  /** Per column while drawing: how strong the rain shaft is (0: none), and its colours this frame. */
+  private readonly shaft: Float32Array;
+  private readonly shaftLut = new Uint32Array(SHAFT_LEVELS);
+  /** Per column while drawing: the row of the last storm cloud cell seen, and its shading level (mammatus). */
+  private readonly stormRow: Int32Array;
+  private readonly stormLevel: Uint8Array;
+  /** How many rows deep the mammatus pouch hangs in each column (0: a gap between pouches). */
+  private readonly pouch: Uint8Array;
   private frame = 0;
   /** Air's own colour (Sun off, no day and night): the sky is tinted from this. */
   private readonly background: readonly [number, number, number];
@@ -191,6 +220,14 @@ export class Renderer {
     this.cloudRow = new Int32Array(world.width);
     this.cloudDepth = new Uint16Array(world.width);
     this.cloudDist = new Uint8Array(world.size);
+    this.shaft = new Float32Array(world.width);
+    this.stormRow = new Int32Array(world.width);
+    this.stormLevel = new Uint8Array(world.width);
+    // Each pouch a half-ellipse, with a column's gap between neighbours.
+    this.pouch = Uint8Array.from({ length: world.width }, (_, x) => {
+      const u = ((x % MAMMATUS_WIDTH) + 0.5) / MAMMATUS_WIDTH - 0.5;
+      return Math.round(MAMMATUS_DROP * Math.sqrt(Math.max(0, 1 - (u * 2.3) ** 2)));
+    });
   }
 
   render(world: World, options: RenderOptions = { heatView: false, cursor: null }): void {
@@ -223,13 +260,43 @@ export class Renderer {
     }
     const vel = world.vel;
     const water: number = M.Water;
+    const storm: number = M.StormCloud;
     let rain = 0;
+    const { shaft, shaftLut, stormRow, stormLevel, pouch } = this;
+    shaft.fill(0);
+    stormRow.fill(-100);
+    for (let k = 0; k < SHAFT_LEVELS; k++) {
+      const a = (SHAFT_ALPHA * (k + 1)) / SHAFT_LEVELS;
+      shaftLut[k] = pack(bgR + (SHAFT_GREY[0] - bgR) * a, bgG + (SHAFT_GREY[1] - bgG) * a, bgB + (SHAFT_GREY[2] - bgB) * a);
+    }
+    const stormLut = cloudBase[storm];
+    // The column and row of cell i, kept as the loop goes (cheaper than a division per cell).
+    let cx = -1;
+    let cy = 0;
     const fireBase = M.Fire * SHADES;
     let seed = this.seed;
 
     for (let i = 0; i < size; i++) {
+      if (++cx === width) {
+        cx = 0;
+        cy++;
+      }
       const m = mat[i];
       if (isAir[m]) {
+        // Just under a thinning storm's base: a mammatus pouch.
+        const below = cy - stormRow[cx];
+        if (below <= pouch[cx] && stormLut >= 0) {
+          pixels[i] = cloudLut[stormLut + stormLevel[cx] * SHADES + shade[i]];
+          continue;
+        }
+        const sh = shaft[cx];
+        if (sh > 0.02) {
+          shaft[cx] = sh * SHAFT_FADE;
+          if (!(bow > 0.01 && arc[i] !== 0)) {
+            pixels[i] = shaftLut[Math.min(SHAFT_LEVELS - 1, (sh * SHAFT_LEVELS) | 0)];
+            continue;
+          }
+        }
         if (starlight > 0 && stars[i] !== 0) {
           const twinkle = ((i * 7 + glowShift) & 7) === 0 ? 0.6 : 1;
           const v = stars[i] * starlight * twinkle;
@@ -238,8 +305,9 @@ export class Renderer {
         else pixels[i] = bg;
         continue;
       }
-      if (charge[i] !== 0) {
-        pixels[i] = charge[i] >= CHARGE_ACTIVE ? chargeHead[m] : chargeTail[m];
+      // (Above CHARGE_ACTIVE: a conducting liquid resting after a pulse, which doesn't glow.)
+      if (charge[i] !== 0 && charge[i] <= CHARGE_ACTIVE) {
+        pixels[i] = charge[i] === CHARGE_ACTIVE ? chargeHead[m] : chargeTail[m];
         continue;
       }
       // Cheap xorshift for flicker; no Math.random in the hot loop.
@@ -287,9 +355,22 @@ export class Renderer {
         cloudRow[x] = y;
         const level = depth <= CLOUD_LIT ? 0 : Math.min(CLOUD_LEVELS - 1, (((depth - CLOUD_LIT) * (CLOUD_LEVELS - 1)) / CLOUD_DEEP) | 0);
         pixels[i] = cloudLut[cloudBase[m] + level * SHADES + shade[i]];
+        if (m === storm) {
+          if (shaft[x] < SHAFT_START) shaft[x] = SHAFT_START;
+          // Only a storm thinning out (raining itself out) hangs pouches.
+          stormRow[x] = depth <= MAMMATUS_DEPTH ? y : -100;
+          stormLevel[x] = level;
+        }
       } else {
         pixels[i] = lut[m * SHADES + shade[i]];
-        if (m === water && vel[i] > 2) rain++;
+        if (m === water && vel[i] > 2) {
+          rain++;
+          // A drop falling under a storm keeps its shaft going.
+          if (shaft[cx] > 0) shaft[cx] = Math.min(1, shaft[cx] + SHAFT_DROP);
+        } else if (!flickers[m] && fadeFrames[m] === 0) {
+          // Ground, a pool, anything solid: the shaft stops here.
+          shaft[cx] = 0;
+        }
       }
     }
     this.seed = seed;
