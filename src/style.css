@@ -243,8 +243,26 @@ input:focus-visible {
 /* Overlays on the stage sit above the canvas, which paints on top of them once zoomed (transformed). */
 #fps,
 .zoom,
-#heat-legend {
+#heat-legend,
+.hover-label {
   z-index: 1;
+}
+
+/* The name of the material under a resting mouse pointer. */
+.hover-label {
+  position: absolute;
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: rgba(14, 15, 20, 0.82);
+  color: var(--text);
+  font-size: 12px;
+  white-space: nowrap;
+  pointer-events: none;
+  font-variant-numeric: tabular-nums;
+}
+
+.hover-label[hidden] {
+  display: none;
 }
 
 #fps {

@@ -891,7 +891,8 @@ const defs: Record<MaterialId, Def> = {
     update: formBattery,
     above: { temp: 102, into: M.Steam, sometimes: { into: M.Salt, chance: 0.5 } },
     wind: 0.05,
-    // Evaporating in the sun, it leaves salt behind (a salt flat).
+    // Evaporating in the sun, shallow salt water leaves salt behind (a salt flat, a still); over
+    // deep water the salt stays dissolved.
     sunlit: { chance: 0.006, into: M.Vapour, sometimes: { into: M.Salt, chance: 0.5 } },
     description: 'Heavier than fresh water (sinks under it) and never freezes. Boil it to get salt back.',
   },

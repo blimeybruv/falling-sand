@@ -1484,15 +1484,26 @@ describe('after the storm', () => {
     expect(w.count(M.Compost)).toBe(1);
   });
 
-  it('a solar still: salt water under glass in the sun gives fresh water and leaves salt', { timeout: 20000 }, () => {
+  it('a solar still: a shallow tray of salt water under glass in the sun gives fresh water and leaves salt', { timeout: 20000 }, () => {
     const w = new World(40, 40, 8);
     fill(w, 0, 36, 40, 4, M.Stone);
-    fill(w, 0, 30, 40, 6, M.SaltWater);
+    fill(w, 0, 33, 40, 3, M.SaltWater);
     fill(w, 0, 20, 40, 1, M.Glass);
     w.sun = 1;
     run(w, 3000);
     expect(w.created[M.Water]).toBeGreaterThan(20);
     expect(w.count(M.Salt)).toBeGreaterThan(5);
+  });
+
+  it('the sea in the sun evaporates without filling up with salt (it stays dissolved in deep water)', { timeout: 20000 }, () => {
+    const w = new World(40, 40, 9);
+    fill(w, 0, 36, 40, 4, M.Stone);
+    fill(w, 0, 20, 40, 16, M.SaltWater);
+    w.sun = 1;
+    run(w, 3000);
+    expect(w.created[M.Vapour]).toBeGreaterThan(20);
+    // (Before, the same sea left a grain of salt for every other cell that evaporated.)
+    expect(w.count(M.Salt)).toBeLessThan(4);
   });
 });
 

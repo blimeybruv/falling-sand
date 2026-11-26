@@ -80,6 +80,8 @@ const BURN_TEMP = Float32Array.from(MATERIALS, (d) => d.burnTemp ?? BURNING_TEMP
 const WIND = Float32Array.from(MATERIALS, (d) => d.wind);
 const DRIFTS = Float32Array.from(MATERIALS, (d) => d.drifts ?? 0);
 const LOFTS = Float32Array.from(MATERIALS, (d) => d.lofts ?? 0);
+/** How many cells of the same liquid below make it deep (see `deepBelow`). */
+const DEEP_LIQUID = 4;
 /** Powders that the "fixed" drawing option can pin in place: not creatures, seeds and other life, which move by themselves. */
 const PINNABLE = Uint8Array.from(MATERIALS, (d) => (d.kind === 'powder' && d.category !== 'life' ? 1 : 0));
 /** For sound: glass that shatters audibly in a blast, and ice that cracks as it melts. */
@@ -671,10 +673,22 @@ export class World {
       } else if (t[i] < target) t[i] = Math.min(target, t[i] + heat);
       if (chances[m] > 0 && this.rng.chance(chances[m] * strength)) {
         const change = night ? MATS[m].night! : MATS[m].sunlit!;
-        const other = change.sometimes;
+        // What it sometimes leaves (salt from salt water) is left only where it's shallow (a tray,
+        // a still, a drying pool): over deep water it stays dissolved, so a sea in the sun doesn't
+        // fill up with salt.
+        const other = change.sometimes && !this.deepBelow(i, m) ? change.sometimes : undefined;
         this.transform(i, other && this.rng.chance(other.chance) ? other.into : change.into);
       }
     }
+  }
+
+  /** Whether at least DEEP_LIQUID more cells of material m lie straight below cell i. */
+  private deepBelow(i: number, m: number): boolean {
+    for (let k = 1; k <= DEEP_LIQUID; k++) {
+      const j = i + k * this.width;
+      if (j >= this.size || this.mat[j] !== m) return false;
+    }
+    return true;
   }
 
   /**

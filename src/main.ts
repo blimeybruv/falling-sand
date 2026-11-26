@@ -9,6 +9,7 @@ import { loadDiscovery, loadMode } from './ui/progress';
 import { Sound } from './ui/sound';
 import { History } from './ui/history';
 import { View } from './ui/view';
+import { HoverLabel } from './ui/hover';
 
 /** The grid is sized to the window at load, up to roughly this many cells (the performance budget). */
 const TARGET_CELLS = 80_000;
@@ -39,6 +40,7 @@ const history = new History(world);
 const view = new View(stage, canvas, cols, rows);
 const input = new PointerInput(canvas, world, state, () => history.push(), view);
 const sound = new Sound();
+const hover = new HoverLabel(stage, canvas, document.getElementById('hover-label') as HTMLElement, world);
 const controls = setupControls(state, world, discovery, sound, history, view);
 loadFromHash(world).then(
   (loaded) => loaded && toast('Loaded shared scene'),
@@ -86,6 +88,8 @@ function frame(now: number): void {
   sound.update(world, !state.paused);
 
   renderer.render(world, { heatView: state.heatView, cursor: c && { x: c.x, y: c.y, radius: state.brush }, preview: input.preview() });
+
+  hover.update(now, state.heatView);
 
   frames++;
   if (now - fpsTime >= 500) {
