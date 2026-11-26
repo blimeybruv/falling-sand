@@ -263,6 +263,34 @@ function nearWood(w: World, x: number, y: number, r: number): boolean {
 function sprout(w: World, i: number, species: number, height: number): void {
   w.life[i] = species + height;
   w.vel[i] = height;
+  const x = i % w.width;
+  growRoots(w, x, (i - x) / w.width + 1, Math.min(14, 3 + (height >> 2)));
+}
+
+/** Soil roots can grow through. */
+function isRootSoil(t: number): boolean {
+  return t === M.Earth || t === M.Loam || t === M.Sand || t === M.Grass || t === M.Ash || t === M.Fertiliser || t === M.Mud || t === M.Clay;
+}
+
+/**
+ * Roots, as a tree sprouts: a few strands working down into the soil below it and spreading
+ * outwards a little as they go, deeper for a bigger tree. They stop at anything that isn't soil.
+ */
+function growRoots(w: World, x: number, y: number, depth: number): void {
+  const strands = depth > 8 ? 3 : 2;
+  for (let s = 0; s < strands; s++) {
+    // One strand heads down, the others out to either side.
+    const lean = strands === 3 ? s - 1 : s === 0 ? -1 : 1;
+    let rx = x;
+    let ry = y;
+    for (let k = 0; k < depth; k++) {
+      if (!isRootSoil(w.get(rx, ry))) break;
+      w.setCell(w.idx(rx, ry), M.Root);
+      ry++;
+      if (lean !== 0 && w.rng.chance(0.5)) rx += lean;
+      else if (w.rng.chance(0.2)) rx += w.rng.sign();
+    }
+  }
 }
 
 /** Move a growing tip up to (nx, ny), carrying its species, height left and starting height. */

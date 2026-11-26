@@ -101,7 +101,18 @@ export function setupControls(state: GameState, world: World, discovery: Discove
   fillBtn.title = 'Filled boxes and circles, or just outlines (Shift+F)';
   fillBtn.setAttribute('aria-label', 'Filled shapes');
   fillBtn.addEventListener('click', () => setFill(!state.fill));
-  toolRow.append(gap, fillBtn);
+  // Fixed: powders drawn while it's on stay where they're put, for building shapes out of sand.
+  const fixBtn = document.createElement('button');
+  fixBtn.type = 'button';
+  fixBtn.innerHTML = svg('<path d="M9 3h6l-1 6 3 3H7l3-3z" /><path d="M12 12v9" />');
+  fixBtn.title = 'Fixed: powders you draw (sand, earth...) stay where you put them (Shift+P)';
+  fixBtn.setAttribute('aria-label', 'Fixed powders');
+  const setFixed = (fixed: boolean): void => {
+    world.drawFixed = fixed;
+    fixBtn.setAttribute('aria-pressed', String(fixed));
+  };
+  fixBtn.addEventListener('click', () => setFixed(!world.drawFixed));
+  toolRow.append(gap, fillBtn, fixBtn);
   const setDrawTool = (tool: DrawTool): void => {
     state.drawTool = tool;
     for (const [id, b] of toolButtons) b.setAttribute('aria-pressed', String(id === tool));
@@ -112,6 +123,7 @@ export function setupControls(state: GameState, world: World, discovery: Discove
   };
   setDrawTool(state.drawTool);
   setFill(state.fill);
+  setFixed(world.drawFixed);
 
   // --- discovery
   const modeSel = byId<HTMLSelectElement>('mode');
@@ -424,6 +436,8 @@ export function setupControls(state: GameState, world: World, discovery: Discove
       setDrawTool(shiftKeys[key]);
     } else if (e.shiftKey && key === 'f') {
       setFill(!state.fill);
+    } else if (e.shiftKey && key === 'p') {
+      setFixed(!world.drawFixed);
     } else if (tool !== undefined) {
       selectTool(tool);
     } else if (key === ' ') {

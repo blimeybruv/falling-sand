@@ -348,7 +348,7 @@ species in `life`, as it already carries its height.
 **Built (26 Nov).** Each growing tip carries its species (an offset in `life`) and its starting
 height (in `vel`, free once a seed has sprouted). The species comes from the ground and from where
 the seed came from. Pine needles are a new internal material: resinous, quicker to catch, and they
-drop cones. Roots aren't built yet.
+drop cones. Roots (a new internal material, grown into the soil as a tree sprouts) followed the same day.
 
 **Shape first.**
 - Trunks thick at the base and thinner up the tree (2-3 cells wide in big trees).

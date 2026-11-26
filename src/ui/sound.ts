@@ -15,6 +15,7 @@
  *   fireworks    a pop, then tinkling sparks
  *   popcorn      little pops as seeds burst in the heat
  *   bees         a faint wavering buzz
+ *   glass, ice   glass shattering in a blast; ice cracking as it melts or a pond freezes over
  *   birds        now and then, a seagull's cry or a crow's caw
  *   discovery    a bright chime (a longer one for the reward)
  *
@@ -132,6 +133,7 @@ export class Sound {
   private lastSample = 0;
   private lastSteam = 0;
   private heard: Heard = { fire: 0, fallingLiquid: 0, fallingPowder: 0, lava: 0, charged: 0, bees: 0, gulls: 0, crows: 0, sparks: 0, bolts: 0 };
+  private lastCrack = 0;
   private lastBoom = 0;
   private pendingBoom = 0;
   private lastThunder = 0;
@@ -169,7 +171,7 @@ export class Sound {
     const noise = world.noise;
     const ctx = this.ctx;
     if (!ctx || !this.enabled || document.hidden) {
-      noise.blasts = noise.blastRadius = noise.strikes = noise.corona = noise.fizzes = noise.bursts = noise.pops = 0;
+      noise.blasts = noise.blastRadius = noise.strikes = noise.corona = noise.fizzes = noise.bursts = noise.pops = noise.shatters = noise.cracks = 0;
       this.lastSteam = world.created[M.Steam];
       return;
     }
@@ -190,7 +192,9 @@ export class Sound {
     const corona = noise.corona;
     const bursts = noise.bursts;
     const pops = noise.pops;
-    noise.blasts = noise.blastRadius = noise.strikes = noise.corona = noise.fizzes = noise.bursts = noise.pops = 0;
+    const shatters = noise.shatters;
+    const cracks = noise.cracks;
+    noise.blasts = noise.blastRadius = noise.strikes = noise.corona = noise.fizzes = noise.bursts = noise.pops = noise.shatters = noise.cracks = 0;
 
     const h = this.heard;
     if (running) this.sample(world);
@@ -216,7 +220,7 @@ export class Sound {
     const busy =
       strength > 0 ||
       crackles + drips + bubbles + pings + cries + caws > 0 ||
-      blasts + strikes + bursts + pops + corona + h.bolts > 0 ||
+      blasts + strikes + bursts + pops + corona + shatters + cracks + h.bolts > 0 ||
       (loops !== null && Object.values(loops).some((l) => l.target > 0.001));
 
     if (busy) {
@@ -252,6 +256,12 @@ export class Sound {
       this.lastBoom = t;
     }
     if (bursts > 0) this.pop(ahead);
+    if (shatters > 0) this.shatter(ahead, shatters);
+    // Ice cracks now and then while it's melting or freezing over, not with every cell.
+    if (cracks > 0 && t - this.lastCrack > 0.15 + Math.random() * 0.5) {
+      this.crack(ahead);
+      this.lastCrack = t;
+    }
     for (let k = Math.min(6, pops); k > 0; k--) this.kernel(ahead + Math.random() * dt);
     // The strike a corona warned of thunders at the distance chosen for it. Any other strike, or a
     // bolt seen in the grid (lightning drawn with the brush), thunders from a random distance.
@@ -544,6 +554,29 @@ export class Sound {
       // A breath of noise for the hoarseness.
       this.burst(this.crackleBus!, s, 0.05, 0.12, 0.4);
     }
+  }
+
+  /** Glass shattering: a bright crash of noise and a scatter of tinkling shards, more for more glass. */
+  private shatter(t: number, cells: number): void {
+    this.burst(this.crackleBus!, t, 0.35, 0.12, 2.2);
+    for (let k = Math.min(10, 3 + (cells >> 2)); k > 0; k--) this.ping(t + 0.02 + Math.random() * 0.35);
+  }
+
+  /** Ice cracking: a sharp, glassy snap with a short, hollow ring after it. */
+  private crack(t: number): void {
+    const ctx = this.ctx!;
+    this.burst(this.crackleBus!, t, 0.12, 0.03, 1.6);
+    const osc = ctx.createOscillator();
+    osc.type = 'triangle';
+    const f = 900 + Math.random() * 700;
+    osc.frequency.setValueAtTime(f, t);
+    osc.frequency.exponentialRampToValueAtTime(f * 0.45, t + 0.12);
+    const env = ctx.createGain();
+    env.gain.setValueAtTime(0.05, t);
+    env.gain.exponentialRampToValueAtTime(0.0005, t + 0.14);
+    osc.connect(env).connect(this.out!);
+    osc.start(t);
+    osc.stop(t + 0.16);
   }
 
   /** A firework bursting: a small, bright pop. */

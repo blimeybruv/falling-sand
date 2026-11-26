@@ -1758,3 +1758,100 @@ describe('tree species', () => {
     expect(w.count(M.Leaf)).toBeGreaterThan(300);
   });
 });
+
+describe('fixed powders', () => {
+  it('sand drawn fixed stays where it was put; ordinary sand falls', () => {
+    const w = new World(40, 40, 1);
+    w.drawFixed = true;
+    w.paint(10, 10, 3, M.Sand);
+    w.drawFixed = false;
+    w.paint(30, 10, 3, M.Sand);
+    const fixed = w.count(M.Sand);
+    run(w, 200);
+    let high = 0;
+    for (let y = 0; y < 20; y++) for (let x = 0; x < 20; x++) if (w.get(x, y) === M.Sand) high++;
+    expect(high).toBeGreaterThan(20);
+    expect(w.get(30, 10)).toBe(M.Empty);
+    expect(w.count(M.Sand)).toBe(fixed);
+  });
+
+  it('drawn fixed, it goes down solid, not scattered', () => {
+    const w = new World(40, 40, 2);
+    w.drawFixed = true;
+    w.paint(20, 20, 4, M.Sand);
+    // A full disc of radius 4: every cell within it.
+    let n = 0;
+    for (let dy = -4; dy <= 4; dy++) for (let dx = -4; dx <= 4; dx++) if (dx * dx + dy * dy <= 20) n++;
+    expect(w.count(M.Sand)).toBe(n);
+  });
+
+  it('fixed gunpowder still burns, and a blast knocks fixed grains loose', () => {
+    const w = new World(40, 40, 3);
+    for (let x = 0; x < 40; x++) w.set(x, 39, M.Stone);
+    w.drawFixed = true;
+    w.paint(20, 10, 2, M.Gunpowder);
+    w.paint(10, 20, 2, M.Sand);
+    w.drawFixed = false;
+    w.ignite(w.idx(20, 10));
+    run(w, 300);
+    expect(w.count(M.Gunpowder)).toBe(0);
+    w.explode(10, 25, 5);
+    run(w, 300);
+    // Thrown loose, the sand has fallen to the floor.
+    let floor = 0;
+    for (let x = 0; x < 40; x++) if (w.get(x, 38) === M.Sand) floor++;
+    expect(floor).toBeGreaterThan(0);
+  });
+
+  it('open edges leave fixed powders alone', () => {
+    const w = new World(30, 30, 4);
+    w.openEdges = true;
+    w.drawFixed = true;
+    for (let x = 0; x < 30; x++) w.paint(x, 29, 0, M.Sand);
+    w.drawFixed = false;
+    run(w, 100);
+    expect(w.count(M.Sand)).toBe(30);
+  });
+});
+
+describe('tree roots', () => {
+  it('a sprouting tree sends roots down into the soil, deeper for a bigger tree', () => {
+    const w = new World(40, 60, 1);
+    for (let y = 40; y < 60; y++) for (let x = 0; x < 40; x++) w.set(x, y, M.Loam);
+    w.set(20, 39, M.Seed);
+    run(w, 600);
+    expect(w.count(M.Root)).toBeGreaterThan(6);
+    let deepest = 0;
+    for (let y = 40; y < 60; y++) for (let x = 0; x < 40; x++) if (w.get(x, y) === M.Root) deepest = Math.max(deepest, y - 40);
+    expect(deepest).toBeGreaterThan(4);
+    // Nothing but soil was turned to root: no roots above ground.
+    for (let y = 0; y < 40; y++) for (let x = 0; x < 40; x++) expect(w.get(x, y)).not.toBe(M.Root);
+  });
+
+  it('roots stop at rock', () => {
+    const w = new World(40, 60, 2);
+    for (let y = 40; y < 43; y++) for (let x = 0; x < 40; x++) w.set(x, y, M.Loam);
+    for (let y = 43; y < 60; y++) for (let x = 0; x < 40; x++) w.set(x, y, M.Stone);
+    w.set(20, 39, M.Seed);
+    run(w, 600);
+    for (let y = 43; y < 60; y++) for (let x = 0; x < 40; x++) expect(w.get(x, y)).toBe(M.Stone);
+  });
+});
+
+describe('glass and ice can be heard', () => {
+  it('glass caught in a blast shatters (a sound event), and melting ice cracks', () => {
+    const w = new World(30, 30, 1);
+    for (let y = 10; y < 20; y++) for (let x = 10; x < 20; x++) w.set(x, y, M.Glass);
+    w.explode(15, 15, 4);
+    expect(w.noise.shatters).toBeGreaterThan(0);
+    const ice = new World(20, 20, 2);
+    for (let x = 0; x < 20; x++) ice.set(x, 19, M.ThinIce);
+    run(ice, 300);
+    expect(ice.noise.cracks).toBeGreaterThan(0);
+    // Stone in a blast makes no such sound.
+    const stone = new World(30, 30, 3);
+    for (let y = 10; y < 20; y++) for (let x = 10; x < 20; x++) stone.set(x, y, M.Stone);
+    stone.explode(15, 15, 4);
+    expect(stone.noise.shatters).toBe(0);
+  });
+});

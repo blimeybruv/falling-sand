@@ -174,6 +174,7 @@ export const M = {
   Crow: 166,
   PineCone: 167,
   Needles: 168,
+  Root: 169,
 } as const;
 
 export type MaterialId = (typeof M)[keyof typeof M];

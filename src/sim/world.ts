@@ -80,6 +80,9 @@ const BURN_TEMP = Float32Array.from(MATERIALS, (d) => d.burnTemp ?? BURNING_TEMP
 const WIND = Float32Array.from(MATERIALS, (d) => d.wind);
 const DRIFTS = Float32Array.from(MATERIALS, (d) => d.drifts ?? 0);
 const LOFTS = Float32Array.from(MATERIALS, (d) => d.lofts ?? 0);
+/** For sound: glass that shatters audibly in a blast, and ice that cracks as it melts. */
+const GLASSY = Uint8Array.from(MATERIALS, (d) => (d.id === M.Glass || d.id === M.StainedGlass || d.id === M.Icicle ? 1 : 0));
+const ICY = Uint8Array.from(MATERIALS, (d) => (d.id === M.Ice || d.id === M.ThinIce || d.id === M.Icicle ? 1 : 0));
 /** Sunlight shines through these (air, gases, glass) and stops at the first thing that isn't. */
 const TRANSPARENT = Uint8Array.from(MATERIALS, (d) => ((d.transparent ?? (d.kind === 'gas' || d.kind === 'empty')) ? 1 : 0));
 const SUNLIT_CHANCE = Float32Array.from(MATERIALS, (d) => d.sunlit?.chance ?? 0);
@@ -134,6 +137,14 @@ export class World {
   readonly vx: Int8Array;
   readonly vy: Int8Array;
   readonly charge: Uint8Array;
+  /**
+   * 1 for a powder drawn with "fixed" on (`drawFixed`): it stays where it was put instead of
+   * falling or sliding (it still burns, melts and reacts). Anything that becomes something else
+   * loses it.
+   */
+  readonly pinned: Uint8Array;
+  /** While set, powders drawn with the brush or the shape tools are pinned (see `pinned`). */
+  drawFixed = false;
   /** Current temperatures. Double-buffered, so this array is replaced every frame: don't hold on to it. */
   temp: Float32Array;
   private tempBack: Float32Array;
@@ -145,9 +156,10 @@ export class World {
   /**
    * Audible events since the UI last looked (it reads and zeroes these; the simulation itself makes
    * no sound): explosions and the biggest radius among them, lightning strikes, frames of charge
-   * building before a strike (corona), acid eating something, fireworks bursting, popcorn popping.
+   * building before a strike (corona), acid eating something, fireworks bursting, popcorn popping,
+   * glass shattering in a blast, ice cracking (melting, or a pond skinning over).
    */
-  readonly noise = { blasts: 0, blastRadius: 0, strikes: 0, corona: 0, fizzes: 0, bursts: 0, pops: 0 };
+  readonly noise = { blasts: 0, blastRadius: 0, strikes: 0, corona: 0, fizzes: 0, bursts: 0, pops: 0, shatters: 0, cracks: 0 };
   /**
    * Sunshine, 0 (none) to 1 (full). Light comes straight down each column and warms the first thing
    * it reaches, which may also change (`sunlit` in the material table): water evaporates, clouds burn off.
@@ -197,6 +209,7 @@ export class World {
     this.vx = new Int8Array(this.size);
     this.vy = new Int8Array(this.size);
     this.charge = new Uint8Array(this.size);
+    this.pinned = new Uint8Array(this.size);
     this.temp = new Float32Array(this.size).fill(AMBIENT_TEMP);
     this.tempBack = new Float32Array(this.size).fill(AMBIENT_TEMP);
     this.stamp = new Uint32Array(this.size);
@@ -273,6 +286,7 @@ export class World {
     this.vx[i] = 0;
     this.vy[i] = 0;
     this.charge[i] = 0;
+    this.pinned[i] = 0;
     this.temp[i] = def.heat ? def.heat.temp : (def.startTemp ?? AMBIENT_TEMP);
     this.stamp[i] = this.frame;
     if (this.stepping) this.created[m]++;
@@ -291,13 +305,15 @@ export class World {
 
   /** Throw particle i with a velocity in cells per frame (positive y is down). */
   launch(i: number, vxCells: number, vyCells: number): void {
+    // Thrown, a fixed grain comes loose.
+    this.pinned[i] = 0;
     this.vx[i] = Math.max(-127, Math.min(127, Math.round(vxCells * SUB)));
     this.vy[i] = Math.max(-127, Math.min(127, Math.round(vyCells * SUB)));
   }
 
   /** Swap two cells (all their state) and mark both as moved this frame. */
   swap(a: number, b: number): void {
-    const { mat, shade, life, burn, vel, vx, vy, temp, charge } = this;
+    const { mat, shade, life, burn, vel, vx, vy, temp, charge, pinned } = this;
     let t: number;
     t = mat[a]; mat[a] = mat[b]; mat[b] = t;
     t = shade[a]; shade[a] = shade[b]; shade[b] = t;
@@ -308,6 +324,7 @@ export class World {
     t = vy[a]; vy[a] = vy[b]; vy[b] = t;
     t = temp[a]; temp[a] = temp[b]; temp[b] = t;
     t = charge[a]; charge[a] = charge[b]; charge[b] = t;
+    t = pinned[a]; pinned[a] = pinned[b]; pinned[b] = t;
     this.stamp[a] = this.frame;
     this.stamp[b] = this.frame;
   }
@@ -321,6 +338,7 @@ export class World {
     this.vx.fill(0);
     this.vy.fill(0);
     this.charge.fill(0);
+    this.pinned.fill(0);
     this.temp.fill(AMBIENT_TEMP);
     this.tempBack.fill(AMBIENT_TEMP);
     this.stamp.fill(0);
@@ -344,7 +362,9 @@ export class World {
     const r = Math.max(0, Math.floor(radius));
     const r2 = r * r + r;
     const kind = MATS[m].kind;
-    const scatter = r === 0 || kind === 'static' ? 1 : 0.5;
+    // Drawn fixed, a powder goes down solid, as drawn; otherwise loose materials are scattered a little.
+    const pin = this.drawFixed && kind === 'powder';
+    const scatter = r === 0 || kind === 'static' || pin ? 1 : 0.5;
     for (let dy = -r; dy <= r; dy++) {
       const y = cy + dy;
       if (y < 0 || y >= this.height) continue;
@@ -356,7 +376,10 @@ export class World {
         if (m === M.Empty) {
           if (t !== M.Empty) this.setCell(i, M.Empty);
         } else if (t === M.Empty) {
-          if (this.rng.chance(scatter)) this.setCell(i, m);
+          if (this.rng.chance(scatter)) {
+            this.setCell(i, m);
+            if (pin) this.pinned[i] = 1;
+          }
         } else if (m === M.Fire) {
           this.ignite(i);
         } else if (m === M.Lightning) {
@@ -371,6 +394,7 @@ export class World {
    * rules but solid, with no scattering: the shape tools.
    */
   paintCells(cells: Int32Array, count: number, m: MaterialId): void {
+    const pin = this.drawFixed && MATS[m].kind === 'powder';
     for (let k = 0; k < count; k++) {
       const i = cells[k];
       const t = this.mat[i];
@@ -378,6 +402,7 @@ export class World {
         if (t !== M.Empty) this.setCell(i, M.Empty);
       } else if (t === M.Empty) {
         this.setCell(i, m);
+        if (pin) this.pinned[i] = 1;
       } else if (m === M.Fire) {
         this.ignite(i);
       } else if (m === M.Lightning) {
@@ -403,6 +428,7 @@ export class World {
         const t = this.mat[i];
         if (t === M.Empty || t === to || (from !== M.Empty && t !== from)) continue;
         this.setCell(i, to);
+        if (this.drawFixed && MATS[to].kind === 'powder') this.pinned[i] = 1;
       }
     }
   }
@@ -519,6 +545,7 @@ export class World {
         const i = y * this.width + x;
         const def = MATS[this.mat[i]];
         if (d2 <= r2) {
+          if (GLASSY[def.id]) this.noise.shatters++;
           if (def.shattersInto !== undefined) this.setCell(i, def.shattersInto);
           else if (!def.indestructible) this.setCell(i, this.rng.chance(0.25) ? M.Fire : M.Empty);
           continue;
@@ -586,7 +613,7 @@ export class World {
     const bottom = (h - 1) * w;
     for (let x = 0; x < w; x++) {
       const kind = KIND[mat[bottom + x]];
-      if (kind === KIND_POWDER || kind === KIND_LIQUID) this.setCell(bottom + x, M.Empty);
+      if ((kind === KIND_POWDER && this.pinned[bottom + x] === 0) || kind === KIND_LIQUID) this.setCell(bottom + x, M.Empty);
       if (KIND[mat[x]] === KIND_GAS && !IS_CLOUD[mat[x]]) this.setCell(x, M.Empty);
     }
     for (let y = 0; y < h; y++) {
@@ -594,7 +621,7 @@ export class World {
         const i = y * w + (side === 0 ? 0 : w - 1);
         const m = mat[i];
         const kind = KIND[m];
-        if (kind === KIND_STATIC || kind === KIND_EMPTY) continue;
+        if (kind === KIND_STATIC || kind === KIND_EMPTY || this.pinned[i] !== 0) continue;
         if (IS_CLOUD[m] && (this.wind === 0 || (this.wind < 0) !== (side === 0))) continue;
         this.setCell(i, M.Empty);
       }
@@ -631,6 +658,7 @@ export class World {
         const cold = NIGHT_COLD_TEMP[m];
         if (t[i] < cold) {
           this.transform(i, MATS[m].night!.cold!.into);
+          this.noise.cracks++;
           continue;
         }
       } else if (t[i] < target) t[i] = Math.min(target, t[i] + heat);
@@ -736,6 +764,7 @@ export class World {
     const above = def.above;
     // (Burning cells are hot because they're burning: they don't melt until they've stopped.)
     if (above && t > above.temp && this.burn[i] === 0) {
+      if (ICY[def.id]) this.noise.cracks++;
       const other = above.sometimes;
       this.transform(i, other && this.rng.chance(other.chance) ? other.into : above.into);
       return;
@@ -763,7 +792,8 @@ export class World {
 
     switch (def.kind) {
       case 'powder':
-        this.movePowder(x, y, i, def);
+        // Drawn fixed: it stays put.
+        if (this.pinned[i] === 0) this.movePowder(x, y, i, def);
         break;
       case 'liquid':
         this.moveLiquid(x, y, i, def);
