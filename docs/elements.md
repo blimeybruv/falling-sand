@@ -423,6 +423,16 @@ Differences from the plan:
 - **Stasis pocket**: cells within reach update one frame in eight, staggered so they move in slow
   motion rather than in jerks.
 
+**The last three (26 Nov, late).**
+- **Phase fault** shifts things within reach one state up through their `above` change, leaving them
+  just past its temperature, so they change back as they cool a little way off.
+- **Linked gates**: every gate is linked to every other, rather than in coloured pairs (single cells
+  drawn with the brush would almost never share a colour). They register with the world each frame,
+  like stasis pockets, at most 64. Made by lightning striking an arc node.
+- **Transmuter**: a second Discovery reward, earned by finding the other seven anomalies. Chains: rust
+  to iron to copper to gold, coal or charcoal to graphite to diamond, sand or stone to quartz. It
+  burns out into slag after 30 to 60 seconds.
+
 | | Anomaly | The rule it breaks | What it does | How it might form | Effort |
 |---|---|---|---|---|---|
 | ✅ | Lift field | Gravity | Loose particles nearby fall upwards, so sand and water fountain into the sky and rain down outside it | Lightning striking a magnet in plasma | F |
@@ -430,9 +440,9 @@ Differences from the plan:
 | ✅ | Cold sun | Heat flows downhill | Draws heat out of everything around it, so it freezes water and puts out fire, and glows brighter the more it drinks | Dry ice touching plasma | F |
 | ✅ | Stasis pocket | Time | Cells within reach update only now and then, so fire, water and creatures move in slow motion | A red sprite touching the ground | F |
 | ✅ | Arc node | Insulation | Throws arcs of electricity to anything nearby, conductor or not, setting things alight | Lightning striking graphite under salt water | F |
-| | Phase fault | Phase changes | Things passing through swap state (solid to liquid, liquid to gas) and back again a little way off | Plasma meeting mercury | F |
-| | Linked gates | Distance | A pair: what falls into one comes out of the other (single cells linked by a shared colour, not one multi-cell entity) | Two arc nodes struck at once | S |
-| | Transmuter | Conservation | Slowly turns its neighbours one step along a chain (lead to gold, stone to quartz) and burns out after a while | The reward for finding every anomaly | F |
+| ✅ | Phase fault | Phase changes | Things passing through swap state (solid to liquid, liquid to gas) and back again a little way off | Plasma meeting mercury | F |
+| ✅ | Linked gates | Distance | A pair: what falls into one comes out of the other (single cells linked by a shared colour, not one multi-cell entity) | Two arc nodes struck at once | S |
+| ✅ | Transmuter | Conservation | Slowly turns its neighbours one step along a chain (lead to gold, stone to quartz) and burns out after a while | The reward for finding every anomaly | F |
 
 ## Eldritch materials (design note, 22 Nov)
 

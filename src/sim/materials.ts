@@ -33,6 +33,9 @@ import {
   gravityKnot,
   stasisPocket,
   arcNode,
+  phaseFault,
+  linkedGate,
+  transmuter,
   formAlcohol,
   formBattery,
   pulseBattery,
@@ -1440,8 +1443,12 @@ const defs: Record<MaterialId, Def> = {
     conductivity: 0.25,
     acidProof: true,
     conducts: true,
-    // Panning: mercury picks the odd fleck of gold out of sand.
-    reactions: [{ with: M.Sand, chance: 0.001, otherInto: M.Gold }],
+    reactions: [
+      // Panning: mercury picks the odd fleck of gold out of sand.
+      { with: M.Sand, chance: 0.001, otherInto: M.Gold },
+      // Plasma meeting mercury: phase changes come loose (a phase fault).
+      { with: M.Plasma, chance: 0.3, into: M.PhaseFault },
+    ],
     description: 'Liquid metal, heavier than everything: sinks through all liquids, and sand floats on it. Conducts.',
   },
   [M.Lightning]: {
@@ -3181,6 +3188,56 @@ const defs: Record<MaterialId, Def> = {
     update: arcNode,
     description: 'Anomaly: insulation fails around it. Throws arcs of lightning at anything nearby, conductor or not, setting things alight.',
   },
+  [M.PhaseFault]: {
+    ...base,
+    name: 'Phase fault',
+    key: '',
+    category: 'anomaly',
+    kind: 'static',
+    density: 100,
+    colour: [255, 120, 200],
+    colourEnd: [120, 220, 255],
+    colourJitter: 0,
+    glow: true,
+    acidProof: true,
+    indestructible: true,
+    update: phaseFault,
+    description: 'Anomaly: phase changes come loose around it. Things nearby melt, boil or thaw without being heated, and change back a little way off.',
+  },
+  [M.LinkedGate]: {
+    ...base,
+    name: 'Linked gate',
+    key: '',
+    category: 'anomaly',
+    kind: 'static',
+    density: 100,
+    colour: [255, 170, 60],
+    colourEnd: [120, 70, 230],
+    colourJitter: 0,
+    glow: true,
+    acidProof: true,
+    indestructible: true,
+    update: linkedGate,
+    description: 'Anomaly: distance comes loose. Whatever falls into one gate comes out of another (every gate is linked to every other).',
+  },
+  [M.Transmuter]: {
+    ...base,
+    name: 'Transmuter',
+    key: '',
+    category: 'anomaly',
+    kind: 'static',
+    density: 100,
+    colour: [255, 225, 120],
+    colourEnd: [200, 120, 40],
+    colourJitter: 0,
+    glow: true,
+    acidProof: true,
+    indestructible: true,
+    lifetime: [1800, 3600],
+    decay: { into: M.Slag, chance: 1 },
+    update: transmuter,
+    description: 'Anomaly: slowly turns its neighbours one step along a chain (rust to iron to copper to gold, coal to graphite to diamond, sand or stone to quartz), then burns out into slag.',
+  },
   [M.Root]: {
     ...base,
     name: 'Root',
@@ -3252,7 +3309,7 @@ export const PALETTE: readonly MaterialDef[] = [
   // creatures
   M.Earthworm, M.Termite, M.Fish, M.Firefly, M.Bee, M.Snail, M.Ant, M.Yeast, M.CoralPolyp, M.Seagull, M.Crow, M.PineCone,
   // anomalies
-  M.ColdSun, M.LiftField, M.GravityKnot, M.StasisPocket, M.ArcNode,
+  M.ColdSun, M.LiftField, M.GravityKnot, M.StasisPocket, M.ArcNode, M.PhaseFault, M.LinkedGate, M.Transmuter,
 ].map((id) => MATERIALS[id]);
 
 /** Room temperature. Cells drift back towards it when nothing heats or cools them. */

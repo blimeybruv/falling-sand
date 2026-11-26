@@ -217,6 +217,15 @@ export const RECIPES: Readonly<Partial<Record<MaterialId, Recipe>>> = {
   [M.GravityKnot]: { hint: 'The hardest thing, crushed even harder.', recipe: 'A diamond caught in the heart of a blast.' },
   [M.StasisPocket]: { hint: 'Something from high above a storm, reaching the ground.', recipe: 'A red sprite touching stone, earth or sand (build a tower up to where they flash).' },
   [M.ArcNode]: { hint: 'Lightning, carbon and the sea.', recipe: 'Lightning striking graphite under salt water.' },
+  [M.PhaseFault]: { hint: 'The fourth state of matter meets the liquid metal.', recipe: 'Plasma touching mercury.' },
+  [M.LinkedGate]: { hint: 'Strike a broken insulator.', recipe: 'Lightning striking an arc node.' },
+};
+
+/** The anomalies' own reward: the transmuter, once every other anomaly has been found. */
+export const ANOMALY_REWARD: { material: MaterialId; after: readonly MaterialId[]; recipe: string } = {
+  material: M.Transmuter,
+  after: [M.ColdSun, M.LiftField, M.GravityKnot, M.StasisPocket, M.ArcNode, M.PhaseFault, M.LinkedGate],
+  recipe: 'The reward for finding every other anomaly.',
 };
 
 /** Not made by any reaction: awarded once enough other materials have been discovered. */
@@ -262,6 +271,9 @@ export class Discovery {
     if (id === REWARD.material) {
       return this.isUnlocked(id) ? REWARD.recipe : `Discover ${REWARD.after} materials to earn this.`;
     }
+    if (id === ANOMALY_REWARD.material) {
+      return this.isUnlocked(id) ? ANOMALY_REWARD.recipe : 'Find every other anomaly to earn this.';
+    }
     const r = RECIPES[id];
     if (!r) return '';
     return this.isUnlocked(id) ? r.recipe : r.hint;
@@ -269,7 +281,7 @@ export class Discovery {
 
   /**
    * Check what the simulation has created (World.created) and unlock anything new.
-   * Returns the newly unlocked materials, in the order they were unlocked (the reward last).
+   * Returns the newly unlocked materials, in the order they were unlocked (the rewards last).
    */
   update(created: Uint32Array): MaterialId[] {
     const fresh: MaterialId[] = [];
@@ -282,6 +294,10 @@ export class Discovery {
     if (!this.unlocked.has(REWARD.material) && this.discovered >= REWARD.after) {
       this.unlocked.add(REWARD.material);
       fresh.push(REWARD.material);
+    }
+    if (!this.unlocked.has(ANOMALY_REWARD.material) && ANOMALY_REWARD.after.every((id) => this.unlocked.has(id))) {
+      this.unlocked.add(ANOMALY_REWARD.material);
+      fresh.push(ANOMALY_REWARD.material);
     }
     return fresh;
   }

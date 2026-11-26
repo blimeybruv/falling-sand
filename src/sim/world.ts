@@ -99,6 +99,8 @@ const LOFTS = Float32Array.from(MATERIALS, (d) => d.lofts ?? 0);
  * to one update in STASIS_SLOW frames (staggered, so the pocket moves in slow motion, not in jerks).
  */
 const MAX_STASIS = 32;
+/** At most this many linked gates are linked at once. */
+const MAX_GATES = 64;
 const STASIS_REACH = 7;
 const STASIS_SLOW = 8;
 const STASIS: number = M.StasisPocket;
@@ -186,6 +188,27 @@ export class World {
     if (this.stasisNextCount >= MAX_STASIS) return;
     this.stasisNextX[this.stasisNextCount] = x;
     this.stasisNextY[this.stasisNextCount++] = y;
+  }
+
+  /** Linked gates that registered last frame (cell indices), and those registering this frame. */
+  private readonly gates = new Int32Array(MAX_GATES);
+  private gatesFound = 0;
+  private readonly gatesNext = new Int32Array(MAX_GATES);
+  private gatesNextCount = 0;
+
+  /** A linked gate at cell i is open next frame (called from its behaviour). */
+  holdGate(i: number): void {
+    if (this.gatesNextCount < MAX_GATES) this.gatesNext[this.gatesNextCount++] = i;
+  }
+
+  /** How many linked gates were open last frame. */
+  get gateCount(): number {
+    return this.gatesFound;
+  }
+
+  /** The cell index of open gate k (0 to gateCount - 1). It may since have been erased: check the cell. */
+  gateAt(k: number): number {
+    return this.gates[k];
   }
 
   /** Whether (x, y) lies within reach of a stasis pocket this frame. */
@@ -397,6 +420,7 @@ export class World {
     this.charge.fill(0);
     this.pinned.fill(0);
     this.stasisCount = this.stasisNextCount = 0;
+    this.gatesFound = this.gatesNextCount = 0;
     this.temp.fill(AMBIENT_TEMP);
     this.tempBack.fill(AMBIENT_TEMP);
     this.stamp.fill(0);
@@ -654,6 +678,9 @@ export class World {
     this.stasisY.set(this.stasisNextY);
     this.stasisCount = this.stasisNextCount;
     this.stasisNextCount = 0;
+    this.gates.set(this.gatesNext);
+    this.gatesFound = this.gatesNextCount;
+    this.gatesNextCount = 0;
     const stasis = this.stasisCount > 0;
     const { width: w, height: h, mat, stamp } = this;
     const f = this.frame;

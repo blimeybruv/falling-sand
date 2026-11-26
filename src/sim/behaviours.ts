@@ -1595,6 +1595,8 @@ export function updateBolt(w: World, x: number, y: number, _i: number): boolean 
     // striking graphite under salt water, insulation fails (an arc node).
     else if (t === M.Magnet && countAround(w, nx, ny, M.Plasma, M.Plasma) > 0 && w.rng.chance(0.3)) w.transform(n, M.LiftField);
     else if (t === M.Graphite && countAround(w, nx, ny, M.SaltWater, M.SaltWater) > 0 && w.rng.chance(0.3)) w.transform(n, M.ArcNode);
+    // Lightning striking an arc node tears it open into a gate, linked to every other gate.
+    else if (t === M.ArcNode && w.rng.chance(0.15)) w.transform(n, M.LinkedGate);
     else if (t === M.Iron && w.rng.chance(0.05)) w.transform(n, M.Magnet);
     // An arc through charcoal or coal turns it to graphite.
     else if ((t === M.Charcoal || t === M.Coal) && w.rng.chance(0.2)) w.transform(n, M.Graphite);
@@ -2734,5 +2736,95 @@ export function arcNode(w: World, x: number, y: number, _i: number): boolean {
     }
     break;
   }
+  return true;
+}
+
+const FAULT_REACH = 5;
+
+/**
+ * Phase fault: phase changes come loose around it. Things within reach are shifted one state up,
+ * as if heated past their change (ice to water, water to steam, metal to molten metal), but only
+ * just past it, so a little way off, cooling, they change back.
+ */
+export function phaseFault(w: World, x: number, y: number, _i: number): boolean {
+  for (let k = 0; k < 4; k++) {
+    const j = within(w, x, y, FAULT_REACH);
+    if (j < 0 || w.burn[j] > 0) continue;
+    const above = w.defAt(j % w.width, (j / w.width) | 0).above;
+    if (!above) continue;
+    w.transform(j, above.into);
+    w.temp[j] = above.temp + 5;
+  }
+  return true;
+}
+
+/**
+ * Linked gates: distance comes loose between them. A grain or drop falling into one (resting on it)
+ * comes out of another gate, below it; a wisp of gas rising into one, out of the top of another.
+ * Every gate is linked to every other (they register with the world each frame: World.holdGate).
+ */
+export function linkedGate(w: World, x: number, y: number, i: number): boolean {
+  w.holdGate(i);
+  const count = w.gateCount;
+  if (count < 2) return true;
+  // What's falling in from above, or rising in from below?
+  let src = -1;
+  let up = false;
+  if (y > 0 && loose(w, i - w.width)) src = i - w.width;
+  else if (y < w.height - 1 && w.defAt(x, y + 1).kind === 'gas') {
+    src = i + w.width;
+    up = true;
+  }
+  if (src < 0) return true;
+  const g = w.gateAt(w.rng.int(0, count - 1));
+  if (g === i || w.mat[g] !== M.LinkedGate) return true;
+  const gx = g % w.width;
+  const gy = (g - gx) / w.width;
+  const ty = up ? gy - 1 : gy + 1;
+  for (const dx of [0, -1, 1]) {
+    const tx = gx + dx;
+    const t = w.get(tx, dx === 0 ? ty : gy);
+    if (t === M.Empty) {
+      w.swap(src, w.idx(tx, dx === 0 ? ty : gy));
+      return true;
+    }
+  }
+  return true;
+}
+
+/** One step along the transmuter's chains: base metal towards gold, carbon towards diamond, rock towards quartz. */
+function transmuted(t: MaterialId): MaterialId | -1 {
+  switch (t) {
+    case M.Rust:
+      return M.Iron;
+    case M.Iron:
+      return M.Copper;
+    case M.Copper:
+      return M.Gold;
+    case M.Coal:
+    case M.Charcoal:
+      return M.Graphite;
+    case M.Graphite:
+      return M.Diamond;
+    case M.Sand:
+    case M.Stone:
+      return M.Quartz;
+    default:
+      return -1;
+  }
+}
+
+/**
+ * Transmuter: conservation comes loose. Now and then it turns a neighbour one step along a chain
+ * (rust to iron to copper to gold, coal to graphite to diamond, sand or stone to quartz), until it
+ * burns out (its lifetime) into slag.
+ */
+export function transmuter(w: World, x: number, y: number, _i: number): boolean {
+  if (!w.rng.chance(0.03)) return true;
+  const k = w.rng.int(0, 3);
+  const nx = k === 0 ? x - 1 : k === 1 ? x + 1 : x;
+  const ny = k === 2 ? y - 1 : k === 3 ? y + 1 : y;
+  const into = transmuted(w.get(nx, ny));
+  if (into !== -1) w.transform(w.idx(nx, ny), into);
   return true;
 }

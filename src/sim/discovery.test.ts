@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CHARGE_ACTIVE, Discovery, M, MATERIALS, PALETTE, RECIPES, REWARD, STARTERS, World, type MaterialId } from './index';
+import { ANOMALY_REWARD, CHARGE_ACTIVE, Discovery, M, MATERIALS, PALETTE, RECIPES, REWARD, STARTERS, World, type MaterialId } from './index';
 
 function run(world: World, frames: number): void {
   for (let f = 0; f < frames; f++) world.step();
@@ -12,9 +12,20 @@ function fillRect(world: World, x0: number, y0: number, w: number, h: number, m:
 describe('discovery rules', () => {
   it('every palette material can be discovered: a starter, a recipe or the reward', () => {
     for (const def of PALETTE) {
-      const ways = [STARTERS.includes(def.id), RECIPES[def.id] !== undefined, REWARD.material === def.id];
+      const ways = [STARTERS.includes(def.id), RECIPES[def.id] !== undefined, REWARD.material === def.id, ANOMALY_REWARD.material === def.id];
       expect(ways.filter(Boolean).length, def.name).toBe(1);
     }
+  });
+
+  it('finding every other anomaly earns the transmuter', () => {
+    const d = new Discovery();
+    const created = new Uint32Array(MATERIALS.length);
+    for (const id of ANOMALY_REWARD.after.slice(0, -1)) created[id] = 1;
+    expect(d.update(created)).not.toContain(M.Transmuter);
+    expect(d.describe(M.Transmuter)).toMatch(/every other anomaly/);
+    created[ANOMALY_REWARD.after[ANOMALY_REWARD.after.length - 1]] = 1;
+    expect(d.update(created)).toContain(M.Transmuter);
+    expect(d.isUnlocked(M.Transmuter)).toBe(true);
   });
 
   it('counts only what the simulation creates, not what is painted', () => {
@@ -41,7 +52,7 @@ describe('discovery rules', () => {
     expect(d.update(created)).not.toContain(REWARD.material);
     for (const id of recipes) created[id] = 1;
     const fresh = d.update(created);
-    expect(fresh[fresh.length - 1]).toBe(REWARD.material);
+    expect(fresh.slice(-2)).toEqual([REWARD.material, ANOMALY_REWARD.material]);
     expect(d.unlocked.size).toBe(d.total);
   });
 
@@ -739,6 +750,15 @@ describe('every recipe works in the simulation', () => {
     ['stasis pocket (anomaly): a red sprite touching the ground', M.StasisPocket, 30, (w) => {
       fillRect(w, 0, 20, 40, 20, M.Stone);
       fillRect(w, 10, 19, 20, 1, M.Sprite);
+    }],
+    ['phase fault (anomaly): plasma touching mercury', M.PhaseFault, 60, (w) => {
+      fillRect(w, 0, 36, 40, 4, M.Mercury);
+      fillRect(w, 5, 34, 30, 2, M.Plasma);
+    }],
+    ['linked gate (anomaly): lightning striking an arc node', M.LinkedGate, 60, (w) => {
+      fillRect(w, 0, 39, 40, 1, M.Stone);
+      fillRect(w, 15, 30, 10, 1, M.ArcNode);
+      fillRect(w, 15, 31, 10, 1, M.Lightning);
     }],
     ['arc node (anomaly): lightning striking graphite under salt water', M.ArcNode, 60, (w) => {
       fillRect(w, 0, 39, 40, 1, M.Stone);

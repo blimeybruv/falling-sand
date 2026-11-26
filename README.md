@@ -41,7 +41,7 @@ Every other material is a locked "?" button with a hint. You unlock a material b
 the simulation: pour fire onto water and you discover steam; plant a seed near water and the tree
 that grows gives you wood. Drawing a material with the brush, or loading a scene, never unlocks
 anything. The journal (`J`) lists what you've found and how, and lava is the reward for discovering
-ten materials. Progress is saved in your browser.
+ten materials. The anomalies have their own reward: find all seven and you earn the transmuter. Progress is saved in your browser.
 
 Switch to Sandbox mode (the Mode menu, behind the downward arrow on a phone) to have everything at once. Your
 Discovery progress is kept for when you switch back.
@@ -260,6 +260,9 @@ debris start fresh when a scene loads.
 | | Gravity knot | Everything falls towards it: it pulls loose grains and drops in from all sides and crushes what it holds, sand and earth into stone, coal into diamond, snow into ice | A diamond caught in the heart of a blast |
 | | Stasis pocket | Time runs slow around it: fire, water and creatures nearby move in slow motion | A red sprite touching stone, earth or sand |
 | | Arc node | Insulation fails around it: every so often it throws an arc of lightning at something nearby, conductor or not, setting it alight | Lightning striking graphite under salt water |
+| | Phase fault | Phase changes come loose around it: ice thaws, water boils and metal melts nearby without being heated, and changes back a little way off as it cools | Plasma touching mercury |
+| | Linked gate | Distance comes loose: a grain or drop falling into one gate comes out under another (every gate is linked to every other); gas rising into one comes out of the top of another | Lightning striking an arc node |
+| | Transmuter | Slowly turns its neighbours one step along a chain (rust to iron to copper to gold, coal to graphite to diamond, sand or stone to quartz), then after half a minute to a minute burns out into slag | Reward for finding every other anomaly |
 
 The Discovery column gives the answers away, so skip it if you'd rather find them yourself.
 
@@ -289,7 +292,7 @@ src/
     ids.ts         material ids
     materials.ts   the material table (density, flammability, heat, colours, ...)
     behaviours.ts  small per-material functions (fire, steam, grass, trees, acid, lava, ice, mixing)
-    discovery.ts   Discovery mode: starters, recipes and hints, the reward, progress
+    discovery.ts   Discovery mode: starters, recipes and hints, the rewards, progress
     world.ts       grid storage, the update loop, temperature, explosions
     scene.ts       compact scene format for saving and sharing
     rng.ts         seedable random numbers, so tests are deterministic

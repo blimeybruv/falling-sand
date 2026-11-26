@@ -2088,6 +2088,61 @@ describe('anomalies', () => {
     expect(lit).toBeGreaterThan(0);
   });
 
+  it('a phase fault melts ice and boils water without heat, and they change back a little way off', () => {
+    const w = new World(40, 40, 7);
+    fill(w, 0, 36, 40, 4, M.Stone);
+    fill(w, 14, 30, 12, 6, M.Ice);
+    w.set(20, 29, M.PhaseFault);
+    run(w, 400);
+    expect(w.created[M.Water]).toBeGreaterThan(0);
+    expect(w.created[M.Steam]).toBeGreaterThan(0);
+    // Nothing near it was hot to begin with: it took no fire to do it.
+    expect(w.created[M.Fire]).toBe(0);
+  });
+
+  it('linked gates: sand poured into one comes out of another', () => {
+    const w = new World(60, 40, 8);
+    fill(w, 0, 38, 60, 2, M.Stone);
+    w.set(10, 20, M.LinkedGate);
+    w.set(50, 10, M.LinkedGate);
+    for (let f = 0; f < 300; f++) {
+      if (w.get(10, 10) === M.Empty) w.set(10, 10, M.Sand);
+      w.step();
+    }
+    // Sand turns up on the far side, under the other gate.
+    let far = 0;
+    for (let y = 0; y < 40; y++) for (let x = 40; x < 60; x++) if (w.get(x, y) === M.Sand) far++;
+    expect(far).toBeGreaterThan(20);
+  });
+
+  it('a lone gate goes nowhere', () => {
+    const w = new World(40, 40, 9);
+    fill(w, 0, 38, 40, 2, M.Stone);
+    w.set(20, 20, M.LinkedGate);
+    w.set(20, 15, M.Sand);
+    run(w, 100);
+    // It lands on the gate and slides off beside it, as off any pillar: it isn't sent anywhere.
+    expect(w.count(M.Sand)).toBe(1);
+    let x = -1;
+    for (let i = 0; i < w.size; i++) if (w.mat[i] === M.Sand) x = i % 40;
+    expect(Math.abs(x - 20)).toBeLessThanOrEqual(2);
+  });
+
+  it('a transmuter turns iron to copper to gold and coal towards diamond, then burns out into slag', () => {
+    const w = new World(20, 20, 10);
+    fill(w, 0, 15, 20, 5, M.Stone);
+    w.set(10, 10, M.Transmuter);
+    w.set(9, 10, M.Iron);
+    w.set(11, 10, M.Graphite);
+    w.set(10, 9, M.Stone);
+    w.set(10, 11, M.Iron);
+    run(w, 4000);
+    expect(w.created[M.Copper]).toBeGreaterThan(0);
+    expect(w.created[M.Gold] + w.created[M.Diamond]).toBeGreaterThan(0);
+    expect(w.count(M.Transmuter)).toBe(0);
+    expect(w.created[M.Slag]).toBeGreaterThan(0);
+  });
+
   it('anomalies shrug off blasts', () => {
     const w = new World(30, 30, 6);
     for (const [k, m] of [M.ColdSun, M.LiftField, M.GravityKnot, M.StasisPocket, M.ArcNode].entries()) w.set(10 + k * 2, 15, m);

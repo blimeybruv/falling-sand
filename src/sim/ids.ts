@@ -180,6 +180,9 @@ export const M = {
   GravityKnot: 172,
   StasisPocket: 173,
   ArcNode: 174,
+  PhaseFault: 175,
+  LinkedGate: 176,
+  Transmuter: 177,
 } as const;
 
 export type MaterialId = (typeof M)[keyof typeof M];
