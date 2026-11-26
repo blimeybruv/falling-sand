@@ -19,6 +19,25 @@ describe('scenes', () => {
     expect(Array.from(scene.mat)).toEqual(Array.from(w.mat));
   });
 
+  it('keeps pinned powders pinned, and still writes version 1 when nothing is pinned', () => {
+    const w = sample();
+    expect(encodeScene(captureScene(w))[2]).toBe(1);
+    w.drawFixed = true;
+    w.paint(10, 5, 2, M.Sand);
+    w.paint(0, 0, 0, M.Gunpowder);
+    const bytes = encodeScene(captureScene(w));
+    expect(bytes[2]).toBe(2);
+    const copy = new World(50, 30, 2);
+    applyScene(copy, decodeScene(bytes));
+    expect(Array.from(copy.mat)).toEqual(Array.from(w.mat));
+    expect(Array.from(copy.pinned)).toEqual(Array.from(w.pinned));
+    expect(copy.pinned[0]).toBe(1);
+    // Loaded, they stay where they were put.
+    for (let f = 0; f < 100; f++) copy.step();
+    expect(copy.get(10, 5)).toBe(M.Sand);
+    expect(() => decodeScene(bytes.slice(0, bytes.length - 1))).toThrow(/truncated|corrupt/);
+  });
+
   it('is compact for mostly-empty scenes', () => {
     const bytes = encodeScene(captureScene(sample()));
     expect(bytes.length).toBeLessThan(400); // 1500 cells

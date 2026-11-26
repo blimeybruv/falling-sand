@@ -1651,10 +1651,8 @@ describe('light powders in the wind', () => {
     return home;
   };
 
-  it('a strong wind sweeps up a whole pile of sand, not just its surface; a light one some of it', () => {
-    expect(leftInPlace(M.Sand, 1, 600)).toBeLessThan(144 * 0.1);
-    expect(leftInPlace(M.Sand, 0.4, 600)).toBeLessThan(144 * 0.6);
-    expect(leftInPlace(M.Sand, 0.4, 600)).toBeGreaterThan(144 * 0.1);
+  it('a strong wind only rolls the surface of a sand heap; most of it stays put', () => {
+    expect(leftInPlace(M.Sand, 1, 600)).toBeGreaterThan(144 * 0.5);
     expect(leftInPlace(M.Sand, 0, 600)).toBeGreaterThan(144 * 0.6);
   });
 
@@ -1760,6 +1758,20 @@ describe('tree species', () => {
 });
 
 describe('fixed powders', () => {
+  it('creatures and seeds are never pinned: they move by themselves', () => {
+    const w = new World(40, 40, 4);
+    w.drawFixed = true;
+    w.paint(10, 10, 1, M.Earthworm);
+    w.paint(30, 10, 1, M.Seed);
+    w.paint(20, 30, 0, M.Sand);
+    let pins = 0;
+    for (let i = 0; i < w.size; i++) if (w.mat[i] === M.Earthworm || w.mat[i] === M.Seed) pins += w.pinned[i];
+    expect(pins).toBe(0);
+    expect(w.pinned[w.idx(20, 30)]).toBe(1);
+    run(w, 200);
+    expect(w.get(10, 10)).toBe(M.Empty);
+  });
+
   it('sand drawn fixed stays where it was put; ordinary sand falls', () => {
     const w = new World(40, 40, 1);
     w.drawFixed = true;
@@ -1853,5 +1865,41 @@ describe('glass and ice can be heard', () => {
     for (let y = 10; y < 20; y++) for (let x = 10; x < 20; x++) stone.set(x, y, M.Stone);
     stone.explode(15, 15, 4);
     expect(stone.noise.shatters).toBe(0);
+  });
+});
+
+describe('ash soaks into the soil', () => {
+  /** A layer of ash `depth` cells deep on a bed of `soil`. */
+  const bed = (soil: MaterialId, depth: number, seed: number): World => {
+    const w = new World(60, 30, seed);
+    for (let y = 20; y < 30; y++) for (let x = 0; x < 60; x++) w.set(x, y, soil);
+    for (let y = 20 - depth; y < 20; y++) for (let x = 0; x < 60; x++) w.set(x, y, M.Ash);
+    return w;
+  };
+
+  it('an ash bed on earth lasts a while, then sinks in over a minute or two, enriching it into loam', { timeout: 30000 }, () => {
+    const w = bed(M.Earth, 2, 1);
+    run(w, 600);
+    // Ten seconds on, most of the ash bed is still there for seeds to grow in.
+    expect(w.count(M.Ash)).toBeGreaterThan(120 * 0.6);
+    run(w, 6600);
+    expect(w.count(M.Ash)).toBeLessThan(120 * 0.15);
+    expect(w.count(M.Loam)).toBeGreaterThan(80);
+  });
+
+  it('ash on bare rock stays heaped', () => {
+    const w = bed(M.Stone, 2, 2);
+    run(w, 3000);
+    expect(w.count(M.Ash)).toBe(120);
+  });
+
+  it('earthworms work ash beside them into the soil much faster', () => {
+    const count = (worms: boolean): number => {
+      const w = bed(M.Earth, 1, 3);
+      if (worms) for (let x = 2; x < 60; x += 4) w.set(x, 21, M.Earthworm);
+      run(w, 1200);
+      return w.count(M.Ash);
+    };
+    expect(count(true)).toBeLessThan(count(false) - 8);
   });
 });

@@ -36,7 +36,7 @@ import {
   growSeaweed,
   releaseGas,
   sublimate,
-  formCement,
+  updateAsh,
   igniteOnLanding,
   launchFirework,
   meltThrough,
@@ -318,8 +318,6 @@ const defs: Record<MaterialId, Def> = {
     conductivity: 0.06,
     wind: 0.1,
     drifts: 0.015,
-    // A strong wind strips a heap of it grain by grain.
-    lofts: 0.08,
     key: '1',
     kind: 'powder',
     density: 20,
@@ -745,8 +743,8 @@ const defs: Record<MaterialId, Def> = {
       // Ash and saltpetre (potash and nitrate) make plant food.
       { with: M.Saltpetre, chance: 0.01, into: M.Fertiliser, otherInto: M.Fertiliser },
     ],
-    update: formCement,
-    description: 'Light grey powder left by fires. Floats on water and blows in the wind.',
+    update: updateAsh,
+    description: 'Light grey powder left by fires. Floats on water and blows in the wind; lying on soil, it slowly soaks in and enriches it into loam.',
   },
   [M.Mud]: {
     ...base,

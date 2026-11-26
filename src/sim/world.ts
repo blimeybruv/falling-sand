@@ -80,6 +80,8 @@ const BURN_TEMP = Float32Array.from(MATERIALS, (d) => d.burnTemp ?? BURNING_TEMP
 const WIND = Float32Array.from(MATERIALS, (d) => d.wind);
 const DRIFTS = Float32Array.from(MATERIALS, (d) => d.drifts ?? 0);
 const LOFTS = Float32Array.from(MATERIALS, (d) => d.lofts ?? 0);
+/** Powders that the "fixed" drawing option can pin in place: not creatures, seeds and other life, which move by themselves. */
+const PINNABLE = Uint8Array.from(MATERIALS, (d) => (d.kind === 'powder' && d.category !== 'life' ? 1 : 0));
 /** For sound: glass that shatters audibly in a blast, and ice that cracks as it melts. */
 const GLASSY = Uint8Array.from(MATERIALS, (d) => (d.id === M.Glass || d.id === M.StainedGlass || d.id === M.Icicle ? 1 : 0));
 const ICY = Uint8Array.from(MATERIALS, (d) => (d.id === M.Ice || d.id === M.ThinIce || d.id === M.Icicle ? 1 : 0));
@@ -145,6 +147,11 @@ export class World {
   readonly pinned: Uint8Array;
   /** While set, powders drawn with the brush or the shape tools are pinned (see `pinned`). */
   drawFixed = false;
+
+  /** Whether a cell of material m can be pinned: a powder that isn't alive (worms and seeds move by themselves). */
+  canPin(m: MaterialId): boolean {
+    return PINNABLE[m] === 1;
+  }
   /** Current temperatures. Double-buffered, so this array is replaced every frame: don't hold on to it. */
   temp: Float32Array;
   private tempBack: Float32Array;
@@ -363,7 +370,7 @@ export class World {
     const r2 = r * r + r;
     const kind = MATS[m].kind;
     // Drawn fixed, a powder goes down solid, as drawn; otherwise loose materials are scattered a little.
-    const pin = this.drawFixed && kind === 'powder';
+    const pin = this.drawFixed && PINNABLE[m] === 1;
     const scatter = r === 0 || kind === 'static' || pin ? 1 : 0.5;
     for (let dy = -r; dy <= r; dy++) {
       const y = cy + dy;
@@ -394,7 +401,7 @@ export class World {
    * rules but solid, with no scattering: the shape tools.
    */
   paintCells(cells: Int32Array, count: number, m: MaterialId): void {
-    const pin = this.drawFixed && MATS[m].kind === 'powder';
+    const pin = this.drawFixed && PINNABLE[m] === 1;
     for (let k = 0; k < count; k++) {
       const i = cells[k];
       const t = this.mat[i];
@@ -428,7 +435,7 @@ export class World {
         const t = this.mat[i];
         if (t === M.Empty || t === to || (from !== M.Empty && t !== from)) continue;
         this.setCell(i, to);
-        if (this.drawFixed && MATS[to].kind === 'powder') this.pinned[i] = 1;
+        if (this.drawFixed && PINNABLE[to] === 1) this.pinned[i] = 1;
       }
     }
   }

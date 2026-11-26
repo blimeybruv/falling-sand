@@ -57,13 +57,13 @@ Discovery progress is kept for when you switch back.
 | A–Z button (beside the material tabs) | Sort the materials by name; press again for the usual order, grouped by kind. Remembered next time. In Discovery mode, materials not yet found stay after the rest, so it gives nothing away |
 | `E` | Eraser |
 | `[` and `]` | Smaller / bigger brush (or the Brush slider) |
-| Drawing tools (beside the material tabs) | Brush (`Shift+B`), line (`Shift+L`), box (`Shift+R`), circle (`Shift+O`) and replace (`Shift+X`). Drag a line, box or circle out, with a preview, and let go to draw it; the brush size sets how thick it is, and the square button (`Shift+F`) fills boxes and circles, and the pin (`Shift+P`) draws powders fixed: sand, earth or gunpowder drawn with it on stay exactly where you put them (they still burn and react; a blast knocks them loose), for building shapes out of them. A circle is centred where you start. Replace swaps the material you start on for the selected one (water for oil, say, leaving the tank alone). Right-drag erases with any tool |
+| Drawing tools (beside the material tabs) | Brush (`Shift+B`), line (`Shift+L`), box (`Shift+R`), circle (`Shift+O`) and replace (`Shift+X`). Drag a line, box or circle out, with a preview, and let go to draw it; the brush size sets how thick it is, and the square button (`Shift+F`) fills boxes and circles, and the pin (`Shift+P`) draws powders fixed: sand, earth or gunpowder drawn with it on stay exactly where you put them (they still burn and react; a blast knocks them loose), for building shapes out of them. Creatures and seeds can't be pinned. Pins are kept in saves, share links and undo. A circle is centred where you start. Replace swaps the material you start on for the selected one (water for oil, say, leaving the tank alone). Right-drag erases with any tool |
 | `Ctrl+Z` / `Ctrl+Y` | Undo / redo your last changes (strokes, shapes, Clear, loading a scene), up to 30 back; also in the Scene menu |
 | `Space` | Pause / play |
 | `.` | Step one frame while paused (or the Step button) |
 | `T` | Heat view: colour everything by temperature, with a scale in the corner (or the Heat view button) |
 | Speed menu | 0.25× to 3× simulation speed |
-| Wind menu | Blow smoke, fire, steam and falling particles left or right; it sweeps loose powders up off the ground (sand, snow and ash heaps are stripped grain by grain; sawdust flies). Clouds sail along; in a strong wind, dunes creep and snow piles into drifts, fire races downwind, and flowers send seeds off on the breeze. Gusty swells and drops and now and then turns round |
+| Wind menu | Blow smoke, fire, steam and falling particles left or right; it sweeps loose powders up off the ground (snow and ash heaps are stripped grain by grain; sawdust flies; sand only rolls along the surface). Clouds sail along; in a strong wind, dunes creep and snow piles into drifts, fire races downwind, and flowers send seeds off on the breeze. Gusty swells and drops and now and then turns round |
 | Edges button | Walls (the default: things pile up against the edges) or open: sand, liquids and creatures fall off the bottom, liquids and gases flow out of the sides and rise out of the top, and clouds sail off with the wind. Solid things you draw stay put, so you can build a floor |
 | Speaker button | Sound on or off. Wind (following the Wind setting, gusting), crackling fire, booming explosions, thunder after lightning (with a corona sizzle as the charge builds before a near strike), hissing steam and acid, rain and pouring sand, bubbling lava, humming electricity, fireworks, buzzing bees, crying gulls and cawing crows, glass shattering in a blast and ice cracking as it melts or freezes over, and a chime for each discovery. All made live with the Web Audio API, no sound files |
 | Sun menu | Sunlight from above warms whatever it reaches first: it evaporates water (which rises and makes clouds), dries mud and salt water, burns off clouds and melts snow, but not in the shade. Glass lets it through. Plants grow faster in sunlight and slower in shade (moss the other way round). Sun on falling rain draws a faint rainbow. Vapour rising against a roof condenses on it, so salt water under glass in the sun makes a solar still: fresh water drips back, salt is left behind. Day/night runs a three-minute day: the sky brightens, warms at dawn and dusk and fills with stars; clear nights chill whatever is open to the sky (a cloud or a roof keeps it warm), mist rises off water, ponds skin over with thin ice, and fog settling on frozen ground leaves frost. The morning sun melts it all |
@@ -87,7 +87,7 @@ debris start fresh when a scene loads.
 | Key | Material | Behaviour | In Discovery mode |
 |---|---|---|---|
 | **Ground** | | | |
-| 1 | Sand | Falls, piles up, sinks through water; a strong wind strips a heap grain by grain; sprouts grass at the water's edge; melts into glass when very hot | Starter |
+| 1 | Sand | Falls, piles up, sinks through water; sprouts grass at the water's edge; melts into glass when very hot | Starter |
 | D | Earth | Brown powder; turns to mud when wet, and to loam beside sand and clay | Starter |
 | M | Mud | Thick, slow liquid; dries back to earth when heated; settles into clay in water | Earth meets water |
 | C | Clay | Sticky powder that stands in steep piles; fired in a kiln it becomes brick | Mud left in water |
@@ -191,7 +191,7 @@ debris start fresh when a scene loads.
 | 7 | Fire | Short-lived; rises and flickers; ignites flammable neighbours | Starter |
 | K | Charcoal | Burns slowly and very hot, glowing rather than flaming; hot enough to make glass | Smother a wood fire with sand |
 | | Coal | Burns for a very long time, very hot | Charcoal buried with no air and baked past 200° |
-| X | Ash | Light powder left by fires; floats on water, and the wind lifts it off a heap and carries it away. Rich in potash: seeds grow into trees on it without water, and grass spreads faster beside it | Wood, leaves or grass burning out |
+| X | Ash | Light powder left by fires; floats on water, and the wind lifts it off a heap and carries it away. Rich in potash: seeds grow into trees on it without water, and grass spreads faster beside it. Lying on soil it slowly soaks in over a minute or two, enriching it into loam | Wood, leaves or grass burning out |
 | U | Sulfur | Yellow powder; burns with choking smoke; slowly turns water acidic | Lava meets water (now and then) |
 | P | Saltpetre | White crystals (nitrate): grass spreads faster on it. Lightning striking soil leaves some | Leaves buried in earth, or lightning striking soil |
 | G | Gunpowder | Powder; burns very fast with small blasts, so a line of it works as a fuse | Charcoal with sulfur and saltpetre |
@@ -237,7 +237,7 @@ debris start fresh when a scene loads.
 | | Honeydew | Sweet drops that ferment like sugar | Flowers drip it |
 | | Honey | Thick, golden, very slow | Bees on honeydew |
 | | Sawdust | Very light: a gust sends nearly all of it flying, far downwind; catches fire easily | Termites eating wood |
-| | Earthworm | Creature: burrows through earth, leaving loam; comes up to the surface when rain lies on the ground; drowns if it falls into water | Damp loam |
+| | Earthworm | Creature: burrows through earth, leaving loam, and works ash beside it into the soil; comes up to the surface when rain lies on the ground; drowns if it falls into water | Damp loam |
 | | Termite | Creature: eats wood into sawdust; dies out in the open | Rotting wood (mushrooms) |
 | | Fish | Creature: swims, eats algae, breeds; can't survive out of water; stunned by a nearby blast, it floats up and comes round | Water under algae |
 | | Firefly | Creature: drifts over grass, glowing | Grass with open air above |
@@ -308,7 +308,7 @@ chains (neon, toffee, popcorn, icicles, fertiliser, compost...), with recipes an
 estimates.
 
 - [ ] **A primordial wilderness map**: a pre-generated starting world (from a seed, so it can be shared and regenerated) that looks like untouched prehistoric land: layered rock with ore veins and a buried oil pocket, a smouldering volcano with a lava chamber, a salt-water sea with sandy shores and seaweed, caves with stalactites, loam hills with grass and trees, a peat bog, and storm clouds over it all. Offered from the Scene menu. Loading it shouldn't count as discoveries (scenes already don't), so it doubles as a sandbox for Discovery mode.
-- [ ] **A wind pass over every material** (later, no hurry): go through the table and give each material wind values that match how it really behaves (`wind` for things in the air, `drifts` and `lofts` for powders on the ground), measured in the sim, so seeds, leaves, feathers, flour-like powders, smoke and spray all respond in proportion. A player's suggestion.
+- [ ] **A wind pass over every material** (later, no hurry): go through the table and give each material wind values that match how it really behaves (`wind` for things in the air, `drifts` and `lofts` for powders on the ground), measured in the sim, so seeds, leaves, feathers, flour-like powders, smoke and spray all respond in proportion. Sand stays as it is until then: when it was made to loft like sawdust, a wind reshaped the example scenes too drastically, so it only rolls along the surface. A player's suggestion.
 - [ ] **Load-bearing materials**: see the design note in [`docs/elements.md`](docs/elements.md). (Vents are built.)
 - [ ] **More materials**: pick one from [`docs/elements.md`](docs/elements.md). Each is a table entry, usually a `Reaction`, and a line in `RECIPES`; the tests check every one can be discovered.
 - [ ] **Discovery goals**: small challenges once everything is unlocked ("grow a forest of 5 trees", "boil a whole pond").

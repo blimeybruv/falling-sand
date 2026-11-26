@@ -526,6 +526,39 @@ export function formCement(w: World, x: number, y: number, i: number): boolean {
   return mixThree(w, x, y, i, M.Sand, M.Water, M.Cement);
 }
 
+/** Per frame, the chance that ash lying on soil sinks one cell into it, and that buried ash is taken up. */
+const ASH_SINK = 0.0005;
+const ASH_TAKEN_UP = 0.002;
+
+/** Soil that ash soaks into. */
+function soaksAsh(t: MaterialId): boolean {
+  return t === M.Earth || t === M.Loam || t === M.Grass;
+}
+
+/**
+ * Ash: lying on soil, it slowly soaks in, now and then trading places with the soil below it, and
+ * once soil covers it it's taken up, enriching the soil into loam. A burnt forest floor keeps its
+ * ash bed long enough for seeds to come up in it, then the ash sinks in over a minute or two instead
+ * of heaping up for ever. (Worms work it in faster: see updateWorm.) Otherwise it mixes into cement.
+ */
+export function updateAsh(w: World, x: number, y: number, i: number): boolean {
+  if (w.pinned[i] === 0) {
+    if (soaksAsh(w.get(x, y - 1)) && w.rng.chance(ASH_TAKEN_UP)) {
+      w.transform(i, M.Loam);
+      return true;
+    }
+    const below = w.get(x, y + 1);
+    if (soaksAsh(below) && w.rng.chance(ASH_SINK)) {
+      const n = w.idx(x, y + 1);
+      if (w.pinned[n] === 0) {
+        w.swap(i, n);
+        return true;
+      }
+    }
+  }
+  return formCement(w, x, y, i);
+}
+
 /** Put material m into the first open cell below, beside or above (x, y), in that order. */
 function drip(w: World, x: number, y: number, m: MaterialId): void {
   const d = w.rng.sign();
@@ -1838,6 +1871,11 @@ export function updateWorm(w: World, x: number, y: number, i: number): boolean {
   if (!soil) return false; // in the open: it falls
   // Out at the surface (rain brings worms up), it now and then draws a crow.
   if (w.rng.chance(BIRD_DRAW) && touches(w, x, y, M.Empty)) drawBird(w, x, y, M.Crow);
+  // Ash beside it: it works it into the soil as loam.
+  if (w.rng.chance(0.02)) {
+    const a = neighbourOf(w, x, y, M.Ash, M.Ash);
+    if (a >= 0) w.transform(a, M.Loam);
+  }
   if (!w.rng.chance(0.3)) return true;
   if (rainAbove(w, x, y)) {
     // Rain: head up towards the surface, and stay there while the ground is wet.

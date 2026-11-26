@@ -153,7 +153,7 @@ does not melt sand into glass").
 
 `src/sim/scene.ts` defines the save format used by browser saves, files and share links. People will
 have saved scenes and posted links, so keep old ones loading: if you change the format, bump
-`VERSION` and keep decoding the old version. Scenes store only material ids.
+`VERSION` and keep decoding the old version. Scenes store only material ids, plus which cells are pinned (version 2, written only when something is).
 
 ## Before committing
 
