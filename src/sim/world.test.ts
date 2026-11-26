@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { AMBIENT_TEMP, CHARGE_ACTIVE, M, MATERIALS, MAX_BLAST_RADIUS, MAX_EXPLOSIONS_PER_FRAME, PALETTE, World, gustAt, sunAt, type MaterialId } from './index';
-import { GIANT_TIP, PINE_SEED } from './behaviours';
+import { FALLING_ICE, GIANT_TIP, PINE_SEED } from './behaviours';
 
 function run(world: World, frames: number): void {
   for (let f = 0; f < frames; f++) world.step();
@@ -1927,5 +1927,59 @@ describe('ash soaks into the soil', () => {
       return w.count(M.Ash);
     };
     expect(count(true)).toBeLessThan(count(false) - 8);
+  });
+});
+
+describe('ice frozen out of the sky', () => {
+  it('steam freezing at the top falls as ice crystals that melt where they land, instead of hanging in the sky', { timeout: 30000 }, () => {
+    const w = new World(40, 60, 1);
+    for (let x = 0; x < 40; x++) w.set(x, 59, M.Stone);
+    for (let y = 0; y < 3; y++) for (let x = 0; x < 40; x++) w.set(x, y, M.Steam);
+    let made = 0;
+    for (let f = 0; f < 1500; f++) {
+      w.step();
+      made = w.created[M.Ice];
+    }
+    expect(made).toBeGreaterThan(0);
+    // None hangs in the sky, and none is left as ice on the warm floor.
+    expect(w.count(M.Ice) + w.count(M.Icicle)).toBe(0);
+  });
+
+  it('a crystal landing on frozen ground stays as ice; on warm ground it melts', () => {
+    const drop = (floor: MaterialId): World => {
+      const w = new World(20, 20, 4);
+      for (let x = 0; x < 20; x++) w.set(x, 19, floor);
+      w.set(10, 2, M.Ice);
+      w.life[w.idx(10, 2)] = FALLING_ICE;
+      run(w, 200);
+      return w;
+    };
+    const cold = drop(M.Ice);
+    expect(cold.get(10, 18)).toBe(M.Ice);
+    expect(cold.count(M.Ice)).toBe(21);
+    const warm = drop(M.Stone);
+    expect(warm.count(M.Ice)).toBe(0);
+    expect(warm.count(M.Water)).toBe(1);
+  });
+
+  it('a steady plume of steam grows no icicles at the top of the sky', { timeout: 60000 }, () => {
+    const w = new World(60, 80, 2);
+    for (let x = 0; x < 60; x++) w.set(x, 79, M.Stone);
+    for (let f = 0; f < 4000; f++) {
+      for (let x = 25; x < 35; x++) if (w.get(x, 70) === M.Empty) w.set(x, 70, M.Steam);
+      w.step();
+    }
+    let high = 0;
+    for (let y = 0; y < 20; y++) for (let x = 0; x < 60; x++) if (w.get(x, y) === M.Ice || w.get(x, y) === M.Icicle) high++;
+    expect(high).toBe(0);
+  });
+
+  it('ice you draw in mid-air stays put', () => {
+    const w = new World(20, 20, 3);
+    w.paint(10, 5, 1, M.Ice);
+    const n = w.count(M.Ice);
+    run(w, 100);
+    expect(w.get(10, 5)).toBe(M.Ice);
+    expect(w.count(M.Ice)).toBe(n);
   });
 });

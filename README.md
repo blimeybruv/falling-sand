@@ -99,7 +99,7 @@ debris start fresh when a scene loads.
 | B | Brick | Static; insulates, never burns, and acid can't eat it | Fire clay in a kiln |
 | Q | Glass | Static; acid can't eat it | Melt sand with lava or a charcoal fire |
 | N | Obsidian | Black volcanic glass; indestructible | Lava meets ice |
-| I | Ice | Static and cold; melts near heat, slowly freezes neighbouring water | Steam reaching the top |
+| I | Ice | Static and cold; melts near heat, slowly freezes neighbouring water. Steam reaching the top of the sky now and then freezes into a crystal, which falls and melts where it lands (unless the ground is frozen) | Steam reaching the top |
 | | Icicle | Grows downward where water drips past ice; melts when warm | Water dripping past ice |
 | F | Snow | Light, cold powder; melts near warmth | A cloud near ice |
 | Z | Salt | Dissolves in water (salt water) and melts ice | Boiling water leaves some behind |

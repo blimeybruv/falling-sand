@@ -36,6 +36,9 @@ function countAround(w: World, x: number, y: number, a: MaterialId, b: MaterialI
   return n;
 }
 
+/** Marks (in `life`) an ice crystal frozen out of the sky, which falls until it lands. */
+export const FALLING_ICE = 1;
+
 /**
  * Steam: near the top of the grid, crowded steam gathers into clouds, and the rest condenses back
  * into water (some freezing to ice). It also condenses under a solid ceiling.
@@ -48,8 +51,14 @@ export function updateSteam(w: World, x: number, y: number, i: number): boolean 
     return true;
   }
   if (nearTop && w.rng.chance(0.01)) {
-    // Up in the cold, some of it freezes straight to frost.
-    w.setCell(i, w.rng.chance(0.08) ? M.Ice : M.Water);
+    // Up in the cold, some of it freezes straight to ice, a crystal that falls until it lands (and
+    // melts there, unless the ground is frozen).
+    if (w.rng.chance(0.08)) {
+      w.setCell(i, M.Ice);
+      w.life[i] = FALLING_ICE;
+    } else {
+      w.setCell(i, M.Water);
+    }
     return true;
   }
   if (w.isSolid(x, y - 1) && w.rng.chance(0.004)) {
@@ -834,6 +843,25 @@ export function growIcicle(w: World, x: number, y: number, i: number): boolean {
 }
 
 export function freezeWater(w: World, x: number, y: number, i: number): boolean {
+  // An ice crystal frozen out of the sky falls (through air and gases) until it lands. Without
+  // this it hung at the top of the sky for ever, growing icicles from the water condensing beside it.
+  if (w.life[i] === FALLING_ICE) {
+    const below = w.get(x, y + 1);
+    const kind = below === M.Empty ? 'gas' : w.defAt(x, y + 1).kind;
+    if (kind === 'gas') {
+      w.swap(i, w.idx(x, y + 1));
+      return true;
+    }
+    // A raindrop falling just below: wait for it, rather than landing on it in mid-air.
+    if (kind === 'liquid' && (w.get(x, y + 2) === M.Empty || w.defAt(x, y + 2).kind === 'gas')) return true;
+    // Landed. On anything above freezing it melts, like a hailstone (ice keeps itself cold, so a
+    // crystal kept as ice in a warm sea would slowly freeze the sea); on frozen ground it stays.
+    if (!w.inBounds(x, y + 1) || w.temp[w.idx(x, y + 1)] >= 0) {
+      w.setCell(i, M.Water);
+      return true;
+    }
+    w.life[i] = 0;
+  }
   if (w.temp[i] >= 0) return true;
   freezeDrip(w, x, y);
   if (!w.rng.chance(0.01)) return true;

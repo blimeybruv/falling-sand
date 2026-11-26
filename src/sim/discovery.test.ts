@@ -1336,8 +1336,10 @@ describe('round 4', () => {
       return n;
     };
     // Boiling water keeps opening brief gaps of air above the lava, so it does crust a little:
-    // measured over 1500 frames, 0-9 cells a world under water against 12-19 in the open.
-    expect(basalt(true)).toBeLessThan(basalt(false) / 3);
+    // measured over 1500 frames, 0-13 cells a world under water against 11-19 in the open (24
+    // worlds: 153 against 352). It once looked better than that only because ice frozen out of the
+    // steam hung at the top of the sky, so the clouds snowed on the lava and set some of it as stone.
+    expect(basalt(true)).toBeLessThan(basalt(false) / 2);
   });
 
   it('molten glass with no wind stays molten glass (until it cools)', () => {
