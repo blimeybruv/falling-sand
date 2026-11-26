@@ -527,7 +527,7 @@ export function formCement(w: World, x: number, y: number, i: number): boolean {
 }
 
 /** Per frame, the chance that ash lying on soil sinks one cell into it, and that buried ash is taken up. */
-const ASH_SINK = 0.0005;
+const ASH_SINK = 0.0007;
 const ASH_TAKEN_UP = 0.002;
 
 /** Soil that ash soaks into. */
@@ -537,18 +537,21 @@ function soaksAsh(t: MaterialId): boolean {
 
 /**
  * Ash: lying on soil, it slowly soaks in, now and then trading places with the soil below it, and
- * once soil covers it it's taken up, enriching the soil into loam. A burnt forest floor keeps its
- * ash bed long enough for seeds to come up in it, then the ash sinks in over a minute or two instead
- * of heaping up for ever. (Worms work it in faster: see updateWorm.) Otherwise it mixes into cement.
+ * once it's in the ground (soil above and below) it's taken up, enriching the soil into loam. A heap
+ * soaks in from the bottom, a grain at a time in each column. A burnt forest floor keeps its ash bed
+ * long enough for seeds to come up in it, then the ash sinks in over a minute or two instead of
+ * heaping up for ever. (Worms work it in faster: see updateWorm.) Otherwise it mixes into cement.
+ * Soil lying on top of ash doesn't count: earth dropped (or a worm dying) on an ash heap leaves it be.
  */
 export function updateAsh(w: World, x: number, y: number, i: number): boolean {
-  if (w.pinned[i] === 0) {
-    if (soaksAsh(w.get(x, y - 1)) && w.rng.chance(ASH_TAKEN_UP)) {
-      w.transform(i, M.Loam);
-      return true;
-    }
-    const below = w.get(x, y + 1);
-    if (soaksAsh(below) && w.rng.chance(ASH_SINK)) {
+  if (w.pinned[i] === 0 && soaksAsh(w.get(x, y + 1))) {
+    if (soaksAsh(w.get(x, y - 1))) {
+      if (w.rng.chance(ASH_TAKEN_UP)) {
+        w.transform(i, M.Loam);
+        return true;
+      }
+    } else if (soaksAsh(w.get(x, y + 2)) && w.rng.chance(ASH_SINK)) {
+      // Only into solid ground (soil under soil), so a grain it pushed up can't rise on through the heap.
       const n = w.idx(x, y + 1);
       if (w.pinned[n] === 0) {
         w.swap(i, n);
@@ -1871,10 +1874,10 @@ export function updateWorm(w: World, x: number, y: number, i: number): boolean {
   if (!soil) return false; // in the open: it falls
   // Out at the surface (rain brings worms up), it now and then draws a crow.
   if (w.rng.chance(BIRD_DRAW) && touches(w, x, y, M.Empty)) drawBird(w, x, y, M.Crow);
-  // Ash beside it: it works it into the soil as loam.
+  // Ash lying on the soil beside it: it works it in as loam.
   if (w.rng.chance(0.02)) {
     const a = neighbourOf(w, x, y, M.Ash, M.Ash);
-    if (a >= 0) w.transform(a, M.Loam);
+    if (a >= 0 && a + w.width < w.size && soaksAsh(w.mat[a + w.width] as MaterialId)) w.transform(a, M.Loam);
   }
   if (!w.rng.chance(0.3)) return true;
   if (rainAbove(w, x, y)) {

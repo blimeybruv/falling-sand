@@ -1887,6 +1887,21 @@ describe('ash soaks into the soil', () => {
     expect(w.count(M.Loam)).toBeGreaterThan(80);
   });
 
+  it('earth or a worm lying on top of an ash heap leaves it be: the heap soaks in only from the bottom', { timeout: 30000 }, () => {
+    const w = new World(60, 40, 5);
+    for (let y = 30; y < 40; y++) for (let x = 0; x < 60; x++) w.set(x, y, M.Earth);
+    for (let y = 20; y < 30; y++) for (let x = 0; x < 60; x++) w.set(x, y, M.Ash);
+    for (let x = 0; x < 60; x++) w.set(x, 19, x % 4 ? M.Earth : M.Earthworm);
+    run(w, 2400);
+    // The top half of the heap is untouched (the worms only turn the earth layer they crawl in to loam).
+    let loamHigh = 0;
+    for (let y = 20; y < 25; y++) for (let x = 0; x < 60; x++) if (w.get(x, y) === M.Loam) loamHigh++;
+    expect(loamHigh).toBe(0);
+    let ashTop = 0;
+    for (let y = 20; y < 25; y++) for (let x = 0; x < 60; x++) if (w.get(x, y) === M.Ash) ashTop++;
+    expect(ashTop).toBeGreaterThan(300 * 0.95);
+  });
+
   it('ash on bare rock stays heaped', () => {
     const w = bed(M.Stone, 2, 2);
     run(w, 3000);
