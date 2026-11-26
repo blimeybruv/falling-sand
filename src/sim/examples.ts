@@ -83,8 +83,8 @@ function wilderness(w: World): void {
   const volcanoAt = 0.78 + rng.next() * 0.06;
   const bogAt = shore + 0.12 + rng.next() * (volcanoAt - shore - 0.36);
   const seaLevel = Math.round(H * 0.66);
-  // The ground's surface row at column x.
-  const surface = (x: number): number => {
+  // The hills' surface row at column x (before the volcano rises out of them).
+  const hills = (x: number): number => {
     const f = x / W;
     let g = 0.62;
     for (const { k, p, a } of waves) g += Math.sin(f * k + p) * a;
@@ -95,17 +95,42 @@ function wilderness(w: World): void {
     if (b < 1) g += 0.025 * (1 - b * b);
     return Math.round(g * H);
   };
+  // The volcano: a stratovolcano rising out of the hills, steep near the top and spreading into
+  // gentle flanks (a concave profile), with a bowl-shaped crater at the summit.
+  const peak = Math.round(H * (0.31 + rng.next() * 0.04));
+  const reach = 0.15;
+  const craterWidth = 0.13;
+  const craterDepth = Math.max(3, Math.round(H * 0.022));
+  /** How far column x is from the volcano's centre, as a fraction of its reach (1 or more: outside it). */
+  const fromCone = (x: number): number => Math.abs(x / W - volcanoAt) / reach;
+  const surface = (x: number): number => {
+    const ground = hills(x);
+    const d = fromCone(x);
+    if (d >= 1) return ground;
+    const slope = (t: number): number => peak + (ground - peak) * (1 - (1 - t) ** 1.8);
+    // Inside the rim, a bowl sunk below it; outside, the slope.
+    const y = d < craterWidth ? slope(craterWidth) + craterDepth * (1 - (d / craterWidth) ** 2) : slope(d);
+    return Math.min(ground, Math.round(y));
+  };
   const rock = new Int32Array(W);
   for (let x = 0; x < W; x++) {
     const top = surface(x);
+    const ground = hills(x);
     const f = x / W;
-    const soil = f < shore ? 0 : 5 + Math.round(rng.next() * 2);
+    const d = fromCone(x);
+    // Soil covers the hills and the volcano's lower flanks; higher up it's bare rock.
+    const soil = f < shore || d < 0.75 ? 0 : 5 + Math.round(rng.next() * 2);
     rock[x] = top + soil;
     for (let y = top; y < H; y++) {
       let m: MaterialId = M.Stone;
       if (y >= H - Math.max(3, Math.round(H * 0.04))) m = M.Basalt;
       else if (y < top + soil) m = y === top ? M.Grass : y < top + 3 ? M.Loam : M.Earth;
       else if (f < shore + 0.02 && y < top + 4) m = M.Sand;
+      else if (d < 1 && y < ground + 2) {
+        // The cone: old lava flows and ash falls in layers following its slope, under a basalt crust.
+        const layer = Math.floor((y - top) / 4 + Math.sin(x * 0.7) * 0.3);
+        m = y === top ? M.Basalt : layer % 6 === 5 ? M.Ash : layer % 2 === 0 ? M.Basalt : M.Stone;
+      }
       // Strata: wavy bands of basalt through the stone.
       else if (Math.abs(((y + Math.sin(f * 9) * 4) % 23) - 11) < 1) m = M.Basalt;
       cell(w, x, y, m);
@@ -176,15 +201,26 @@ function wilderness(w: World): void {
     if (Math.abs(x / W - bogAt) < 0.065) continue;
     tree(w, x, surface(x), Math.round(H * (0.07 + rng.next() * 0.06)));
   }
-  // The volcano, on the rock, with a lava chamber beneath it and a throat up to the crater.
-  const base = Math.max(...Array.from({ length: 9 }, (_, k) => surface(Math.round((volcanoAt - 0.08 + k * 0.02) * W)))) / H;
-  mound(w, volcanoAt, 0.15, 0.36, base, M.Stone);
-  mound(w, volcanoAt, 0.09, 0.33, base, M.Basalt);
-  box(w, volcanoAt - 0.04, base + 0.02, volcanoAt + 0.04, base + 0.14, M.Lava);
-  box(w, volcanoAt - 0.01, 0.36, volcanoAt + 0.01, base + 0.02, M.Lava);
-  box(w, volcanoAt - 0.025, 0.31, volcanoAt + 0.025, 0.37, M.Empty);
-  box(w, volcanoAt - 0.01, 0.35, volcanoAt + 0.01, 0.37, M.Lava);
-  cell(w, Math.round(volcanoAt * W), Math.round(0.38 * H), M.VolcanicVent);
+  // Under the volcano: a magma chamber, a narrow winding throat up to the crater, a lava pool in the
+  // crater, and the vent just under the pool (a vent releases only into open air close above it).
+  {
+    const cx = Math.round(volcanoAt * W);
+    const floor = surface(cx);
+    const rx = Math.max(5, W * 0.045);
+    const ry = Math.max(4, H * 0.045);
+    const cy = Math.min(H - Math.max(4, Math.round(H * 0.04)) - ry - 2, hills(cx) + H * 0.1);
+    blob(w, cx, cy, rx, ry, M.Lava);
+    for (let y = floor + 1; y <= cy; y++) {
+      const tx = cx + Math.round(Math.sin(y * 0.22) * 1.5);
+      cell(w, tx, y, M.Lava);
+      cell(w, tx + 1, y, M.Lava);
+    }
+    const rim = surface(Math.round((volcanoAt + reach * craterWidth) * W));
+    for (let x = Math.round((volcanoAt - reach * craterWidth) * W); x <= (volcanoAt + reach * craterWidth) * W; x++) {
+      for (let y = rim + 1; y < surface(x); y++) cell(w, x, y, M.Lava);
+    }
+    cell(w, cx, floor + 1, M.VolcanicVent);
+  }
   // Storm clouds gathering.
   box(w, 0.04, 0.06, 0.5, 0.06 + Math.max(0.12, 26 / H), M.Cloud);
   box(w, 0.55, 0.1, 0.7, 0.18, M.Cloud);

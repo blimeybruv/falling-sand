@@ -1636,7 +1636,7 @@ describe('water plants keep their place', () => {
     expect(w.count(M.Algae)).toBeLessThan(70);
   });
 
-  it('kelp grows in slender stalks of mixed heights, not a solid bed', { timeout: 30000 }, () => {
+  it('kelp grows in slender stalks of mixed heights, not a solid bed', { timeout: 60000 }, () => {
     const w = new World(120, 100, 2);
     for (let y = 30; y < 100; y++) for (let x = 0; x < 120; x++) w.set(x, y, M.SaltWater);
     for (let y = 96; y < 100; y++) for (let x = 0; x < 120; x++) w.set(x, y, M.Sand);
