@@ -5,6 +5,7 @@
  */
 import { M, type MaterialId } from './ids';
 import type { World } from './world';
+import { PINE_SEED } from './behaviours';
 
 export interface Example {
   id: string;
@@ -131,6 +132,36 @@ export const EXAMPLES: readonly Example[] = [
       const ground = Math.round(0.86 * w.height);
       const step = Math.max(14, Math.round(w.width / 8));
       for (let x = Math.round(step / 2); x < w.width - 4; x += step) tree(w, x, ground, Math.round(w.height * (0.22 + ((x * 7) % 5) * 0.03)));
+    },
+  },
+  {
+    id: 'grove',
+    name: 'Five kinds of tree',
+    hint: 'Seeds grow the tree that suits where they land: a palm on the sandy shore, a willow by the pond, a pine from the cone, a broadleaf on damp earth, a flowering tree on loam. Give them a minute.',
+    build(w) {
+      const ground = Math.round(0.86 * w.height);
+      box(w, 0, 0.86, 1, 1, M.Earth);
+      box(w, 0.6, 0.86, 1, 1, M.Loam);
+      box(w, 0, 0.96, 1, 1, M.Stone);
+      // The sea, walled off from a sandy shore.
+      box(w, 0, 0.87, 0.14, 0.96, M.SaltWater);
+      box(w, 0.14, 0.86, 0.15, 0.96, M.Stone);
+      box(w, 0.15, 0.86, 0.26, 0.96, M.Sand);
+      // A pond with stone banks, and damp earth beyond it.
+      box(w, 0.36, 0.87, 0.44, 0.96, M.Water);
+      box(w, 0.355, 0.86, 0.36, 0.96, M.Stone);
+      box(w, 0.44, 0.86, 0.445, 0.96, M.Stone);
+      box(w, 0.5, 0.87, 0.53, 0.9, M.Water);
+      const seed = (fx: number, life: number): void => {
+        const x = Math.round(fx * w.width);
+        cell(w, x, ground - 1, M.Seed);
+        if (w.inBounds(x, ground - 1)) w.life[w.idx(x, ground - 1)] = life;
+      };
+      seed(0.155, 0);
+      seed(0.452, 0);
+      seed(0.3, PINE_SEED);
+      seed(0.56, 0);
+      seed(0.82, 0);
     },
   },
 ];

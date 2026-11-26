@@ -67,7 +67,7 @@ Discovery progress is kept for when you switch back.
 | Edges button | Walls (the default: things pile up against the edges) or open: sand, liquids and creatures fall off the bottom, liquids and gases flow out of the sides and rise out of the top, and clouds sail off with the wind. Solid things you draw stay put, so you can build a floor |
 | Speaker button | Sound on or off. Wind (following the Wind setting, gusting), crackling fire, booming explosions, thunder after lightning (with a corona sizzle as the charge builds before a near strike), hissing steam and acid, rain and pouring sand, bubbling lava, humming electricity, fireworks, buzzing bees, crying gulls and cawing crows, and a chime for each discovery. All made live with the Web Audio API, no sound files |
 | Sun menu | Sunlight from above warms whatever it reaches first: it evaporates water (which rises and makes clouds), dries mud and salt water, burns off clouds and melts snow, but not in the shade. Glass lets it through. Plants grow faster in sunlight and slower in shade (moss the other way round). Sun on falling rain draws a faint rainbow. Vapour rising against a roof condenses on it, so salt water under glass in the sun makes a solar still: fresh water drips back, salt is left behind. Day/night runs a three-minute day: the sky brightens, warms at dawn and dusk and fills with stars; clear nights chill whatever is open to the sky (a cloud or a roof keeps it warm), mist rises off water, ponds skin over with thin ice, and fog settling on frozen ground leaves frost. The morning sun melts it all |
-| Scene menu | Undo and redo, save in this browser, load it again, download or open a scene file, or copy a share link. Also five example scenes: a volcano island, a fuse and charges, pond life, a thunderstorm and a forest to set alight |
+| Scene menu | Undo and redo, save in this browser, load it again, download or open a scene file, or copy a share link. Also six example scenes: a volcano island, a fuse and charges, pond life, a thunderstorm, a forest to set alight, and five kinds of tree to watch grow |
 | `J` or Journal button | Discovery journal: what you've found, and hints for the rest |
 | Mode menu | Discovery or Sandbox |
 | Clear button | Empty the whole grid |
@@ -215,7 +215,7 @@ debris start fresh when a scene loads.
 | | Peat | Slow-burning fuel | Grass or moss buried under earth |
 | | Smoke bomb | Lit, it pours out smoke | Saltpetre meets sugar |
 | **Life** | | | |
-| S | Seed | Falls; on loam, ash or fertiliser, or on damp sand or earth, it grows into a tree (wood trunk, branches, leaves); on dry sand far from water, a cactus. Sprouts fastest on ash or in smoke, as after a forest fire | Starter |
+| S | Seed | Falls and grows into a tree that suits where it lands: on damp ground, ash or fertiliser a broadleaf (thick-trunked when tall, with forking branches); on loam a flowering tree (or bamboo right by water); beside fresh water a willow with hanging curtains of leaves; on a sandy shore by the sea a palm; on dry sand far from water, a cactus. A seed from a pine cone grows a pine, even on poor dry ground. Very rarely, on rich ground, a giant tree. Sprouts fastest on ash or in smoke, as after a forest fire | Starter |
 | 5 | Grass | Weeds and grass: spreads over damp ground and loam, and into water; burns | A sandy shore |
 | 4 | Wood | Static; burns slowly; buried under sand it slowly turns to oil | Grow a tree |
 | | Flower | Blooms on trees grown in loam; now and then drops a seed | A tree rooted in loam |
@@ -244,7 +244,7 @@ debris start fresh when a scene loads.
 | | Bee | Creature: turns honeydew into honey | Flowers draw them |
 | | Snail | Creature: creeps over damp stone eating algae and moss; withdraws into its shell in strong dry sun | Moss beside water |
 | | Seagull | Creature: wheels over open water, floats on it and dives for fish; cries now and then. Starves without fish | A fish near the surface of open water |
-| | Pine cone | Drops from a tree crown as it burns; fireproof, it opens into a seed once the fire has passed and it has cooled | A tree crown burning |
+| | Pine cone | Drops from a tree crown as it burns (and now and then from a living pine); fireproof, it opens into a pine seed once the fire has passed and it has cooled | A tree crown burning |
 | | Crow | Creature: flies low over the land, perches, and swoops on earthworms out on the surface; caws. Starves without worms | An earthworm out on the surface (rain brings them up) |
 | | Ant | Digs earth and sand and carries the grains up into anthills; eats sweet things; drowns in water | Sugar on earth |
 | | Yeast | In water, ferments sugar into alcohol and bubbles of carbon dioxide, multiplying while fed | Fruit soaking in water |

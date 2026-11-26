@@ -95,7 +95,7 @@ Movement is density-based: a mover can swap with an empty, liquid or gas cell th
   been created, plus the reward once enough are found. The UI saves progress in localStorage.
 - Recipes should follow from the physics where possible, and hints should nudge rather than give the
   answer. Avoid reactions that fire constantly in ordinary sandbox play.
-- Internal-only materials (Leaf, Spark, Molten wax, Water vapour, Dried paint, Thin ice) stay out of `PALETTE` and need no recipe.
+- Internal-only materials (Leaf, Pine needles, Spark, Molten wax, Water vapour, Dried paint, Thin ice) stay out of `PALETTE` and need no recipe.
 - Weather conserves water: rain is the cloud itself coming down (a cloud cell turns into the drop),
   never water from nowhere, or the sun's water cycle would slowly flood a scene.
 - Clouds come in three kinds (see "Clouds, redesigned" in `docs/elements.md`):

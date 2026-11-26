@@ -338,12 +338,17 @@ applies to Neon.
 | ✅ | Fog bank | Mist rising off water on clear nights, hanging low and pooling in hollows (fog is now a very light liquid, like CO2) | `night` change on Water | F |
 | | Rain shafts | Rain from a storm drawn as faint grey streaks, not separate drops | renderer | F |
 
-## Trees (design note, 23 Nov): planned for a session of its own
+## Trees (design note, 23 Nov; built 26 Nov)
 
 The player's suggestion. Today every seed grows the same tree: a thin trunk, a few branches and a
 round crown (on loam, a flowering one). That proves the idea. A trees session would give each tree a
 species whose shape and needs follow from what it grew from and where. A seed would carry its
 species in `life`, as it already carries its height.
+
+**Built (26 Nov).** Each growing tip carries its species (an offset in `life`) and its starting
+height (in `vel`, free once a seed has sprouted). The species comes from the ground and from where
+the seed came from. Pine needles are a new internal material: resinous, quicker to catch, and they
+drop cones. Roots aren't built yet.
 
 **Shape first.**
 - Trunks thick at the base and thinner up the tree (2-3 cells wide in big trees).
@@ -354,12 +359,12 @@ species in `life`, as it already carries its height.
 
 | | Idea | Mechanics | What it does | How it grows | Effort |
 |---|---|---|---|---|---|
-| | Pine | trees + fire | Tall and narrow: a straight trunk under a stacked, triangular crown of dark needles. Drops pine cones now and then, and many in a fire | From a pine cone | F |
-| | Broadleaf (oak) | trees | Today's tree, done properly: a stout trunk, forking boughs, a wide crown | From a seed on damp ground | F |
-| | Fruit tree | trees + creatures | The flowering tree on loam: blossom, then fruit, which bees and birds visit | From a seed on loam | T |
-| | Willow | trees + water | Leans over water, its crown hanging down in curtains | From a seed beside water | F |
-| | Palm | trees + salt water + sand | A tall bare trunk with a tuft of fronds on top, on sandy shores by the sea; drops coconuts | From a seed on sand near salt water | F |
-| | Giant tree | trees | Rarely (one seed in a few hundred, on rich ground), a tree that grows far bigger and thicker than the rest and lives for ages | Rare variant of a pine or broadleaf | F |
+| ✅ | Pine | trees + fire | Tall and narrow: a straight trunk under a stacked, triangular crown of dark needles. Drops pine cones now and then, and many in a fire | From a pine cone | F |
+| ✅ | Broadleaf (oak) | trees | Today's tree, done properly: a stout trunk, forking boughs, a wide crown | From a seed on damp ground | F |
+| ✅ | Fruit tree | trees + creatures | The flowering tree on loam: blossom, then fruit, which bees and birds visit | From a seed on loam | T |
+| ✅ | Willow | trees + water | Leans over water, its crown hanging down in curtains | From a seed beside water | F |
+| ✅ | Palm | trees + salt water + sand | A tall bare trunk with a tuft of fronds on top, on sandy shores by the sea; drops coconuts | From a seed on sand near salt water | F |
+| ✅ | Giant tree | trees | Rarely (one seed in a few hundred, on rich ground), a tree that grows far bigger and thicker than the rest and lives for ages | Rare variant of a pine or broadleaf | F |
 | | Autumn | trees + seasons | Leaves turn yellow and red and fall, then grow back (needs seasons) | | S |
 | | Worldtree (eldritch) | see the eldritch table | A tree that grows to the size of the map | | S |
 

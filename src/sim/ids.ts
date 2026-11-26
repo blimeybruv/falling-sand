@@ -173,6 +173,7 @@ export const M = {
   Seagull: 165,
   Crow: 166,
   PineCone: 167,
+  Needles: 168,
 } as const;
 
 export type MaterialId = (typeof M)[keyof typeof M];

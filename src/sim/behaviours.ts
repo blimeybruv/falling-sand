@@ -134,6 +134,15 @@ const LOAM_TREE = 1000;
 const CACTUS_TIP = 2000;
 /** ...or of a bamboo stalk. */
 const BAMBOO_TIP = 3000;
+/** ...a pine (from a pine cone's seed), a palm (on a sandy shore), a willow (beside fresh water), or a rare giant. */
+const PINE_TIP = 4000;
+const PALM_TIP = 5000;
+const WILLOW_TIP = 6000;
+export const GIANT_TIP = 7000;
+/** A dormant seed's `life` when it came out of a pine cone: it grows into a pine. */
+export const PINE_SEED = -1;
+/** On rich ground (loam or fertiliser), the chance a broadleaf seed grows into a giant instead. */
+const GIANT_CHANCE = 0.005;
 /** A seed heated past this pops into popcorn. */
 const POP_TEMP = 180;
 /** Ground with no water this near counts as desert. */
@@ -141,9 +150,13 @@ const DRY_RANGE = 10;
 
 export function updateSeed(w: World, x: number, y: number, i: number): boolean {
   const height = w.life[i];
+  if (height >= GIANT_TIP) return growGiant(w, x, y, i, height - GIANT_TIP);
+  if (height >= WILLOW_TIP) return growTree(w, x, y, i, height - WILLOW_TIP, 'willow');
+  if (height >= PALM_TIP) return growPalm(w, x, y, i, height - PALM_TIP);
+  if (height >= PINE_TIP) return growPine(w, x, y, i, height - PINE_TIP);
   if (height >= BAMBOO_TIP) return growBamboo(w, x, y, i, height - BAMBOO_TIP);
   if (height >= CACTUS_TIP) return growCactus(w, x, y, i, height - CACTUS_TIP);
-  if (height > 0) return growTree(w, x, y, i, height);
+  if (height > 0) return growTree(w, x, y, i, height, 'broadleaf');
   // Heated past 180° (short of catching fire at 220°), a seed pops.
   if (w.temp[i] > POP_TEMP) {
     w.transform(i, M.Popcorn);
@@ -157,14 +170,33 @@ export function updateSeed(w: World, x: number, y: number, i: number): boolean {
   const up = w.get(x, y - 1);
   if (up !== M.Empty && up !== M.Smoke) return false;
   const below = w.get(x, y + 1);
+  // A seed from a pine cone grows a pine: pines take to poor, dry ground too, but not crowded in
+  // right beside another trunk.
+  if (height === PINE_SEED) {
+    if (isTreeGround(below) && !nearWood(w, x, y, 3)) sprout(w, i, PINE_TIP, w.rng.int(22, 38));
+    return true;
+  }
+  // On a sandy shore by the sea, a palm.
+  if (below === M.Sand && w.near(x, y, 10, M.SaltWater)) {
+    sprout(w, i, PALM_TIP, w.rng.int(16, 26));
+    return true;
+  }
   if (below === M.Loam) {
-    // Right beside water, loam grows bamboo; otherwise a flowering tree.
-    w.life[i] = w.near(x, y, 2, M.Water) ? BAMBOO_TIP + w.rng.int(20, 40) : w.rng.int(28, 46) + LOAM_TREE;
+    // Right beside water, loam grows bamboo; otherwise a flowering tree (rarely, a giant).
+    if (w.near(x, y, 2, M.Water)) w.life[i] = BAMBOO_TIP + w.rng.int(20, 40);
+    else if (w.rng.chance(GIANT_CHANCE)) sprout(w, i, GIANT_TIP, w.rng.int(70, 100));
+    else sprout(w, i, LOAM_TREE, w.rng.int(28, 46));
+    return true;
+  }
+  // Right beside fresh water, a willow leaning over it.
+  if ((below === M.Sand || below === M.Earth || below === M.Grass) && w.near(x, y, 5, M.Water)) {
+    sprout(w, i, WILLOW_TIP, w.rng.int(12, 20));
     return true;
   }
   // On fertiliser or ash (rich in potash, the ash-bed after a fire), or damp ground, it grows into a tree.
   if (below === M.Fertiliser || below === M.Ash || ((below === M.Sand || below === M.Earth || below === M.Grass) && w.near(x, y, DAMP_RANGE, M.Water))) {
-    w.life[i] = w.rng.int(18, 34);
+    if (below === M.Fertiliser && w.rng.chance(GIANT_CHANCE)) sprout(w, i, GIANT_TIP, w.rng.int(70, 100));
+    else sprout(w, i, 0, w.rng.int(18, 34));
     return true;
   }
   // In the desert (sand with no water anywhere near), now and then a seed grows into a cactus.
@@ -183,7 +215,7 @@ function growBamboo(w: World, x: number, y: number, i: number, height: number): 
     w.set(x, y - 1, M.Seed);
     if (w.inBounds(x, y - 1)) w.life[w.idx(x, y - 1)] = BAMBOO_TIP + height - 1;
   } else {
-    growCrown(w, x, y - 1, 2, false);
+    crown(w, x, y - 1, 2, false, false);
   }
   return true;
 }
@@ -212,38 +244,102 @@ function growCactus(w: World, x: number, y: number, i: number, height: number): 
   return true;
 }
 
-function growTree(w: World, x: number, y: number, i: number, tip: number): boolean {
+/** Ground a tree can root in. */
+function isTreeGround(t: number): boolean {
+  return t === M.Earth || t === M.Grass || t === M.Sand || t === M.Loam || t === M.Ash || t === M.Fertiliser;
+}
+
+/** Whether there's a trunk (wood) within r cells either side of (x, y) or just above or below. */
+function nearWood(w: World, x: number, y: number, r: number): boolean {
+  for (let dy = -2; dy <= 2; dy++) for (let dx = -r; dx <= r; dx++) if (w.get(x + dx, y + dy) === M.Wood) return true;
+  return false;
+}
+
+/**
+ * Turn a seed into the growing tip of a tree: `life` is the species' offset plus the height left
+ * to grow, and `vel` keeps the height it started with (a tip never falls, so `vel` is free), which
+ * some species need to know where they are along the trunk.
+ */
+function sprout(w: World, i: number, species: number, height: number): void {
+  w.life[i] = species + height;
+  w.vel[i] = height;
+}
+
+/** Move a growing tip up to (nx, ny), carrying its species, height left and starting height. */
+function climb(w: World, nx: number, ny: number, species: number, height: number, start: number): void {
+  w.set(nx, ny, M.Seed);
+  if (!w.inBounds(nx, ny)) return;
+  const n = w.idx(nx, ny);
+  w.life[n] = species + height;
+  w.vel[n] = start;
+}
+
+/** Wood into (x, y) if it's open air or leaves: thickening a trunk, or a branch. */
+function wood(w: World, x: number, y: number): void {
+  const t = w.get(x, y);
+  if (t === M.Empty || t === M.Leaf || t === M.Needles) w.set(x, y, M.Wood);
+}
+
+/**
+ * A broadleaf tree, or (`willow`) a willow. It climbs a cell at a time leaving wood behind, leaning
+ * a little now and then; low down on a tall tree the trunk is two cells thick. It puts out forking
+ * branches with clusters of leaves at their tips, and finishes with a crown. Rooted in loam it
+ * flowers; a willow's crowns hang down in curtains.
+ */
+function growTree(w: World, x: number, y: number, i: number, tip: number, kind: 'broadleaf' | 'willow'): boolean {
   if (!thrives(w, x, y, 0.2)) return true; // grows slowly, and stays put while it does
-  const loam = tip >= LOAM_TREE;
-  const height = loam ? tip - LOAM_TREE : tip;
-  const nx = w.rng.chance(0.15) ? x + w.rng.sign() : x; // a slight lean now and then
+  const willow = kind === 'willow';
+  // (For a willow, `tip` is already the height left; otherwise it may carry the loam marker.)
+  const species = willow ? WILLOW_TIP : tip >= LOAM_TREE ? LOAM_TREE : 0;
+  const loam = species === LOAM_TREE;
+  const height = willow ? tip : tip - species;
+  const start = w.vel[i];
+  const nx = w.rng.chance(willow ? 0.3 : 0.15) ? x + w.rng.sign() : x; // a slight lean now and then
   const above = w.get(nx, y - 1);
   w.setCell(i, M.Wood);
+  // Low down on a tall tree, a trunk two cells thick.
+  if (height > 14) wood(w, x + 1, y);
   if (height > 1 && (above === M.Empty || above === M.Leaf)) {
-    w.set(nx, y - 1, M.Seed);
-    if (w.inBounds(nx, y - 1)) w.life[w.idx(nx, y - 1)] = height - 1 + (loam ? LOAM_TREE : 0);
-    if (height > 5 && height < 30 && w.rng.chance(0.25)) growBranch(w, x, y, w.rng.sign(), loam);
+    climb(w, nx, y - 1, species, height - 1, start);
+    if (height > 4 && height < 30 && w.rng.chance(willow ? 0.3 : 0.25)) growBranch(w, x, y, w.rng.sign(), loam, willow, w.rng.int(3, 6));
   } else {
-    growCrown(w, x, y - 1, w.rng.int(5, 7), loam);
+    crown(w, x, y - 1, w.rng.int(5, 7), loam, willow);
   }
   return true;
 }
 
-function growBranch(w: World, x: number, y: number, dir: number, loam: boolean): void {
+/** A branch reaching out and up from (x, y), forking now and then, with leaves at its tips. */
+function growBranch(w: World, x: number, y: number, dir: number, loam: boolean, willow: boolean, length: number): void {
   let bx = x;
   let by = y;
-  const length = w.rng.int(3, 6);
+  // Set out from the side of the trunk, however thick it is.
+  while (w.get(bx + dir, by) === M.Wood) bx += dir;
   for (let k = 0; k < length; k++) {
     bx += dir;
     if (k % 2 === 1) by--;
     if (w.get(bx, by) !== M.Empty) return;
     w.set(bx, by, M.Wood);
+    // Halfway along, sometimes a fork turns up and out on its own.
+    if (k === length >> 1 && length >= 4 && w.rng.chance(0.4)) {
+      let fx = bx;
+      let fy = by;
+      for (let f = 0; f < 2 + (length >> 2); f++) {
+        fy--;
+        if (f % 2 === 1) fx += dir;
+        if (w.get(fx, fy) !== M.Empty) break;
+        w.set(fx, fy, M.Wood);
+      }
+      crown(w, fx, fy - 1, 2 + (length >> 3), loam, willow);
+    }
   }
-  growCrown(w, bx, by - 1, w.rng.int(2, 4), loam);
+  crown(w, bx, by - 1, w.rng.int(2, 3) + (length >> 3), loam, willow);
 }
 
-/** A disc of leaves; trees rooted in loam put out the odd flower among them. */
-function growCrown(w: World, cx: number, cy: number, r: number, loam: boolean): void {
+/**
+ * A cluster of leaves; trees rooted in loam put out the odd flower among them. A willow's hang
+ * down from the cluster's underside in long curtains.
+ */
+function crown(w: World, cx: number, cy: number, r: number, loam: boolean, willow: boolean): void {
   for (let dy = -r; dy <= r; dy++) {
     for (let dx = -r; dx <= r; dx++) {
       if (dx * dx + dy * dy > r * r + r) continue;
@@ -251,6 +347,100 @@ function growCrown(w: World, cx: number, cy: number, r: number, loam: boolean): 
       w.set(cx + dx, cy + dy, loam && w.rng.chance(0.08) ? M.Flower : M.Leaf);
     }
   }
+  if (!willow) return;
+  for (let dx = -r; dx <= r; dx++) {
+    if (!w.rng.chance(0.6)) continue;
+    let hy = cy + Math.round(Math.sqrt(Math.max(0, r * r - dx * dx))) + 1;
+    for (let k = w.rng.int(3, 9); k > 0 && w.get(cx + dx, hy) === M.Empty; k--, hy++) w.set(cx + dx, hy, M.Leaf);
+  }
+}
+
+/**
+ * A pine: a straight trunk, bare at the foot, under a tapering crown of dark needles in tiers,
+ * widest low down and narrowing to a spire. Its needles now and then drop a cone.
+ */
+function growPine(w: World, x: number, y: number, i: number, height: number): boolean {
+  if (!thrives(w, x, y, 0.2)) return true;
+  const start = w.vel[i];
+  const above = w.get(x, y - 1);
+  w.setCell(i, M.Wood);
+  // Tiers of needles every other cell above the bare foot, each wider the lower down it is.
+  if (height < start * 0.75 && height % 2 === 0) {
+    const half = 1 + Math.round(height * 0.35);
+    for (let dx = 1; dx <= half; dx++) {
+      for (let d = -1; d <= 1; d += 2) {
+        // The tier's outer ends droop a cell.
+        const ny = dx > half * 0.6 ? y + 1 : y;
+        if (w.get(x + d * dx, ny) === M.Empty) w.set(x + d * dx, ny, M.Needles);
+        if (dx <= half * 0.7 && w.get(x + d * dx, y - 1) === M.Empty) w.set(x + d * dx, y - 1, M.Needles);
+      }
+    }
+  }
+  if (height > 1 && (above === M.Empty || above === M.Needles)) {
+    climb(w, x, y - 1, PINE_TIP, height - 1, start);
+  } else {
+    // The spire.
+    for (let k = 1; k <= 3; k++) if (w.get(x, y - k) === M.Empty) w.set(x, y - k, M.Needles);
+    for (let d = -1; d <= 1; d += 2) if (w.get(x + d, y - 1) === M.Empty) w.set(x + d, y - 1, M.Needles);
+  }
+  return true;
+}
+
+/** How steeply each of a palm's three fronds a side sets out: rising, level, falling. */
+const FROND_RISE: readonly number[] = [1, 0.45, 0];
+
+/**
+ * A palm: a tall, thin, slightly leaning trunk with no branches, topped with a tuft of long fronds
+ * arching out and drooping, and a few coconuts (fruit) under them.
+ */
+function growPalm(w: World, x: number, y: number, i: number, height: number): boolean {
+  if (!thrives(w, x, y, 0.2)) return true;
+  const start = w.vel[i];
+  // It leans one way (fixed by its starting height), gently, in its upper part.
+  const lean = start % 2 === 0 ? 1 : -1;
+  const nx = height < start * 0.6 && w.rng.chance(0.2) ? x + lean : x;
+  const above = w.get(nx, y - 1);
+  w.setCell(i, M.Wood);
+  if (height > 1 && above === M.Empty) {
+    climb(w, nx, y - 1, PALM_TIP, height - 1, start);
+    return true;
+  }
+  // Fronds: three a side, rising, level and falling, each arching over and drooping at the tip.
+  for (let d = -1; d <= 1; d += 2) {
+    for (const rise of FROND_RISE) {
+      const length = w.rng.int(5, 8);
+      for (let k = 1; k <= length; k++) {
+        const fy = y - 1 - Math.round(rise * k) + Math.round(0.11 * k * k);
+        if (w.get(x + d * k, fy) === M.Empty) w.set(x + d * k, fy, M.Leaf);
+      }
+    }
+  }
+  if (w.get(x, y - 1) === M.Empty) w.set(x, y - 1, M.Leaf);
+  for (let d = -1; d <= 1; d += 2) if (w.rng.chance(0.7) && w.get(x + d, y + 1) === M.Empty) w.set(x + d, y + 1, M.Fruit);
+  return true;
+}
+
+/**
+ * A giant tree (rare, on rich ground): a broadleaf grown huge. Its trunk is three cells thick low
+ * down and two higher up, it throws out long forking boughs with big clusters of leaves, and it
+ * finishes in a vast crown.
+ */
+function growGiant(w: World, x: number, y: number, i: number, height: number): boolean {
+  if (!thrives(w, x, y, 0.2)) return true;
+  const start = w.vel[i];
+  const nx = w.rng.chance(0.05) ? x + w.rng.sign() : x;
+  const above = w.get(nx, y - 1);
+  w.setCell(i, M.Wood);
+  if (height > start * 0.4) wood(w, x - 1, y);
+  if (height > start * 0.15) wood(w, x + 1, y);
+  if (height > 1 && (above === M.Empty || above === M.Leaf)) {
+    climb(w, nx, y - 1, GIANT_TIP, height - 1, start);
+    if (height < start * 0.7 && height > 8 && w.rng.chance(0.12)) growBranch(w, x, y, w.rng.sign(), false, false, w.rng.int(7, 13));
+  } else {
+    crown(w, x, y - 4, w.rng.int(9, 12), false, false);
+    for (let d = -1; d <= 1; d += 2) crown(w, x + d * w.rng.int(7, 10), y - 1, w.rng.int(5, 7), false, false);
+  }
+  return true;
 }
 
 /**
@@ -2237,8 +2427,16 @@ const CONE_OPEN = 240;
 export function openCone(w: World, _x: number, _y: number, i: number): boolean {
   if (w.temp[i] >= CONE_COOL) w.life[i] = 0;
   else if (++w.life[i] >= CONE_OPEN) {
+    // The seed it drops grows into a pine.
     w.setCell(i, M.Seed);
+    w.life[i] = PINE_SEED;
     return true;
   }
   return false;
+}
+
+/** Pine needles: like leaves (buried under sand they turn to oil), and now and then one drops a cone into the open air below. */
+export function updateNeedles(w: World, x: number, y: number, i: number): boolean {
+  if (w.rng.chance(0.00001) && w.get(x, y + 1) === M.Empty) w.set(x, y + 1, M.PineCone);
+  return fossilise(w, x, y, i);
 }

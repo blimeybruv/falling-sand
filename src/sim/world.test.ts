@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { AMBIENT_TEMP, CHARGE_ACTIVE, M, MATERIALS, MAX_BLAST_RADIUS, MAX_EXPLOSIONS_PER_FRAME, PALETTE, World, gustAt, sunAt, type MaterialId } from './index';
+import { GIANT_TIP, PINE_SEED } from './behaviours';
 
 function run(world: World, frames: number): void {
   for (let f = 0; f < frames; f++) world.step();
@@ -1554,9 +1555,11 @@ describe('after a fire', () => {
     run(w, 600);
     expect(w.created[M.PineCone]).toBeGreaterThan(3);
     run(w, 1800);
-    // Every cone has opened by now, and the seeds didn't pop in the heat.
-    expect(w.count(M.PineCone)).toBe(0);
+    // The cones have opened without their seeds popping in the heat, and the seeds have grown into
+    // young pines. (Those can catch from the still-smouldering trunk and drop cones of their own, so
+    // cones may still be about.)
     expect(w.created[M.Seed]).toBeGreaterThan(3);
+    expect(w.created[M.Needles]).toBeGreaterThan(0);
   });
 
   it('wood (a plank, a house) burning drops no cones: only a crown does', () => {
@@ -1670,5 +1673,88 @@ describe('light powders in the wind', () => {
     };
     // Measured: sawdust ends up about 265 cells downwind (at the far wall), sand about 55.
     expect(reach(M.Sawdust)).toBeGreaterThan(reach(M.Sand) + 100);
+  });
+});
+
+describe('tree species', () => {
+  // A seed on `ground`, with a sea or a pond walled off to its left if asked, grown for a while.
+  const grow = (ground: MaterialId, water: MaterialId | null, life = 0, frames = 3000, height = 80): World => {
+    const w = new World(70, height, 3);
+    const top = height - 10;
+    for (let y = top; y < height; y++) for (let x = 0; x < 70; x++) w.set(x, y, ground);
+    if (water) {
+      for (let y = top + 1; y < height; y++) for (let x = 0; x < 20; x++) w.set(x, y, water);
+      for (let y = top; y < height; y++) w.set(20, y, M.Stone);
+    }
+    const sx = water ? 23 : 35;
+    w.set(sx, top - 1, M.Seed);
+    const i = w.idx(sx, top - 1);
+    w.life[i] = life;
+    if (life >= GIANT_TIP) w.vel[i] = life - GIANT_TIP;
+    run(w, frames);
+    return w;
+  };
+  const widthAt = (w: World, y: number): number => {
+    let n = 0;
+    for (let x = 0; x < w.width; x++) if (w.get(x, y) === M.Wood) n++;
+    return n;
+  };
+  const tallest = (w: World, m: MaterialId): number => {
+    for (let y = 0; y < w.height; y++) for (let x = 0; x < w.width; x++) if (w.get(x, y) === m) return w.height - 10 - y;
+    return 0;
+  };
+
+  it('a seed from a pine cone grows a pine: needles in tiers, no broad leaves, bare at the foot', () => {
+    const w = grow(M.Earth, null, PINE_SEED);
+    expect(w.count(M.Needles)).toBeGreaterThan(60);
+    expect(w.count(M.Leaf)).toBe(0);
+    // Bare trunk just above the ground: only the one column of wood, no needles beside it.
+    expect(widthAt(w, 68)).toBe(1);
+    expect(w.get(34, 68)).toBe(M.Empty);
+  });
+
+  it('pine cones open into pine seeds', () => {
+    const w = new World(20, 20, 4);
+    for (let x = 0; x < 20; x++) w.set(x, 19, M.Stone);
+    w.set(10, 18, M.PineCone);
+    run(w, 300);
+    expect(w.get(10, 18)).toBe(M.Seed);
+    expect(w.life[w.idx(10, 18)]).toBe(PINE_SEED);
+  });
+
+  it('a seed on a sandy shore by the sea grows a palm: a tall, thin trunk topped with fronds', () => {
+    const w = grow(M.Sand, M.SaltWater);
+    expect(tallest(w, M.Wood)).toBeGreaterThan(12);
+    expect(widthAt(w, 62)).toBe(1);
+    expect(w.count(M.Leaf)).toBeGreaterThan(15);
+    expect(w.count(M.Needles)).toBe(0);
+  });
+
+  it('a seed beside fresh water grows a willow, its leaves hanging in curtains', () => {
+    const w = grow(M.Earth, M.Water);
+    expect(w.count(M.Leaf)).toBeGreaterThan(40);
+    // Curtains: columns of leaves reaching down below the wood.
+    let lowestLeaf = 0;
+    for (let y = 0; y < 70; y++) for (let x = 25; x < 70; x++) if (w.get(x, y) === M.Leaf) lowestLeaf = Math.max(lowestLeaf, y);
+    expect(lowestLeaf).toBeGreaterThan(55);
+  });
+
+  it('a tall broadleaf has a trunk two cells thick low down', () => {
+    let thick = false;
+    for (let seed = 1; seed < 6 && !thick; seed++) {
+      const w = new World(70, 80, seed);
+      for (let y = 70; y < 80; y++) for (let x = 0; x < 70; x++) w.set(x, y, M.Loam);
+      w.set(35, 69, M.Seed);
+      run(w, 3000);
+      if (tallest(w, M.Wood) > 25 && widthAt(w, 66) >= 2) thick = true;
+    }
+    expect(thick).toBe(true);
+  });
+
+  it('a giant tree grows huge: a trunk three cells thick, far taller than the rest, with boughs', { timeout: 20000 }, () => {
+    const w = grow(M.Loam, null, GIANT_TIP + 85, 6000, 130);
+    expect(tallest(w, M.Wood)).toBeGreaterThan(70);
+    expect(widthAt(w, 115)).toBe(3);
+    expect(w.count(M.Leaf)).toBeGreaterThan(300);
   });
 });
