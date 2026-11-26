@@ -28,6 +28,11 @@ import {
   erupt,
   spinFibre,
   pullIron,
+  coldSun,
+  liftField,
+  gravityKnot,
+  stasisPocket,
+  arcNode,
   formAlcohol,
   formBattery,
   pulseBattery,
@@ -93,12 +98,13 @@ import type { World } from './world';
 export type Kind = 'empty' | 'static' | 'powder' | 'liquid' | 'gas';
 
 /** Palette tab a material appears under. */
-export type Category = 'ground' | 'fluid' | 'fire' | 'life';
+export type Category = 'ground' | 'fluid' | 'fire' | 'life' | 'anomaly';
 export const CATEGORIES: readonly (readonly [Category, string])[] = [
   ['ground', 'Ground'],
   ['fluid', 'Liquids & gases'],
   ['fire', 'Fire & blasts'],
   ['life', 'Life'],
+  ['anomaly', 'Anomalies'],
 ];
 
 /**
@@ -196,9 +202,16 @@ export interface MaterialDef {
   heat?: { temp: number; rate: number };
   /**
    * Turns into `into` (keeping its temperature) once hotter than `temp`; with `sometimes`, now and
-   * then into something else instead (boiling water leaving a grain of salt).
+   * then into something else instead (boiling water leaving a grain of salt). With `touching`, it
+   * becomes `touching.into` instead whenever a neighbour is `touching.with` (the heat that changes it
+   * coming from something that changes it differently).
    */
-  above?: { temp: number; into: MaterialId; sometimes?: { into: MaterialId; chance: number } };
+  above?: {
+    temp: number;
+    into: MaterialId;
+    sometimes?: { into: MaterialId; chance: number };
+    touching?: { with: MaterialId; into: MaterialId };
+  };
   /** Turns into `into` (keeping its temperature) once colder than `temp`: setting solid again. */
   below?: { temp: number; into: MaterialId };
   /** Temperature a fresh particle starts at, if not room temperature (molten things start hot). */
@@ -1278,8 +1291,11 @@ const defs: Record<MaterialId, Def> = {
     colourJitter: 0.06,
     conductivity: 0.1,
     heat: { temp: -78, rate: 0.15 },
-    above: { temp: -20, into: M.CarbonDioxide },
-    reactions: [{ with: M.Water, chance: 0.02, otherInto: M.Ice }],
+    // Touched by plasma, the coldest thing meets the hottest, and heat starts flowing the wrong way.
+    above: { temp: -20, into: M.CarbonDioxide, touching: { with: M.Plasma, into: M.ColdSun } },
+    reactions: [
+      { with: M.Water, chance: 0.02, otherInto: M.Ice },
+    ],
     update: sublimate,
     description: 'Frozen carbon dioxide. Very cold; slowly turns back into gas, and freezes water.',
   },
@@ -2094,8 +2110,10 @@ const defs: Record<MaterialId, Def> = {
     rise: 0.6,
     glow: true,
     update: updateFire,
-    // A wisp of plasma caught against glass leaves neon behind.
-    reactions: [{ with: M.Glass, chance: 0.05, into: M.Neon }],
+    reactions: [
+      // A wisp of plasma caught against glass leaves neon behind.
+      { with: M.Glass, chance: 0.05, into: M.Neon },
+    ],
     description: 'Glowing gas hotter than anything: from lightning through hydrogen, or any gas past 2000°.',
   },
   [M.Fog]: {
@@ -2853,6 +2871,13 @@ const defs: Record<MaterialId, Def> = {
     lifetime: [14, 28],
     fadeFrames: 14,
     flicker: true,
+    // Reaching the ground (a mountain top, a tower), it leaves a pocket where time runs slow.
+    reactions: [
+      { with: M.Stone, chance: 0.2, into: M.StasisPocket },
+      { with: M.Earth, chance: 0.2, into: M.StasisPocket },
+      { with: M.Sand, chance: 0.2, into: M.StasisPocket },
+      { with: M.Basalt, chance: 0.2, into: M.StasisPocket },
+    ],
     description: 'A ghostly red jellyfish of light that flashes high above a thunderstorm, then is gone.',
   },
   [M.Earthworm]: {
@@ -3075,6 +3100,87 @@ const defs: Record<MaterialId, Def> = {
     update: updateNeedles,
     description: 'Part of a pine. Resinous: it catches easily and drops cones as it burns.',
   },
+  [M.ColdSun]: {
+    ...base,
+    name: 'Cold sun',
+    key: '',
+    category: 'anomaly',
+    kind: 'static',
+    density: 100,
+    // Shade is its brightness: dim blue when idle, white-hot with cold when it's drinking heat.
+    colour: [70, 110, 200],
+    colourEnd: [235, 248, 255],
+    colourJitter: 0,
+    heat: { temp: -60, rate: 0.5 },
+    acidProof: true,
+    indestructible: true,
+    update: coldSun,
+    description: 'Anomaly: heat flows into it. Freezes water and puts out fire around it, and glows brighter the more heat it drinks.',
+  },
+  [M.LiftField]: {
+    ...base,
+    name: 'Lift field',
+    key: '',
+    category: 'anomaly',
+    kind: 'static',
+    density: 100,
+    colour: [170, 130, 255],
+    colourEnd: [90, 60, 210],
+    colourJitter: 0,
+    glow: true,
+    acidProof: true,
+    indestructible: true,
+    update: liftField,
+    description: 'Anomaly: gravity runs backwards around it. Sand and water nearby fountain up out of it and rain down outside.',
+  },
+  [M.GravityKnot]: {
+    ...base,
+    name: 'Gravity knot',
+    key: '',
+    category: 'anomaly',
+    kind: 'static',
+    density: 100,
+    colour: [30, 8, 46],
+    colourEnd: [110, 50, 170],
+    colourJitter: 0,
+    glow: true,
+    acidProof: true,
+    indestructible: true,
+    update: gravityKnot,
+    description: 'Anomaly: everything falls towards it. Pulls loose grains and drops in from all sides and crushes them: sand into stone, coal into diamond.',
+  },
+  [M.StasisPocket]: {
+    ...base,
+    name: 'Stasis pocket',
+    key: '',
+    category: 'anomaly',
+    kind: 'static',
+    density: 100,
+    colour: [90, 220, 205],
+    colourEnd: [30, 110, 120],
+    colourJitter: 0,
+    glow: true,
+    acidProof: true,
+    indestructible: true,
+    update: stasisPocket,
+    description: 'Anomaly: time runs slow around it. Fire, water and creatures nearby move in slow motion.',
+  },
+  [M.ArcNode]: {
+    ...base,
+    name: 'Arc node',
+    key: '',
+    category: 'anomaly',
+    kind: 'static',
+    density: 100,
+    colour: [255, 246, 170],
+    colourEnd: [150, 190, 255],
+    colourJitter: 0,
+    glow: true,
+    acidProof: true,
+    indestructible: true,
+    update: arcNode,
+    description: 'Anomaly: insulation fails around it. Throws arcs of lightning at anything nearby, conductor or not, setting things alight.',
+  },
   [M.Root]: {
     ...base,
     name: 'Root',
@@ -3145,6 +3251,8 @@ export const PALETTE: readonly MaterialDef[] = [
   M.Seed, M.Grass, M.Wood, M.Flower, M.Mushroom, M.Moss, M.Algae, M.Vine, M.Seaweed, M.Cactus, M.Sap, M.Sugar, M.Caramel, M.Toffee, M.CandyFloss, M.Popcorn, M.Fruit, M.Pulp, M.Paper, M.Bamboo, M.Amber, M.Honeydew, M.Honey, M.Sawdust,
   // creatures
   M.Earthworm, M.Termite, M.Fish, M.Firefly, M.Bee, M.Snail, M.Ant, M.Yeast, M.CoralPolyp, M.Seagull, M.Crow, M.PineCone,
+  // anomalies
+  M.ColdSun, M.LiftField, M.GravityKnot, M.StasisPocket, M.ArcNode,
 ].map((id) => MATERIALS[id]);
 
 /** Room temperature. Cells drift back towards it when nothing heats or cools them. */

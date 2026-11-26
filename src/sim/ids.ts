@@ -175,6 +175,11 @@ export const M = {
   PineCone: 167,
   Needles: 168,
   Root: 169,
+  ColdSun: 170,
+  LiftField: 171,
+  GravityKnot: 172,
+  StasisPocket: 173,
+  ArcNode: 174,
 } as const;
 
 export type MaterialId = (typeof M)[keyof typeof M];

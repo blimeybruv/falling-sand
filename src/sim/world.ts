@@ -94,6 +94,14 @@ const BURN_TEMP = Float32Array.from(MATERIALS, (d) => d.burnTemp ?? BURNING_TEMP
 const WIND = Float32Array.from(MATERIALS, (d) => d.wind);
 const DRIFTS = Float32Array.from(MATERIALS, (d) => d.drifts ?? 0);
 const LOFTS = Float32Array.from(MATERIALS, (d) => d.lofts ?? 0);
+/**
+ * Stasis pockets: at most MAX_STASIS take effect at once, each slowing the cells within STASIS_REACH
+ * to one update in STASIS_SLOW frames (staggered, so the pocket moves in slow motion, not in jerks).
+ */
+const MAX_STASIS = 32;
+const STASIS_REACH = 7;
+const STASIS_SLOW = 8;
+const STASIS: number = M.StasisPocket;
 /** How many cells of the same liquid below make it deep (see `deepBelow`). */
 const DEEP_LIQUID = 4;
 /** Powders that the "fixed" drawing option can pin in place: not creatures, seeds and other life, which move by themselves. */
@@ -163,6 +171,32 @@ export class World {
   readonly pinned: Uint8Array;
   /** While set, powders drawn with the brush or the shape tools are pinned (see `pinned`). */
   drawFixed = false;
+
+  /** Stasis pockets that registered last frame (their x, y), which slow the cells around them this frame. */
+  private readonly stasisX = new Int32Array(MAX_STASIS);
+  private readonly stasisY = new Int32Array(MAX_STASIS);
+  private stasisCount = 0;
+  /** ...and those registering this frame, for the next. */
+  private readonly stasisNextX = new Int32Array(MAX_STASIS);
+  private readonly stasisNextY = new Int32Array(MAX_STASIS);
+  private stasisNextCount = 0;
+
+  /** A stasis pocket at (x, y) slows time around it next frame (called from its behaviour). */
+  holdStasis(x: number, y: number): void {
+    if (this.stasisNextCount >= MAX_STASIS) return;
+    this.stasisNextX[this.stasisNextCount] = x;
+    this.stasisNextY[this.stasisNextCount++] = y;
+  }
+
+  /** Whether (x, y) lies within reach of a stasis pocket this frame. */
+  private inStasis(x: number, y: number): boolean {
+    for (let k = 0; k < this.stasisCount; k++) {
+      const dx = x - this.stasisX[k];
+      const dy = y - this.stasisY[k];
+      if (dx * dx + dy * dy <= STASIS_REACH * STASIS_REACH) return true;
+    }
+    return false;
+  }
 
   /** Whether a cell of material m can be pinned: a powder that isn't alive (worms and seeds move by themselves). */
   canPin(m: MaterialId): boolean {
@@ -362,6 +396,7 @@ export class World {
     this.vy.fill(0);
     this.charge.fill(0);
     this.pinned.fill(0);
+    this.stasisCount = this.stasisNextCount = 0;
     this.temp.fill(AMBIENT_TEMP);
     this.tempBack.fill(AMBIENT_TEMP);
     this.stamp.fill(0);
@@ -569,6 +604,11 @@ export class World {
         const def = MATS[this.mat[i]];
         if (d2 <= r2) {
           if (GLASSY[def.id]) this.noise.shatters++;
+          // A diamond crushed in a blast, now and then, collapses into a gravity knot.
+          if (def.id === M.Diamond && this.rng.chance(0.25)) {
+            this.setCell(i, M.GravityKnot);
+            continue;
+          }
           if (def.shattersInto !== undefined) this.setCell(i, def.shattersInto);
           else if (!def.indestructible) this.setCell(i, this.rng.chance(0.25) ? M.Fire : M.Empty);
           continue;
@@ -609,6 +649,12 @@ export class World {
     if (this.gusty) this.wind = gustAt(this.frame);
     if (this.sun !== 0) this.updateSunlight();
     if (this.openEdges) this.drainEdges();
+    // The stasis pockets that registered last frame slow time around them this frame.
+    this.stasisX.set(this.stasisNextX);
+    this.stasisY.set(this.stasisNextY);
+    this.stasisCount = this.stasisNextCount;
+    this.stasisNextCount = 0;
+    const stasis = this.stasisCount > 0;
     const { width: w, height: h, mat, stamp } = this;
     const f = this.frame;
     const leftToRight = (f & 1) === 0;
@@ -619,6 +665,7 @@ export class World {
         const i = row + x;
         const m = mat[i];
         if (m === EMPTY || stamp[i] === f || (INERT[m] && this.burn[i] === 0)) continue;
+        if (stasis && m !== STASIS && (f + i) % STASIS_SLOW !== 0 && this.inStasis(x, y)) continue;
         this.updateCell(x, y, i, MATS[m]);
       }
     }
@@ -802,6 +849,11 @@ export class World {
     // (Burning cells are hot because they're burning: they don't melt until they've stopped.)
     if (above && t > above.temp && this.burn[i] === 0) {
       if (ICY[def.id]) this.noise.cracks++;
+      const touching = above.touching;
+      if (touching && (this.get(x - 1, y) === touching.with || this.get(x + 1, y) === touching.with || this.get(x, y - 1) === touching.with || this.get(x, y + 1) === touching.with)) {
+        this.transform(i, touching.into);
+        return;
+      }
       const other = above.sometimes;
       this.transform(i, other && this.rng.chance(other.chance) ? other.into : above.into);
       return;

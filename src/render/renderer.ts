@@ -65,6 +65,11 @@ const MAMMATUS_DEPTH = 20;
 const MAMMATUS_WIDTH = 7;
 const MAMMATUS_DROP = 3;
 
+/** Anomalies are single cells: each tints the air within HALO_REACH faintly in its own colour, so it can be found. */
+const HALO_REACH = 3;
+const HALO_ALPHA = 0.22;
+const MAX_HALOS = 64;
+
 const LITTLE_ENDIAN = new Uint8Array(new Uint32Array([0x0a0b0c0d]).buffer)[0] === 0x0d;
 
 function pack(r: number, g: number, b: number): number {
@@ -117,6 +122,9 @@ export class Renderer {
   private readonly stormLevel: Uint8Array;
   /** How many rows deep the mammatus pouch hangs in each column (0: a gap between pouches). */
   private readonly pouch: Uint8Array;
+  /** Anomalies seen while drawing this frame (cell indices), haloed afterwards. */
+  private readonly halos = new Int32Array(MAX_HALOS);
+  private readonly isAnomaly: Uint8Array;
   private frame = 0;
   /** Air's own colour (Sun off, no day and night): the sky is tinted from this. */
   private readonly background: readonly [number, number, number];
@@ -220,6 +228,7 @@ export class Renderer {
     this.cloudRow = new Int32Array(world.width);
     this.cloudDepth = new Uint16Array(world.width);
     this.cloudDist = new Uint8Array(world.size);
+    this.isAnomaly = Uint8Array.from(MATERIALS, (d) => (d.category === 'anomaly' ? 1 : 0));
     this.shaft = new Float32Array(world.width);
     this.stormRow = new Int32Array(world.width);
     this.stormLevel = new Uint8Array(world.width);
@@ -270,6 +279,8 @@ export class Renderer {
       shaftLut[k] = pack(bgR + (SHAFT_GREY[0] - bgR) * a, bgG + (SHAFT_GREY[1] - bgG) * a, bgB + (SHAFT_GREY[2] - bgB) * a);
     }
     const stormLut = cloudBase[storm];
+    const { halos, isAnomaly } = this;
+    let haloCount = 0;
     // The column and row of cell i, kept as the loop goes (cheaper than a division per cell).
     let cx = -1;
     let cy = 0;
@@ -315,6 +326,7 @@ export class Renderer {
       seed ^= seed >>> 17;
       seed ^= seed << 5;
 
+      if (isAnomaly[m] && haloCount < MAX_HALOS) halos[haloCount++] = i;
       if (litLut[m] !== 0 && life[i] > 0) {
         pixels[i] = litLut[m];
       } else if (burn[i] > 0 && (seed & 3) !== 0) {
@@ -374,6 +386,26 @@ export class Renderer {
       }
     }
     this.seed = seed;
+    // Each anomaly's halo: the air around it, faintly tinted its colour (fading with distance).
+    for (let k = 0; k < haloCount; k++) {
+      const c = halos[k];
+      const hx = c % width;
+      const hy = (c - hx) / width;
+      const j0 = mat[c] * SHADES + shade[c];
+      for (let dy = -HALO_REACH; dy <= HALO_REACH; dy++) {
+        const y = hy + dy;
+        if (y < 0 || y >= world.height) continue;
+        for (let dx = -HALO_REACH; dx <= HALO_REACH; dx++) {
+          const x = hx + dx;
+          const d2 = dx * dx + dy * dy;
+          if (x < 0 || x >= width || d2 === 0 || d2 > HALO_REACH * HALO_REACH) continue;
+          const n = y * width + x;
+          if (!isAir[mat[n]]) continue;
+          const a = HALO_ALPHA * (1 - Math.sqrt(d2) / (HALO_REACH + 1));
+          pixels[n] = pack(bgR + (lutR[j0] - bgR) * a, bgG + (lutG[j0] - bgG) * a, bgB + (lutB[j0] - bgB) * a);
+        }
+      }
+    }
     const target = world.sun > 0.2 ? Math.min(1, rain / RAINBOW_RAIN) * Math.min(1, world.sun * 1.5) : 0;
     this.rainbow += (target - this.rainbow) * (target > this.rainbow ? 0.03 : 0.01);
   }

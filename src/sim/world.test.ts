@@ -1984,3 +1984,114 @@ describe('ice frozen out of the sky', () => {
   });
 });
 
+
+describe('anomalies', () => {
+  function fill(w: World, x0: number, y0: number, wd: number, ht: number, m: MaterialId): void {
+    for (let y = y0; y < y0 + ht; y++) for (let x = x0; x < x0 + wd; x++) w.set(x, y, m);
+  }
+
+  it('a cold sun freezes the water and puts out the fire around it, and glows brighter as it drinks heat', () => {
+    const w = new World(30, 30, 1);
+    fill(w, 0, 25, 30, 5, M.Stone);
+    fill(w, 5, 20, 20, 5, M.Water);
+    w.set(15, 19, M.ColdSun);
+    const sun = w.idx(15, 19);
+    fill(w, 12, 16, 3, 2, M.Wood);
+    w.ignite(w.idx(13, 16));
+    run(w, 300);
+    expect(w.count(M.ThinIce)).toBeGreaterThan(10);
+    let burning = 0;
+    for (let i = 0; i < w.size; i++) if (w.burn[i] > 0) burning++;
+    expect(burning).toBe(0);
+    expect(w.count(M.Wood)).toBeGreaterThan(0);
+    expect(w.shade[sun]).toBeGreaterThan(0);
+  });
+
+  it('a lift field throws sand and water up out of it, to rain down outside', () => {
+    const w = new World(40, 60, 2);
+    fill(w, 0, 58, 40, 2, M.Stone);
+    fill(w, 14, 50, 12, 8, M.Sand);
+    w.set(20, 57, M.LiftField);
+    let highest = 60;
+    for (let f = 0; f < 200; f++) {
+      w.step();
+      for (let i = 0; i < w.size; i++) if (w.mat[i] === M.Sand) highest = Math.min(highest, (i / 40) | 0);
+    }
+    expect(highest).toBeLessThan(40);
+    // Ordinary sand nearby, out of reach, stays piled.
+    const v = new World(40, 60, 2);
+    fill(v, 0, 58, 40, 2, M.Stone);
+    fill(v, 14, 50, 12, 8, M.Sand);
+    let top = 60;
+    for (let f = 0; f < 200; f++) {
+      v.step();
+      for (let i = 0; i < v.size; i++) if (v.mat[i] === M.Sand) top = Math.min(top, (i / 40) | 0);
+    }
+    expect(top).toBeGreaterThanOrEqual(50);
+  });
+
+  it('a gravity knot crushes coal held against it into diamond', () => {
+    const w = new World(40, 40, 3);
+    w.set(20, 15, M.GravityKnot);
+    w.set(19, 15, M.Coal);
+    w.set(21, 15, M.Coal);
+    w.set(20, 14, M.Coal);
+    run(w, 600);
+    expect(w.created[M.Diamond]).toBeGreaterThan(0);
+  });
+
+  it('a gravity knot pulls sand in mid-air towards it, where it would otherwise fall', () => {
+    const near = (knot: boolean): number => {
+      const w = new World(40, 40, 3);
+      if (knot) w.set(20, 15, M.GravityKnot);
+      fill(w, 24, 12, 3, 3, M.Sand);
+      run(w, 300);
+      let n = 0;
+      for (let y = 8; y < 23; y++) for (let x = 13; x < 28; x++) if (w.get(x, y) === M.Sand || w.get(x, y) === M.Stone) n++;
+      return n;
+    };
+    expect(near(true)).toBeGreaterThan(5);
+    expect(near(false)).toBe(0);
+  });
+
+  it('a stasis pocket slows a fire burning beside it', () => {
+    const burnTime = (pocket: boolean): number => {
+      const w = new World(30, 30, 4);
+      fill(w, 0, 25, 30, 5, M.Stone);
+      fill(w, 12, 20, 6, 5, M.Wood);
+      if (pocket) w.set(15, 19, M.StasisPocket);
+      w.ignite(w.idx(14, 20));
+      let f = 0;
+      for (; f < 6000 && w.count(M.Wood) > 0; f++) w.step();
+      return f;
+    };
+    expect(burnTime(true)).toBeGreaterThan(burnTime(false) * 2);
+  });
+
+  it('an arc node throws arcs that light the wood and spark the copper around it', () => {
+    const w = new World(30, 30, 5);
+    fill(w, 0, 25, 30, 5, M.Stone);
+    w.set(15, 15, M.ArcNode);
+    fill(w, 9, 14, 2, 3, M.Wood);
+    fill(w, 20, 14, 2, 3, M.Copper);
+    let sparked = 0;
+    let lit = 0;
+    for (let f = 0; f < 1500; f++) {
+      w.step();
+      for (let i = 0; i < w.size; i++) {
+        if (w.mat[i] === M.Copper && w.charge[i] !== 0) sparked++;
+        if (w.mat[i] === M.Wood && w.burn[i] > 0) lit++;
+      }
+    }
+    expect(w.created[M.Lightning]).toBeGreaterThan(5);
+    expect(sparked).toBeGreaterThan(0);
+    expect(lit).toBeGreaterThan(0);
+  });
+
+  it('anomalies shrug off blasts', () => {
+    const w = new World(30, 30, 6);
+    for (const [k, m] of [M.ColdSun, M.LiftField, M.GravityKnot, M.StasisPocket, M.ArcNode].entries()) w.set(10 + k * 2, 15, m);
+    w.explode(14, 15, 8);
+    expect(w.count(M.ColdSun) + w.count(M.LiftField) + w.count(M.GravityKnot) + w.count(M.StasisPocket) + w.count(M.ArcNode)).toBe(5);
+  });
+});

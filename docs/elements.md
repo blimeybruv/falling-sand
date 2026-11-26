@@ -411,13 +411,25 @@ striking a magnet inside plasma, a red sprite touching the ground, a diamond hit
 perhaps a late Discovery tab of their own. Each could have a sound (a hum, a hiss, a low throb).
 A larger feature: best built after the cloud redesign.
 
+**Built 26 Nov (the first five).** They have their own palette tab, Anomalies. Each is indestructible
+by blasts and acid (it can still be erased), and a low throb sounds while any is on the grid.
+Differences from the plan:
+- **Cold sun** freezes water into thin ice, which thaws again once it's out of reach. Ordinary ice
+  keeps itself cold and spreads, so a cold sun by the sea would slowly have frozen the whole sea.
+- **Lift field**: lightning striking a magnet beside plasma (lightning through hydrogen makes the
+  plasma).
+- **Gravity knot**: it scans every cell within reach each frame, not a few, because a sampled pull
+  lost to ordinary gravity. Grains caught by it stop falling the ordinary way.
+- **Stasis pocket**: cells within reach update one frame in eight, staggered so they move in slow
+  motion rather than in jerks.
+
 | | Anomaly | The rule it breaks | What it does | How it might form | Effort |
 |---|---|---|---|---|---|
-| | Lift field | Gravity | Loose particles nearby fall upwards, so sand and water fountain into the sky and rain down outside it | Lightning striking a magnet in plasma | F |
-| | Gravity knot | Gravity | Pulls loose particles in from all sides and crushes them: sand into stone, coal into diamond | A diamond caught in a blast | F |
-| | Cold sun | Heat flows downhill | Draws heat out of everything around it, so it freezes water and puts out fire, and glows brighter the more it drinks | Dry ice touching plasma | F |
-| | Stasis pocket | Time | Cells within reach update only now and then, so fire, water and creatures move in slow motion | A red sprite touching the ground | F |
-| | Arc node | Insulation | Throws arcs of electricity to anything nearby, conductor or not, setting things alight | Lightning striking graphite under salt water | F |
+| ✅ | Lift field | Gravity | Loose particles nearby fall upwards, so sand and water fountain into the sky and rain down outside it | Lightning striking a magnet in plasma | F |
+| ✅ | Gravity knot | Gravity | Pulls loose particles in from all sides and crushes them: sand into stone, coal into diamond | A diamond caught in a blast | F |
+| ✅ | Cold sun | Heat flows downhill | Draws heat out of everything around it, so it freezes water and puts out fire, and glows brighter the more it drinks | Dry ice touching plasma | F |
+| ✅ | Stasis pocket | Time | Cells within reach update only now and then, so fire, water and creatures move in slow motion | A red sprite touching the ground | F |
+| ✅ | Arc node | Insulation | Throws arcs of electricity to anything nearby, conductor or not, setting things alight | Lightning striking graphite under salt water | F |
 | | Phase fault | Phase changes | Things passing through swap state (solid to liquid, liquid to gas) and back again a little way off | Plasma meeting mercury | F |
 | | Linked gates | Distance | A pair: what falls into one comes out of the other (single cells linked by a shared colour, not one multi-cell entity) | Two arc nodes struck at once | S |
 | | Transmuter | Conservation | Slowly turns its neighbours one step along a chain (lead to gold, stone to quartz) and burns out after a while | The reward for finding every anomaly | F |

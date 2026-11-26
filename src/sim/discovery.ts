@@ -211,6 +211,12 @@ export const RECIPES: Readonly<Partial<Record<MaterialId, Recipe>>> = {
   [M.Gunpowder]: { hint: 'Three powders, one bang.', recipe: 'Charcoal with sulfur and saltpetre around it.' },
   [M.Nitro]: { hint: 'Something that eats meets something that burns.', recipe: 'Acid meets oil.' },
   [M.Napalm]: { hint: 'Thicken a fuel with something explosive.', recipe: 'Oil meets gunpowder.' },
+  // Anomalies: rare cells where one law of physics goes wrong, made by extreme events.
+  [M.ColdSun]: { hint: 'The coldest thing there is, meeting the hottest.', recipe: 'Dry ice touched by plasma.' },
+  [M.LiftField]: { hint: 'Lightning, a magnet, and the fourth state of matter.', recipe: 'Lightning striking a magnet wrapped in plasma (lightning through hydrogen makes plasma).' },
+  [M.GravityKnot]: { hint: 'The hardest thing, crushed even harder.', recipe: 'A diamond caught in the heart of a blast.' },
+  [M.StasisPocket]: { hint: 'Something from high above a storm, reaching the ground.', recipe: 'A red sprite touching stone, earth or sand (build a tower up to where they flash).' },
+  [M.ArcNode]: { hint: 'Lightning, carbon and the sea.', recipe: 'Lightning striking graphite under salt water.' },
 };
 
 /** Not made by any reaction: awarded once enough other materials have been discovered. */

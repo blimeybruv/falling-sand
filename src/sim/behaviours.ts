@@ -1591,6 +1591,10 @@ export function updateBolt(w: World, x: number, y: number, _i: number): boolean 
     const t = w.get(nx, ny);
     // Lightning through hydrogen strips it into plasma, and now and then magnetises iron.
     if (t === M.Hydrogen) w.transform(n, M.Plasma);
+    // Anomalies: lightning striking a magnet wrapped in plasma turns gravity round (a lift field);
+    // striking graphite under salt water, insulation fails (an arc node).
+    else if (t === M.Magnet && countAround(w, nx, ny, M.Plasma, M.Plasma) > 0 && w.rng.chance(0.3)) w.transform(n, M.LiftField);
+    else if (t === M.Graphite && countAround(w, nx, ny, M.SaltWater, M.SaltWater) > 0 && w.rng.chance(0.3)) w.transform(n, M.ArcNode);
     else if (t === M.Iron && w.rng.chance(0.05)) w.transform(n, M.Magnet);
     // An arc through charcoal or coal turns it to graphite.
     else if ((t === M.Charcoal || t === M.Coal) && w.rng.chance(0.2)) w.transform(n, M.Graphite);
@@ -2536,4 +2540,199 @@ export function openCone(w: World, _x: number, _y: number, i: number): boolean {
 export function updateNeedles(w: World, x: number, y: number, i: number): boolean {
   if (w.rng.chance(0.00001) && w.get(x, y + 1) === M.Empty) w.set(x, y + 1, M.PineCone);
   return fossilise(w, x, y, i);
+}
+
+// ---------------------------------------------------------------- anomalies
+//
+// Rare cells where one law of physics goes wrong. Each is a single static cell that reaches a few
+// cells around it, sampling a handful of them a frame (so it costs little), breaks exactly one
+// rule, and leaves the rest of the physics to react.
+
+/** Pick a random cell within `r` of (x, y), not (x, y) itself: its index, or -1 (off the grid, or outside the circle). */
+function within(w: World, x: number, y: number, r: number): number {
+  const dx = w.rng.int(-r, r);
+  const dy = w.rng.int(-r, r);
+  if ((dx === 0 && dy === 0) || dx * dx + dy * dy > r * r || !w.inBounds(x + dx, y + dy)) return -1;
+  return w.idx(x + dx, y + dy);
+}
+
+/** Can a loose cell (powder or liquid, not pinned) be moved by an anomaly? */
+function loose(w: World, j: number): boolean {
+  const kind = w.defAt(j % w.width, (j / w.width) | 0).kind;
+  return (kind === 'powder' || kind === 'liquid') && w.pinned[j] === 0;
+}
+
+const COLD_SUN_REACH = 6;
+/** The temperature a cold sun drags things towards. */
+const COLD_SUN_TEMP = -60;
+
+/**
+ * Cold sun: heat flows into it instead of out. Everything within reach is chilled hard, so water
+ * freezes and fire goes out, and it glows brighter the more heat it drinks (its brightness, in
+ * `shade`, follows the heat stored in `life`, which slowly fades).
+ */
+export function coldSun(w: World, x: number, y: number, i: number): boolean {
+  let drunk = 0;
+  for (let k = 0; k < 10; k++) {
+    const j = within(w, x, y, COLD_SUN_REACH);
+    if (j < 0) continue;
+    const t = w.temp[j];
+    if (t > COLD_SUN_TEMP) {
+      const take = (t - COLD_SUN_TEMP) * 0.35;
+      w.temp[j] = t - take;
+      drunk += take;
+    }
+    if (w.burn[j] > 0) w.burn[j] = 0;
+    const m = w.mat[j];
+    if (m === M.Fire) w.setCell(j, M.Smoke);
+    // Water freezes (to thin ice, which thaws again away from the cold, so a cold sun can't lock a
+    // whole sea in spreading ice).
+    else if (m === M.Water && w.temp[j] < 0) w.transform(j, M.ThinIce);
+  }
+  w.life[i] = Math.min(4000, Math.max(0, w.life[i] - 6 + drunk * 0.2));
+  w.shade[i] = Math.min(15, w.life[i] >> 8);
+  return true;
+}
+
+const LIFT_REACH = 6;
+
+/**
+ * Lift field: gravity runs backwards around it. Loose grains and drops within reach are thrown
+ * upwards, so sand and water fountain up out of it and rain down outside.
+ */
+export function liftField(w: World, x: number, y: number, _i: number): boolean {
+  for (let k = 0; k < 14; k++) {
+    const j = within(w, x, y, LIFT_REACH);
+    if (j < 0 || !loose(w, j)) continue;
+    w.launch(j, (w.rng.next() - 0.5) * 0.8, -(1.4 + w.rng.next() * 1.4));
+  }
+  return true;
+}
+
+const KNOT_REACH = 8;
+
+/** What a gravity knot crushes its neighbours into. */
+function crushed(t: MaterialId): MaterialId | -1 {
+  switch (t) {
+    case M.Sand:
+    case M.Gravel:
+    case M.Earth:
+    case M.Ash:
+      return M.Stone;
+    case M.Coal:
+    case M.Charcoal:
+    case M.Graphite:
+      return M.Diamond;
+    case M.Snow:
+      return M.Ice;
+    case M.Clay:
+      return M.Brick;
+    default:
+      return -1;
+  }
+}
+
+/**
+ * Gravity knot: gravity pulls towards it, from every side. Loose grains and drops within reach are
+ * drawn a step closer, and whatever it holds against itself is crushed: sand and earth into stone,
+ * coal into diamond, snow into ice.
+ */
+export function gravityKnot(w: World, x: number, y: number, _i: number): boolean {
+  // Every loose cell within reach, every frame, so the pull holds them against ordinary gravity.
+  const r = KNOT_REACH;
+  for (let dy = -r; dy <= r; dy++) {
+    for (let dx = -r; dx <= r; dx++) {
+      const d2 = dx * dx + dy * dy;
+      if (d2 === 0 || d2 > r * r) continue;
+      const jx = x + dx;
+      const jy = y + dy;
+      if (!w.inBounds(jx, jy)) continue;
+      const j = w.idx(jx, jy);
+      if (!loose(w, j)) continue;
+      // Caught by the knot, it stops falling (and flying) the ordinary way.
+      w.vel[j] = 0;
+      w.vx[j] = 0;
+      w.vy[j] = 0;
+      // Cells below have already fallen this frame (the grid updates bottom-up): two steps up for them.
+      const at = pullStep(w, j, jx, jy, x, y);
+      if (dy > 0 && at >= 0) pullStep(w, at, at % w.width, (at - (at % w.width)) / w.width, x, y);
+    }
+  }
+  // Whatever it holds against itself is crushed.
+  for (let dy = -1; dy <= 1; dy++) {
+    for (let dx = -1; dx <= 1; dx++) {
+      if ((dx === 0 && dy === 0) || !w.rng.chance(0.01)) continue;
+      const into = crushed(w.get(x + dx, y + dy));
+      if (into !== -1) w.transform(w.idx(x + dx, y + dy), into);
+    }
+  }
+  return true;
+}
+
+/**
+ * One step of cell j at (jx, jy) towards the knot at (kx, ky): diagonally if it can, otherwise along
+ * the longer way, then the other. Returns where it went, or -1 if it couldn't move.
+ */
+function pullStep(w: World, j: number, jx: number, jy: number, kx: number, ky: number): number {
+  const sx = Math.sign(kx - jx);
+  const sy = Math.sign(ky - jy);
+  if (pullTo(w, j, jx + sx, jy + sy, kx, ky)) return w.idx(jx + sx, jy + sy);
+  const first = Math.abs(kx - jx) >= Math.abs(ky - jy);
+  for (let k = 0; k < 2; k++) {
+    const horizontal = (k === 0) === first;
+    const tx = horizontal ? jx + sx : jx;
+    const ty = horizontal ? jy : jy + sy;
+    if ((tx !== jx || ty !== jy) && pullTo(w, j, tx, ty, kx, ky)) return w.idx(tx, ty);
+  }
+  return -1;
+}
+
+/** Move cell j to (tx, ty) if that's open (air or gas) and isn't the knot at (kx, ky). */
+function pullTo(w: World, j: number, tx: number, ty: number, kx: number, ky: number): boolean {
+  if ((tx === kx && ty === ky) || !w.inBounds(tx, ty)) return false;
+  const t = w.get(tx, ty);
+  if (t !== M.Empty && w.defAt(tx, ty).kind !== 'gas') return false;
+  w.swap(j, w.idx(tx, ty));
+  return true;
+}
+
+/** Stasis pocket: registers itself each frame; the world then updates cells within reach only now and then (see World.holdStasis). */
+export function stasisPocket(w: World, x: number, y: number, _i: number): boolean {
+  w.holdStasis(x, y);
+  return true;
+}
+
+const ARC_REACH = 7;
+
+/**
+ * Arc node: insulation fails around it. Every so often it throws an arc of lightning to something
+ * within reach, conductor or not: through the air to the first thing in the way, which it lights,
+ * sparks or scorches.
+ */
+export function arcNode(w: World, x: number, y: number, _i: number): boolean {
+  if (!w.rng.chance(0.04)) return true;
+  const j = within(w, x, y, ARC_REACH);
+  // Only at something: it doesn't throw arcs into empty air.
+  if (j < 0 || w.mat[j] === M.Empty || w.defAt(j % w.width, (j / w.width) | 0).kind === 'gas') return true;
+  const tx = j % w.width;
+  const ty = (j - tx) / w.width;
+  const steps = Math.max(Math.abs(tx - x), Math.abs(ty - y));
+  for (let s = 1; s <= steps; s++) {
+    const px = Math.round(x + ((tx - x) * s) / steps);
+    const py = Math.round(y + ((ty - y) * s) / steps);
+    const t = w.get(px, py);
+    if (t === M.Empty || (w.defAt(px, py).kind === 'gas' && t !== M.Lightning)) {
+      w.setCell(w.idx(px, py), M.Lightning);
+      continue;
+    }
+    if (t === M.Lightning) continue;
+    // The first thing in the way takes the arc.
+    const n = w.idx(px, py);
+    if (!w.electrify(n)) {
+      if (w.defAt(px, py).flammability > 0) w.ignite(n);
+      else w.temp[n] += 300;
+    }
+    break;
+  }
+  return true;
 }

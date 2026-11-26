@@ -715,6 +715,37 @@ describe('every recipe works in the simulation', () => {
       fillRect(w, 0, 30, 40, 10, M.Oil);
       fillRect(w, 10, 20, 20, 3, M.Gunpowder);
     }],
+    ['cold sun (anomaly): dry ice touched by plasma', M.ColdSun, 60, (w) => {
+      fillRect(w, 0, 36, 40, 4, M.DryIce);
+      fillRect(w, 5, 34, 30, 2, M.Plasma);
+    }],
+    ['lift field (anomaly): lightning striking a magnet in plasma', M.LiftField, 60, (w) => {
+      // A magnet in a glass jar of hydrogen; a bolt down through the hydrogen beside it turns the
+      // gas to plasma, then strikes the magnet.
+      fillRect(w, 10, 20, 12, 1, M.Glass);
+      fillRect(w, 10, 32, 12, 1, M.Glass);
+      fillRect(w, 10, 20, 1, 13, M.Glass);
+      fillRect(w, 21, 20, 1, 13, M.Glass);
+      fillRect(w, 11, 21, 10, 11, M.Hydrogen);
+      fillRect(w, 15, 26, 2, 2, M.Magnet);
+      fillRect(w, 17, 21, 1, 11, M.Lightning);
+    }],
+    ['gravity knot (anomaly): a diamond caught in a blast', M.GravityKnot, 120, (w) => {
+      fillRect(w, 0, 38, 40, 2, M.Stone);
+      fillRect(w, 14, 30, 6, 8, M.Dynamite);
+      fillRect(w, 20, 34, 4, 4, M.Diamond);
+      fillRect(w, 14, 29, 6, 1, M.Fire);
+    }],
+    ['stasis pocket (anomaly): a red sprite touching the ground', M.StasisPocket, 30, (w) => {
+      fillRect(w, 0, 20, 40, 20, M.Stone);
+      fillRect(w, 10, 19, 20, 1, M.Sprite);
+    }],
+    ['arc node (anomaly): lightning striking graphite under salt water', M.ArcNode, 60, (w) => {
+      fillRect(w, 0, 39, 40, 1, M.Stone);
+      fillRect(w, 0, 25, 40, 14, M.SaltWater);
+      fillRect(w, 18, 35, 3, 3, M.Graphite);
+      fillRect(w, 21, 26, 1, 10, M.Lightning);
+    }],
   ];
   for (const [name, target, frames, setup] of cases) {
     it(name, () => {

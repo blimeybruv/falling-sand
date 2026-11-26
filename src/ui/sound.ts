@@ -51,6 +51,8 @@ const SEAGULL: number = M.Seagull;
 const CROW: number = M.Crow;
 const SPARK: number = M.Spark;
 const BOLT: number = M.Lightning;
+/** Anomalies throb: a low, wavering tone while any is on the grid. */
+const ANOMALY = Uint8Array.from(MATERIALS, (d) => (d.category === 'anomaly' ? 1 : 0));
 const LIQUID = Uint8Array.from(MATERIALS, (d) => (d.kind === 'liquid' ? 1 : 0));
 const POWDER = Uint8Array.from(MATERIALS, (d) => (d.kind === 'powder' ? 1 : 0));
 
@@ -115,6 +117,8 @@ interface Heard {
   crows: number;
   sparks: number;
   bolts: number;
+  /** Whether an anomaly was seen in the last full pass over the grid. */
+  anomaly: boolean;
 }
 
 /** A continuous sound whose loudness follows the scene: a source through a filter into a gain. */
@@ -133,7 +137,7 @@ export class Sound {
   private brown: AudioBuffer | null = null;
   private windGain: GainNode | null = null;
   private windFilter: BiquadFilterNode | null = null;
-  private loops: Record<'roar' | 'hiss' | 'wash' | 'hush' | 'hum' | 'buzz', Loop> | null = null;
+  private loops: Record<'roar' | 'hiss' | 'wash' | 'hush' | 'hum' | 'buzz' | 'throb', Loop> | null = null;
   private crackleBus: AudioNode | null = null;
   private dripBus: AudioNode | null = null;
   private coronaBus: AudioNode | null = null;
@@ -147,8 +151,10 @@ export class Sound {
   private offset = 0;
   private lastSample = 0;
   private lastSteam = 0;
-  private heard: Heard = { fire: 0, fallingLiquid: 0, fallingPowder: 0, lava: 0, charged: 0, bees: 0, gulls: 0, crows: 0, sparks: 0, bolts: 0 };
+  private heard: Heard = { fire: 0, fallingLiquid: 0, fallingPowder: 0, lava: 0, charged: 0, bees: 0, gulls: 0, crows: 0, sparks: 0, bolts: 0, anomaly: false };
   private lastCrack = 0;
+  /** Samples left before an anomaly, last heard, goes quiet. */
+  private anomalySeen = 0;
   private lastBoom = 0;
   private pendingBoom = 0;
   private lastThunder = 0;
@@ -235,6 +241,7 @@ export class Sound {
       loops.hush.target = 0.2 * loud(h.fallingPowder, 600);
       loops.hum.target = 0.05 * Math.min(1, h.charged / 60);
       loops.buzz.target = 0.06 * Math.min(1, h.bees / 6);
+      loops.throb.target = h.anomaly ? 0.07 : 0;
     }
     const crackles = Math.min(45, h.fire * 0.06);
     const drips = Math.min(70, h.fallingLiquid * 0.2);
@@ -324,6 +331,7 @@ export class Sound {
     let crows = 0;
     let sparks = 0;
     let bolts = 0;
+    let anomalies = 0;
     for (let i = this.offset; i < size; i += STRIDE) {
       const m = mat[i];
       if (m === EMPTY) continue;
@@ -338,11 +346,16 @@ export class Sound {
       else if (m === CROW) crows++;
       else if (m === SPARK) sparks++;
       else if (m === BOLT) bolts++;
+      else if (ANOMALY[m]) anomalies++;
       // (Above CHARGE_ACTIVE: a conducting liquid resting after a pulse, which is quiet.)
       if (charge[i] !== 0 && charge[i] <= CHARGE_ACTIVE) charged++;
     }
+    // A lone anomaly cell turns up in only one sample in STRIDE: remember it for a whole pass.
+    if (anomalies > 0) this.anomalySeen = STRIDE * 2;
+    else if (this.anomalySeen > 0) this.anomalySeen--;
     this.offset = (this.offset + 1) % STRIDE;
     const h = this.heard;
+    h.anomaly = this.anomalySeen > 0;
     h.fire = fire * STRIDE;
     h.fallingLiquid = fallingLiquid * STRIDE;
     h.fallingPowder = fallingPowder * STRIDE;
@@ -403,6 +416,7 @@ export class Sound {
       wash: { gain: this.loop(this.white, 'bandpass', 5200, 0.6).gain, target: 0 },
       hush: { gain: this.loop(this.white, 'bandpass', 1700, 0.8).gain, target: 0 },
       hum: { gain: this.tone('sawtooth', 100, 'lowpass', 700, 0), target: 0 },
+      throb: { gain: this.tone('sine', 52, 'lowpass', 260, 6), target: 0 },
       buzz: { gain: this.tone('sawtooth', 215, 'bandpass', 520, 9), target: 0 },
     };
     this.crackleBus = this.bus('highpass', 650);
