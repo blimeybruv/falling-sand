@@ -66,6 +66,7 @@ Discovery progress is kept for when you switch back.
 | Speed menu | 0.25× to 3× simulation speed |
 | Wind menu | Blow smoke, fire, steam and falling particles left or right; it sweeps loose powders up off the ground (snow and ash heaps are stripped grain by grain; sawdust flies; sand only rolls along the surface). Clouds sail along; in a strong wind, dunes creep and snow piles into drifts, fire races downwind, and flowers send seeds off on the breeze. Gusty swells and drops and now and then turns round |
 | Edges button | Walls (the default: things pile up against the edges) or open: sand, liquids and creatures fall off the bottom, liquids and gases flow out of the sides and rise out of the top, and clouds sail off with the wind. Solid things you draw stay put, so you can build a floor |
+| Collapse button | Structural collapse, off by default. When on, stone and basalt reach 10 cells sideways (or hanging) from support, concrete and obsidian 8, brick 6, ice 5, glass 3, and powders drawn with the pin only 2; past that they crumble (stone into gravel, glass into sand) and fall, a cell further each frame, so a bridge comes down in a ripple when you blast out its pillar. Columns stand at any height, a slab rests on a sand pile, and metal and wood never collapse, so an iron girder bridges any gap |
 | Speaker button | Sound on or off; hover over it (or tab to it) for a volume slider, which sits beside it on phones. Wind (following the Wind setting, gusting), crackling fire, booming explosions, thunder after lightning (with a corona sizzle as the charge builds before a near strike), hissing steam and acid, rain and pouring sand, bubbling lava, humming electricity, fireworks, buzzing bees, crying gulls and cawing crows, glass shattering in a blast and ice cracking as it melts or freezes over, a low throb near an anomaly, and a chime for each discovery. All made live with the Web Audio API, no sound files |
 | Sun menu | Sunlight from above warms whatever it reaches first: it evaporates water (which rises and makes clouds), dries mud and salt water, burns off clouds and melts snow, but not in the shade. Glass lets it through. Plants grow faster in sunlight and slower in shade (moss the other way round). Sun on falling rain draws a faint rainbow. Vapour rising against a roof condenses on it, so a shallow tray of salt water under glass in the sun makes a solar still: fresh water drips back, salt is left behind. Day/night runs a three-minute day: the sky brightens, warms at dawn and dusk and fills with stars; clear nights chill whatever is open to the sky (a cloud or a roof keeps it warm), mist rises off water, ponds skin over with thin ice, and fog settling on frozen ground leaves frost. The morning sun melts it all |
 | Scene menu | Undo and redo, save in this browser, load it again, download or open a scene file, or copy a share link. Also seven example scenes: a primordial wilderness (a new one each time: sea, hills and a peat bog, a smouldering volcano, and ore, coal, oil and a cave in the rock below), a volcano island, a fuse and charges, pond life, a thunderstorm, a forest to set alight, and five kinds of tree to watch grow |
@@ -97,7 +98,7 @@ debris start fresh when a scene loads.
 | | Compost | Rots down into loam | Mushroom in grass or leaves |
 | 3 | Stone | Static and indestructible (only burning thermite melts it); conducts heat well | Starter |
 | B | Brick | Static; insulates, never burns, and acid can't eat it | Fire clay in a kiln |
-| Q | Glass | Static; acid can't eat it | Melt sand with lava or a charcoal fire |
+| Q | Glass | Static; acid can't eat it. Sand or gravel dropped on it from a height, or hail, smashes it into sand | Melt sand with lava or a charcoal fire |
 | N | Obsidian | Black volcanic glass; indestructible | Lava meets ice |
 | I | Ice | Static and cold; melts near heat, slowly freezes neighbouring water. Steam reaching the top of the sky now and then freezes into a crystal, which falls and melts where it lands (unless the ground is frozen) | Steam reaching the top |
 | | Icicle | Grows downward where water drips past ice; melts when warm | Water dripping past ice |
@@ -230,7 +231,7 @@ debris start fresh when a scene loads.
 | | Toffee | Caramel set hard; melts back above 100° | Caramel left to cool |
 | | Candy floss | Pink fluff, light as air; gone at a touch of water | Hot caramel caught by the wind |
 | | Popcorn | Seeds that pop and jump in the heat, with a little pop you can hear | Seeds heated past 180° |
-| | Fruit | Ripens from flowers and falls; rots into a seed | Flowers ripen |
+| | Fruit | Ripens from flowers and falls; rots into a seed. Dropped from high up, it bursts into pulp | Flowers ripen |
 | | Pulp | Thick slurry of broken-down wood | Wood meets lye |
 | | Paper | Catches fire very easily | Pulp dried past 100° |
 | | Bamboo | Shoots up fast in tall stalks | A seed on loam right beside water |
@@ -318,11 +319,10 @@ chains (neon, toffee, popcorn, icicles, fertiliser, compost...), with recipes an
 estimates.
 
 - [ ] **A wind pass over every material** (later, no hurry): go through the table and give each material wind values that match how it really behaves (`wind` for things in the air, `drifts` and `lofts` for powders on the ground), measured in the sim, so seeds, leaves, feathers, flour-like powders, smoke and spray all respond in proportion. Sand stays as it is until then: when it was made to loft like sawdust, a wind reshaped the example scenes too drastically, so it only rolls along the surface. A player's suggestion.
-- [ ] **Load-bearing materials**: see the design note in [`docs/elements.md`](docs/elements.md). (Vents are built.)
+- [ ] **Weight and pressure**: weight resting on structure (a glass floor crushed under a sand pile), then pressure in liquids (water finding its level through a U-bend, fountains) and in gases (a sealed pot bursting). See "Physics depth" in [`docs/elements.md`](docs/elements.md).
 - [ ] **More materials**: pick one from [`docs/elements.md`](docs/elements.md). Each is a table entry, usually a `Reaction`, and a line in `RECIPES`; the tests check every one can be discovered.
 - [ ] **Discovery goals**: small challenges once everything is unlocked ("grow a forest of 5 trees", "boil a whole pond").
 - [ ] **Run the simulation in a Web Worker**: move `World.step()` off the main thread and pass the arrays across, so bigger grids stay smooth.
-- [ ] **Smarter liquids**: pressure, so water rises to the same level in connected containers (a U-bend).
 - [ ] **Accessibility**: a high-contrast palette option, and keyboard control of the brush position.
 
 ## Licence

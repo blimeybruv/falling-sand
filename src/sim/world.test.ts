@@ -2150,3 +2150,150 @@ describe('anomalies', () => {
     expect(w.count(M.ColdSun) + w.count(M.LiftField) + w.count(M.GravityKnot) + w.count(M.StasisPocket) + w.count(M.ArcNode)).toBe(5);
   });
 });
+
+describe('impacts', () => {
+  function fill(w: World, x0: number, y0: number, wd: number, ht: number, m: MaterialId): void {
+    for (let y = y0; y < y0 + ht; y++) for (let x = x0; x < x0 + wd; x++) w.set(x, y, m);
+  }
+
+  it('sand dropped from a height smashes a glass floor; dropped from just above, it rests on it', () => {
+    const drop = (height: number): number => {
+      const w = new World(40, 80, 1);
+      fill(w, 0, 78, 40, 2, M.Stone);
+      fill(w, 0, 70, 40, 1, M.Glass);
+      fill(w, 15, 70 - height, 10, 2, M.Sand);
+      run(w, 200);
+      return 40 - w.count(M.Glass);
+    };
+    expect(drop(60)).toBeGreaterThan(3);
+    expect(drop(3)).toBe(0);
+  });
+
+  it('rain does not break glass; hail falling from high up does', () => {
+    const fall = (m: MaterialId): number => {
+      const w = new World(40, 80, 2);
+      fill(w, 0, 78, 40, 2, M.Stone);
+      fill(w, 0, 70, 40, 1, M.Glass);
+      for (let x = 2; x < 38; x += 3) w.set(x, 2, m);
+      run(w, 200);
+      return 40 - w.count(M.Glass);
+    };
+    expect(fall(M.Water)).toBe(0);
+    expect(fall(M.Hail)).toBeGreaterThan(0);
+  });
+
+  it('a pebble dropped onto thin ice breaks through it', () => {
+    const w = new World(20, 40, 3);
+    fill(w, 0, 30, 20, 10, M.Water);
+    fill(w, 0, 29, 20, 1, M.ThinIce);
+    w.set(10, 5, M.Gravel);
+    run(w, 100);
+    expect(w.get(10, 29)).not.toBe(M.ThinIce);
+  });
+
+  it('fruit dropped from high up bursts into pulp; dropped a little way, it lands whole', () => {
+    const drop = (height: number): World => {
+      const w = new World(20, 80, 4);
+      fill(w, 0, 78, 20, 2, M.Stone);
+      w.set(10, 77 - height, M.Fruit);
+      run(w, 150);
+      return w;
+    };
+    expect(drop(60).created[M.Pulp]).toBeGreaterThan(0);
+    const low = drop(4);
+    expect(low.count(M.Fruit)).toBe(1);
+  });
+
+  it('a grain hitting water fast splashes it up; one dropped in gently does not', () => {
+    const highest = (height: number): number => {
+      const w = new World(40, 80, 5);
+      fill(w, 0, 60, 40, 20, M.Water);
+      fill(w, 18, 59 - height, 4, 2, M.Sand);
+      let top = 80;
+      for (let f = 0; f < 120; f++) {
+        w.step();
+        for (let i = 0; i < w.size; i++) if (w.mat[i] === M.Water) top = Math.min(top, (i / 40) | 0);
+      }
+      return top;
+    };
+    // Measured: droplets thrown about 12 rows above the surface, against 2 (the sand's own volume).
+    expect(highest(50)).toBeLessThan(highest(1) - 6);
+  });
+});
+
+describe('structural collapse', () => {
+  function fill(w: World, x0: number, y0: number, wd: number, ht: number, m: MaterialId): void {
+    for (let y = y0; y < y0 + ht; y++) for (let x = x0; x < x0 + wd; x++) w.set(x, y, m);
+  }
+  const stoneIn = (w: World, x0: number, x1: number, y: number): number => {
+    let n = 0;
+    for (let x = x0; x < x1; x++) if (w.get(x, y) === M.Stone) n++;
+    return n;
+  };
+
+  it('off (the default), a floating stone shelf stays where it is drawn', () => {
+    const w = new World(40, 40, 1);
+    fill(w, 10, 10, 20, 2, M.Stone);
+    run(w, 100);
+    expect(w.count(M.Stone)).toBe(40);
+  });
+
+  it('on, a floating stone shelf crumbles into gravel and falls', () => {
+    const w = new World(40, 40, 1);
+    w.collapse = true;
+    fill(w, 10, 10, 20, 2, M.Stone);
+    run(w, 100);
+    expect(w.count(M.Stone)).toBe(0);
+    expect(w.count(M.Gravel)).toBe(40);
+  });
+
+  it('a column stands at any height, and a beam reaches 10 cells out from it before giving way', () => {
+    const w = new World(60, 50, 2);
+    w.collapse = true;
+    fill(w, 29, 10, 2, 40, M.Stone); // a column 40 high, standing on the floor
+    fill(w, 5, 10, 50, 1, M.Stone); // a beam across its top
+    run(w, 200);
+    expect(stoneIn(w, 29, 31, 30)).toBe(2);
+    // About ten cells either side of the column survive; the ends fell.
+    const beam = stoneIn(w, 0, 60, 10);
+    expect(beam).toBeGreaterThanOrEqual(20);
+    expect(beam).toBeLessThanOrEqual(24);
+    expect(w.count(M.Gravel)).toBeGreaterThan(20);
+  });
+
+  it('a slab on two pillars holds; knock one pillar out and the far end comes down', () => {
+    const w = new World(60, 40, 3);
+    w.collapse = true;
+    fill(w, 15, 20, 2, 20, M.Stone);
+    fill(w, 33, 20, 2, 20, M.Stone);
+    fill(w, 15, 19, 20, 1, M.Stone);
+    run(w, 100);
+    expect(stoneIn(w, 15, 35, 19)).toBe(20);
+    fill(w, 33, 20, 2, 20, M.Empty);
+    run(w, 100);
+    expect(stoneIn(w, 15, 35, 19)).toBeLessThan(15);
+  });
+
+  it('metal never collapses: an iron girder bridges any gap', () => {
+    const w = new World(60, 40, 4);
+    w.collapse = true;
+    fill(w, 5, 20, 50, 1, M.Iron);
+    run(w, 100);
+    expect(w.count(M.Iron)).toBe(50);
+  });
+
+  it('a pinned sand ledge sticks out only a couple of cells from a wall before the rest falls', () => {
+    const w = new World(40, 40, 5);
+    w.collapse = true;
+    fill(w, 5, 10, 3, 30, M.Stone);
+    w.drawFixed = true;
+    for (let x = 8; x < 20; x++) w.paint(x, 15, 0, M.Sand);
+    w.drawFixed = false;
+    run(w, 150);
+    let ledge = 0;
+    for (let x = 8; x < 20; x++) if (w.get(x, 15) === M.Sand) ledge++;
+    expect(ledge).toBeGreaterThan(0);
+    expect(ledge).toBeLessThanOrEqual(2);
+    expect(w.count(M.Sand)).toBe(12);
+  });
+});

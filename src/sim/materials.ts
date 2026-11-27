@@ -195,6 +195,22 @@ export interface MaterialDef {
    * `chance`: probability of exploding when it burns out (omit: always); otherwise it becomes `burnsInto`.
    */
   explosive?: { radius: number; impactSpeed?: number; chance?: number };
+  /**
+   * Breaks into `into` when a falling powder lands on it hard enough: the impact's force is the
+   * faller's density times its fall speed (frames spent falling, up to IMPACT_TERMINAL), and
+   * `force` is how much it takes. Sand at full speed hits with 320, gravel 384, hail 480; rain
+   * (a liquid) never breaks anything.
+   */
+  brittle?: { force: number; into: MaterialId };
+  /** A falling powder that bursts into `into` when it lands after `speed` frames of falling (fruit into pulp). */
+  splats?: { speed: number; into: MaterialId };
+  /**
+   * Structural strength, with structural collapse on (World.collapse): how far it can reach sideways
+   * or hang below from support, in cells. A column standing on support holds at any height. Past its
+   * span it crumbles into `into` and falls. Materials without one never collapse (and hold up
+   * whatever leans on them): metals, wood, plants.
+   */
+  strength?: { span: number; into: MaterialId };
 
   // ---- temperature (see World.updateTemperature). Ambient is AMBIENT_TEMP (20).
   /** 0..0.25: how quickly a cell takes on its neighbours' average temperature. */
@@ -374,6 +390,7 @@ const defs: Record<MaterialId, Def> = {
     colour: [120, 120, 128],
     colourJitter: 0.16,
     indestructible: true,
+    strength: { span: 10, into: M.Gravel },
     description: 'Static and indestructible.',
   },
   [M.Wood]: {
@@ -605,6 +622,7 @@ const defs: Record<MaterialId, Def> = {
     heat: { temp: -20, rate: 0.1 },
     above: { temp: 2, into: M.Water },
     update: freezeWater,
+    strength: { span: 5, into: M.Snow },
     description: 'Static; melts near heat and slowly freezes neighbouring water.',
   },
   [M.Gunpowder]: {
@@ -800,6 +818,7 @@ const defs: Record<MaterialId, Def> = {
       // Fired very hot with ash, it vitrifies into porcelain.
       { with: M.Ash, minTemp: 450, chance: 0.05, into: M.Porcelain, otherInto: M.Empty },
     ],
+    strength: { span: 6, into: M.Gravel },
     description: 'Fired clay. Insulates heat, never burns, and acid cannot eat it.',
   },
   [M.Glass]: {
@@ -813,6 +832,9 @@ const defs: Record<MaterialId, Def> = {
     acidProof: true,
     above: { temp: 1200, into: M.MoltenGlass },
     reactions: [{ with: M.Rust, chance: 0.01, into: M.StainedGlass, otherInto: M.Empty }],
+    // Sand or gravel dropped from a height, or hail, smashes it.
+    brittle: { force: 250, into: M.Sand },
+    strength: { span: 3, into: M.Sand },
     description: 'Melted sand. Acid cannot eat it, so it makes good containers.',
     // Lets sunlight through: what's under it warms (a greenhouse).
     transparent: true,
@@ -829,6 +851,7 @@ const defs: Record<MaterialId, Def> = {
     conductivity: 0.06,
     indestructible: true,
     acidProof: true,
+    strength: { span: 8, into: M.Gravel },
     description: 'Black volcanic glass from lava cooled fast by ice. Indestructible.',
   },
   [M.Sulfur]: {
@@ -1409,6 +1432,8 @@ const defs: Record<MaterialId, Def> = {
     colourEnd: [60, 120, 220],
     colourJitter: 0.08,
     acidProof: true,
+    brittle: { force: 250, into: M.Sand },
+    strength: { span: 3, into: M.Sand },
     description: 'Glass coloured with rust. Acid cannot eat it.',
     // Lets sunlight through: what's under it warms (a greenhouse).
     transparent: true,
@@ -1599,6 +1624,7 @@ const defs: Record<MaterialId, Def> = {
     heat: { temp: -10, rate: 0.05 },
     above: { temp: 2, into: M.Water },
     update: growIcicle,
+    brittle: { force: 150, into: M.Snow },
     description: 'Drips of water frozen as they fell beside ice. Grows downward in points; melts when warm.',
   },
   [M.Fertiliser]: {
@@ -2247,6 +2273,8 @@ const defs: Record<MaterialId, Def> = {
     update: formAlcohol,
     // Soaking in water, the wild yeast on its skin comes alive.
     reactions: [{ with: M.Water, chance: 0.002, otherInto: M.Yeast }],
+    // Dropped from high up, it bursts.
+    splats: { speed: 14, into: M.Pulp },
     description: 'Ripens from flowers and falls. Rots away leaving a seed; ferments like sugar.',
   },
   [M.Gold]: {
@@ -2468,6 +2496,7 @@ const defs: Record<MaterialId, Def> = {
     conductivity: 0.1,
     shattersInto: M.Gravel,
     reactions: [{ with: M.Water, chance: 0.002, into: M.GeyserRock }],
+    strength: { span: 10, into: M.Gravel },
     description: 'Dark volcanic rock: the crust lava forms where it cools in open air.',
   },
   [M.GlassFibre]: {
@@ -2629,6 +2658,7 @@ const defs: Record<MaterialId, Def> = {
     colourJitter: 0.08,
     indestructible: true,
     acidProof: true,
+    strength: { span: 8, into: M.Gravel },
     description: 'Cement with gravel in it. Blasts and acid cannot touch it.',
   },
   [M.Peat]: {
@@ -3047,6 +3077,9 @@ const defs: Record<MaterialId, Def> = {
     // Unlike placed ice, it holds no cold of its own: the morning sun melts it.
     above: { temp: 2, into: M.Water },
     update: thickenIce,
+    // A pebble through the skin of ice on a pond.
+    brittle: { force: 100, into: M.Water },
+    strength: { span: 1, into: M.Water },
     description: 'The skin of ice a clear night leaves on a pond. Thickens through a cold night; melts in the morning sun.',
   },
   [M.Seagull]: {

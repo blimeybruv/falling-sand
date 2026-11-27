@@ -621,15 +621,15 @@ button.quiet {
 }
 
 /* ---- medium screens: drop the title so the toolbar stays on one row */
-@media (max-width: 1400px) {
+@media (max-width: 1600px) {
   .toolbar {
-    gap: 8px 8px;
+    gap: 8px 6px;
   }
   .toolbar h1 {
     display: none;
   }
   .brush input {
-    width: 90px;
+    width: 72px;
   }
   .toolbar select {
     padding: 6px 6px;

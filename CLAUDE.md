@@ -28,8 +28,9 @@ src/main.ts  creates World + Renderer + UI and runs the requestAnimationFrame lo
 - `World` (`src/sim/world.ts`) holds the grid as parallel typed arrays indexed by `i = y * width + x`:
   `mat` (material id), `shade` (colour variation), `life` (lifetime), `burn` (burn timer or fuse),
   `vel` (frames spent falling), `temp` (temperature), `vx`/`vy` (flight velocity in 1/8 cells per
-  frame), `charge` (electricity). `swap()` moves all of them together; use it for every move. If you add a per-cell array,
-  add it to `swap()`, `setCell()` and `clear()`.
+  frame), `charge` (electricity), `pinned` (powders drawn fixed). `swap()` moves all of them together; use it for every move. If you add a per-cell array,
+  add it to `swap()`, `setCell()` and `clear()`. The exception is `support` (structural collapse's distance from support):
+  like `stamp`, it belongs to the position, since only things that never move use it.
 - `temp` is double-buffered and the array object is replaced every frame, so read `world.temp`
   fresh each time instead of keeping a reference.
 - Each `step()` first spreads heat (`updateTemperature`), then moves electricity
@@ -65,7 +66,8 @@ src/main.ts  creates World + Renderer + UI and runs the requestAnimationFrame lo
    burn time, residue, burnTemp, flames, fumes, lifetime, decay, dispersion, viscosity, rise, explosive,
    acidProof, extinguishes, conducts, shattersInto, conductivity, heat, startTemp, above (phase change,
    optionally `sometimes` leaving something else, or `touching` something that changes it differently), below (setting solid again when cold), ignitesAt,
-   transparent and sunlit (what sunshine does), wind and drifts (powders blown along the ground) and
+   transparent and sunlit (what sunshine does), wind and drifts (powders blown along the ground),
+   brittle and splats (hard landings), strength (structural collapse) and
    emits (a vent, with the shared `vent` behaviour) apply, plus its palette
    `category` (the tab it appears under). `key` may be '' for no shortcut. The comments on `MaterialDef` explain each field. The
    "has sane values" test checks the ranges.

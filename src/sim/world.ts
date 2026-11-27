@@ -109,6 +109,17 @@ const DEEP_LIQUID = 4;
 /** Powders that the "fixed" drawing option can pin in place: not creatures, seeds and other life, which move by themselves. */
 const PINNABLE = Uint8Array.from(MATERIALS, (d) => (d.kind === 'powder' && d.category !== 'life' ? 1 : 0));
 /** For sound: glass that shatters audibly in a blast, and ice that cracks as it melts. */
+/** With structural collapse on: how far each material reaches from support (0: never collapses). */
+const SPAN = Uint8Array.from(MATERIALS, (d) => d.strength?.span ?? 0);
+/** ...and a powder drawn fixed (pinned): it holds together only a little way. */
+const PINNED_SPAN = 2;
+const NO_SUPPORT = 255;
+/** Impacts: fall speed counts up to this many frames of falling (a terminal velocity). */
+const IMPACT_TERMINAL = 16;
+const BRITTLE_FORCE = Float32Array.from(MATERIALS, (d) => d.brittle?.force ?? 0);
+const SPLAT_SPEED = Uint8Array.from(MATERIALS, (d) => d.splats?.speed ?? 0);
+/** A grain hitting a liquid this fast (frames of falling) splashes it up. */
+const SPLASH_SPEED = 6;
 const GLASSY = Uint8Array.from(MATERIALS, (d) => (d.id === M.Glass || d.id === M.StainedGlass || d.id === M.Icicle ? 1 : 0));
 const ICY = Uint8Array.from(MATERIALS, (d) => (d.id === M.Ice || d.id === M.ThinIce || d.id === M.Icicle ? 1 : 0));
 /** Sunlight shines through these (air, gases, glass) and stops at the first thing that isn't. */
@@ -171,6 +182,15 @@ export class World {
    * loses it.
    */
   readonly pinned: Uint8Array;
+  /**
+   * With structural collapse on: each structural cell's distance (in cells) from support, through
+   * structure, counting sideways and hanging steps but not climbing a column (see updateSupport).
+   * It belongs to the position, like `stamp`, not to the material moving through it: only things
+   * that don't move (static structure and pinned powders) use it, so swap() leaves it alone.
+   */
+  readonly support: Uint8Array;
+  /** Structural collapse: unsupported stone, brick, glass and pinned powders give way (the Collapse button). */
+  collapse = false;
   /** While set, powders drawn with the brush or the shape tools are pinned (see `pinned`). */
   drawFixed = false;
 
@@ -290,6 +310,7 @@ export class World {
     this.vy = new Int8Array(this.size);
     this.charge = new Uint8Array(this.size);
     this.pinned = new Uint8Array(this.size);
+    this.support = new Uint8Array(this.size);
     this.temp = new Float32Array(this.size).fill(AMBIENT_TEMP);
     this.tempBack = new Float32Array(this.size).fill(AMBIENT_TEMP);
     this.stamp = new Uint32Array(this.size);
@@ -367,6 +388,7 @@ export class World {
     this.vy[i] = 0;
     this.charge[i] = 0;
     this.pinned[i] = 0;
+    this.support[i] = 0;
     this.temp[i] = def.heat ? def.heat.temp : (def.startTemp ?? AMBIENT_TEMP);
     this.stamp[i] = this.frame;
     if (this.stepping) this.created[m]++;
@@ -419,6 +441,7 @@ export class World {
     this.vy.fill(0);
     this.charge.fill(0);
     this.pinned.fill(0);
+    this.support.fill(0);
     this.stasisCount = this.stasisNextCount = 0;
     this.gatesFound = this.gatesNextCount = 0;
     this.temp.fill(AMBIENT_TEMP);
@@ -673,6 +696,7 @@ export class World {
     if (this.gusty) this.wind = gustAt(this.frame);
     if (this.sun !== 0) this.updateSunlight();
     if (this.openEdges) this.drainEdges();
+    if (this.collapse) this.updateSupport();
     // The stasis pockets that registered last frame slow time around them this frame.
     this.stasisX.set(this.stasisNextX);
     this.stasisY.set(this.stasisNextY);
@@ -777,6 +801,57 @@ export class World {
       if (j >= this.size || this.mat[j] !== m) return false;
     }
     return true;
+  }
+
+  /**
+   * Structural collapse: one relaxation pass of each structural cell's distance from support, then
+   * whatever reaches further than its span gives way (static structure crumbles into its loose
+   * form; a pinned powder comes loose and falls). Support from below costs nothing (a column holds
+   * at any height); from the side or from above, a step each. The floor, and anything solid that
+   * isn't itself structural (sand at rest, metal, wood), is support. Unsupported structure climbs
+   * by a cell a frame until it passes its span, so collapses ripple out rather than happening at once.
+   */
+  private updateSupport(): void {
+    const { width: w, height: h, mat, support, pinned } = this;
+    const leftToRight = (this.frame & 1) === 0;
+    for (let y = h - 1; y >= 0; y--) {
+      const row = y * w;
+      for (let k = 0; k < w; k++) {
+        const x = leftToRight ? k : w - 1 - k;
+        const i = row + x;
+        const m = mat[i];
+        const span = SPAN[m] !== 0 ? SPAN[m] : pinned[i] !== 0 ? PINNED_SPAN : 0;
+        if (span === 0) continue;
+        let s = y === h - 1 ? 0 : this.supportFrom(i + w, 0);
+        if (s > 0) {
+          if (x > 0) s = Math.min(s, this.supportFrom(i - 1, 1));
+          if (x < w - 1) s = Math.min(s, this.supportFrom(i + 1, 1));
+          if (y > 0) s = Math.min(s, this.supportFrom(i - w, 1));
+        }
+        support[i] = s;
+        if (s > span) {
+          if (SPAN[m] !== 0) {
+            if (GLASSY[m]) this.noise.shatters++;
+            this.transform(i, MATS[m].strength!.into);
+          } else {
+            pinned[i] = 0;
+            support[i] = 0;
+          }
+        }
+      }
+    }
+  }
+
+  /** The support a structural cell gets from neighbour n, `step` further away (NO_SUPPORT: none). */
+  private supportFrom(n: number, step: number): number {
+    const m = this.mat[n];
+    if (SPAN[m] !== 0 || this.pinned[n] !== 0) return Math.min(NO_SUPPORT, this.support[n] + step);
+    const kind = KIND[m];
+    // Empty, liquid or gas: nothing to rest on. Loose powder (a sand pile) only holds up what rests
+    // on top of it, not a beam from the side or from above. Anything else solid (metal, wood) is support.
+    if (kind === KIND_EMPTY || kind === KIND_LIQUID || kind === KIND_GAS) return NO_SUPPORT;
+    if (kind === KIND_POWDER && step !== 0) return NO_SUPPORT;
+    return step;
   }
 
   /**
@@ -1027,8 +1102,14 @@ export class World {
         continue;
       }
       if (FLUID[t] && DENSITY[t] < def.density) {
-        // Sinking through a liquid: one cell, and it slows the fall.
+        // Sinking through a liquid: one cell, and it slows the fall. A grain hitting a liquid's
+        // surface fast splashes the liquid it pushed aside up out of the way.
+        const fast = this.vel[ci] >= SPLASH_SPEED && def.kind === 'powder' && KIND[t] === KIND_LIQUID;
         this.swap(ci, ni);
+        if (fast) {
+          const speed = Math.min(this.vel[ni], IMPACT_TERMINAL);
+          this.launch(ci, (this.rng.next() - 0.5) * 1.6, -(0.6 + speed * 0.09 + this.rng.next() * 0.5));
+        }
         ci = ni;
         if (this.vel[ci] > 3) this.vel[ci] = 3;
       }
@@ -1049,6 +1130,24 @@ export class World {
       this.vel[i] = 0;
       this.detonate(x, y, i, def);
       return true;
+    }
+    // A hard landing breaks something brittle underneath (glass, ice), or bursts the faller itself.
+    if (this.vel[i] > 0 && def.kind === 'powder' && y + 1 < this.height) {
+      const speed = Math.min(this.vel[i], IMPACT_TERMINAL);
+      const n = i + w;
+      const under = this.mat[n];
+      const force = BRITTLE_FORCE[under];
+      if (force > 0 && def.density * speed >= force) {
+        if (GLASSY[under]) this.noise.shatters++;
+        else if (ICY[under]) this.noise.cracks++;
+        this.transform(n, MATS[under].brittle!.into);
+      }
+      const splat = SPLAT_SPEED[def.id];
+      if (splat > 0 && speed >= splat) {
+        this.vel[i] = 0;
+        this.transform(i, def.splats!.into);
+        return true;
+      }
     }
     this.vel[i] = 0;
     return false;

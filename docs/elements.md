@@ -488,7 +488,34 @@ game, its fighting, characters or look.
 - **Scenes**: figures would need their own section in the scene format (bump `VERSION`, keep old
   scenes loading without them).
 
+## Physics depth (27 Nov)
+
+The player asked what systems were missing for depth (weight limits, pressure, force, velocity).
+What was already there: falling speeds up the longer a grain falls and slows in liquid; things
+thrown by blasts, gusts or a lift field fly with real velocity under gravity; heavier things sink
+through lighter liquids. Missing, easiest first:
+
+| | System | What it adds | How | Effort |
+|---|---|---|---|---|
+| ✅ | Impacts | Sand or gravel dropped from a height (or hail) smashes glass; a pebble breaks thin ice; fruit dropped from high up bursts into pulp; a grain hitting water fast splashes it up | On landing, force = the faller's density times its fall speed (up to a terminal 16 frames): `brittle` and `splats` in the table. Powders only: liquids splash rather than smash | T |
+| ✅ | Structural collapse | Stone, brick, glass and pinned powders reach only so far from support; past that they crumble and fall, in a ripple | A per-cell support distance, relaxed once a frame (below free, sideways or hanging a step each); `strength` in the table. A toggle, off by default | F |
+| | Weight on top | A glass floor crushed under a sand pile, a beam snapping under lava, ice cracking under rock | A pass down each column adding up the weight resting on each structural cell; past its capacity it's crushed. Vertical load only: a real stress solver (arches, beams) costs far more for little visible gain | F |
+| | Liquid pressure | Water finding its level through a U-bend, fountains from a tank on a hill, dams bursting | A pressure value per liquid cell, relaxed like heat; liquid flows from high to low, upwards too. Tends to jitter, and liquids are already the costliest thing to move | S |
+| | Gas pressure | Steam building in a sealed pot until it bursts it; a blast in a closed room hitting harder | Tracking how much gas is in each sealed region. Best after liquid pressure | S |
+| | Momentum for everything | Waves that slosh, landslides that run on, liquids that carry through bends | Every cell keeps a velocity, not just thrown ones. Changes the feel of everything and roughly doubles the cost of movement | S+ |
+| | Rigid bodies | Blocks that fall, topple and lever as one piece | Multi-cell objects: against how the game is built. Not planned | - |
+
+**Built 27 Nov.** Impacts: glass and stained glass (force 250, into sand), thin ice (100, into
+water), icicles (150, into snow); fruit splats after 14 frames of falling. Blocks of ice aren't
+brittle: hail (force up to 480) would smash the ice that makes clouds hail. Structural collapse:
+stone and basalt span 10, concrete and obsidian 8, brick 6, ice 5, glass 3, thin ice 1, pinned
+powders 2; metal, wood and everything else never collapse (so trees stand, and an iron girder
+bridges any gap). Loose powder supports what rests on it but doesn't hold a beam from the side.
+Not saved in scenes (like the Edges setting).
+
 ## Load-bearing materials (design note)
+
+Built 27 Nov as structural collapse (see "Physics depth" above). The original note:
 
 Feasible in its simple form; a session's work.
 

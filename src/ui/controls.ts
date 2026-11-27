@@ -46,6 +46,7 @@ export function setupControls(state: GameState, world: World, discovery: Discove
   const soundBtn = byId<HTMLButtonElement>('sound');
   const heatBtn = byId<HTMLButtonElement>('heat');
   const edgesBtn = byId<HTMLButtonElement>('edges');
+  const collapseBtn = byId<HTMLButtonElement>('collapse');
   const brush = byId<HTMLInputElement>('brush');
   const brushValue = byId<HTMLElement>('brush-value');
   const moreBtn = byId<HTMLButtonElement>('more');
@@ -280,6 +281,19 @@ export function setupControls(state: GameState, world: World, discovery: Discove
     syncEdges();
   });
   syncEdges();
+
+  // Structural collapse: off (the default) or on, so unsupported structure gives way.
+  const syncCollapse = (): void => {
+    collapseBtn.setAttribute('aria-pressed', String(world.collapse));
+    collapseBtn.title = world.collapse
+      ? 'Collapse: on (unsupported stone, brick, glass and pinned powders give way). Click to turn it off'
+      : 'Collapse: off. Click to turn it on, so unsupported stone, brick and glass give way';
+  };
+  collapseBtn.addEventListener('click', () => {
+    world.collapse = !world.collapse;
+    syncCollapse();
+  });
+  syncCollapse();
 
   const volume = byId<HTMLInputElement>('volume');
   volume.value = String(Math.round(sound.volume * 100));
