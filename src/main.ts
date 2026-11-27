@@ -84,6 +84,9 @@ function frame(now: number): void {
   }
 
   const c = input.cursor();
+  // Watching stone stops changing while the pointer is over it.
+  world.watchX = c ? c.x : -1;
+  world.watchY = c ? c.y : -1;
   controls.checkDiscoveries();
   sound.update(world, !state.paused);
 

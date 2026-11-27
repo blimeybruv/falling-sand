@@ -760,6 +760,34 @@ describe('every recipe works in the simulation', () => {
       fillRect(w, 15, 30, 10, 1, M.ArcNode);
       fillRect(w, 15, 31, 10, 1, M.Lightning);
     }],
+    ['umbral ooze (eldritch): ink sealed in obsidian', M.UmbralOoze, 600, (w) => {
+      fillRect(w, 5, 5, 30, 30, M.Obsidian);
+      fillRect(w, 10, 10, 20, 20, M.Ink);
+    }],
+    ['hush (eldritch): fog drifting through umbral ooze', M.Hush, 200, (w) => {
+      fillRect(w, 0, 34, 40, 6, M.UmbralOoze);
+      fillRect(w, 0, 28, 40, 6, M.Fog);
+    }],
+    ['creeping bloom (eldritch): a mushroom beside umbral ooze', M.CreepingBloom, 400, (w) => {
+      fillRect(w, 0, 38, 40, 2, M.Stone);
+      fillRect(w, 10, 36, 20, 2, M.Mushroom);
+      fillRect(w, 0, 36, 10, 2, M.UmbralOoze);
+      fillRect(w, 30, 36, 10, 2, M.UmbralOoze);
+    }],
+    ['mimic dust (eldritch): sand caught in a phase fault', M.MimicDust, 300, (w) => {
+      fillRect(w, 0, 36, 40, 4, M.Sand);
+      w.set(20, 34, M.PhaseFault);
+    }],
+    ['wrong water (eldritch): water through linked gates', M.WrongWater, 300, (w) => {
+      fillRect(w, 0, 38, 40, 2, M.Stone);
+      w.set(8, 25, M.LinkedGate);
+      w.set(30, 25, M.LinkedGate);
+      fillRect(w, 8, 5, 1, 19, M.Water);
+    }],
+    ['watching stone (eldritch): a transmuter burning out walled in by obsidian', M.WatchingStone, 3700, (w) => {
+      fillRect(w, 17, 17, 5, 5, M.Obsidian);
+      w.set(19, 19, M.Transmuter);
+    }],
     ['arc node (anomaly): lightning striking graphite under salt water', M.ArcNode, 60, (w) => {
       fillRect(w, 0, 39, 40, 1, M.Stone);
       fillRect(w, 0, 25, 40, 14, M.SaltWater);

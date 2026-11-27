@@ -183,6 +183,12 @@ export const M = {
   PhaseFault: 175,
   LinkedGate: 176,
   Transmuter: 177,
+  UmbralOoze: 178,
+  Hush: 179,
+  CreepingBloom: 180,
+  MimicDust: 181,
+  WrongWater: 182,
+  WatchingStone: 183,
 } as const;
 
 export type MaterialId = (typeof M)[keyof typeof M];

@@ -36,6 +36,12 @@ import {
   phaseFault,
   linkedGate,
   transmuter,
+  inkInTheDark,
+  hush,
+  creepingBloom,
+  mimicDust,
+  wrongWater,
+  watchingStone,
   formAlcohol,
   formBattery,
   pulseBattery,
@@ -101,13 +107,14 @@ import type { World } from './world';
 export type Kind = 'empty' | 'static' | 'powder' | 'liquid' | 'gas';
 
 /** Palette tab a material appears under. */
-export type Category = 'ground' | 'fluid' | 'fire' | 'life' | 'anomaly';
+export type Category = 'ground' | 'fluid' | 'fire' | 'life' | 'anomaly' | 'eldritch';
 export const CATEGORIES: readonly (readonly [Category, string])[] = [
   ['ground', 'Ground'],
   ['fluid', 'Liquids & gases'],
   ['fire', 'Fire & blasts'],
   ['life', 'Life'],
   ['anomaly', 'Anomalies'],
+  ['eldritch', 'Eldritch'],
 ];
 
 /**
@@ -1238,6 +1245,8 @@ const defs: Record<MaterialId, Def> = {
       // It rots grass and leaves down into compost.
       { with: M.Grass, chance: 0.002, otherInto: M.Compost },
       { with: M.Leaf, chance: 0.004, otherInto: M.Compost },
+      // Beside umbral ooze, it grows wrong: creeping bloom.
+      { with: M.UmbralOoze, chance: 0.03, into: M.CreepingBloom },
     ],
     description: 'Grows in wood shut away in the damp dark, slowly eating through it, and sprouts on loam in damp shade after rain. Rots into compost.',
   },
@@ -2172,6 +2181,8 @@ const defs: Record<MaterialId, Def> = {
     transparent: false,
     sunlit: { chance: 0.03, into: M.Vapour },
     update: updateFog,
+    // Drifting through umbral ooze, it comes out wrong: hush.
+    reactions: [{ with: M.UmbralOoze, chance: 0.05, into: M.Hush }],
     description: 'A thin mist that lingers low and drifts, then evaporates. Rises off water on clear nights; freezing fog leaves frost on the ground.',
   },
   [M.Stalactite]: {
@@ -2258,6 +2269,8 @@ const defs: Record<MaterialId, Def> = {
     burnTime: [10, 20],
     ignitesAt: 250,
     burnsInto: M.Smoke,
+    // Sealed away from the air against obsidian, it goes wrong: umbral ooze.
+    update: inkInTheDark,
     description: 'Soot mixed with oil: deep blue-black, and it burns.',
   },
   [M.Fruit]: {
@@ -3273,6 +3286,102 @@ const defs: Record<MaterialId, Def> = {
     update: transmuter,
     description: 'Anomaly: slowly turns its neighbours one step along a chain (rust to iron to copper to gold, coal to graphite to diamond, sand or stone to quartz), then burns out into slag.',
   },
+  [M.UmbralOoze]: {
+    ...base,
+    name: 'Umbral ooze',
+    key: '',
+    category: 'eldritch',
+    kind: 'liquid',
+    density: 14,
+    colour: [10, 4, 18],
+    colourEnd: [26, 8, 40],
+    colourJitter: 0,
+    dispersion: 2,
+    viscosity: 0.6,
+    // Sunlight, or the heat of a lamp, boils it away.
+    sunlit: { chance: 0.02, into: M.Smoke },
+    above: { temp: 120, into: M.Smoke },
+    description: 'Eldritch: a slow black liquid that eats the light around it. Sunlight and heat boil it away, so it pools in shadow.',
+  },
+  [M.Hush]: {
+    ...base,
+    name: 'Hush',
+    key: '',
+    category: 'eldritch',
+    kind: 'gas',
+    density: 0.9,
+    colour: [196, 200, 214],
+    colourJitter: 0.05,
+    lifetime: [1200, 2400],
+    fadeFrames: 120,
+    rise: 0.05,
+    dispersion: 2,
+    extinguishes: true,
+    update: hush,
+    description: 'Eldritch: a pale mist that swallows sound. The world goes quiet around it, and fire inside it gutters out.',
+  },
+  [M.CreepingBloom]: {
+    ...base,
+    name: 'Creeping bloom',
+    key: '',
+    category: 'eldritch',
+    kind: 'static',
+    density: 100,
+    colour: [90, 210, 170],
+    colourEnd: [40, 120, 110],
+    colourJitter: 0,
+    glow: true,
+    flammability: 0.6,
+    burnTime: [10, 20],
+    burnsInto: M.Ash,
+    above: { temp: 60, into: M.Ash },
+    sunlit: { chance: 0.05, into: M.Ash },
+    update: creepingBloom,
+    description: 'Eldritch: a faintly glowing growth that spreads over wood, plants and stone in the dark, feeding on them. Sunlight withers it, heat kills it, and it burns readily.',
+  },
+  [M.MimicDust]: {
+    ...base,
+    name: 'Mimic dust',
+    key: '',
+    category: 'eldritch',
+    kind: 'powder',
+    density: 18,
+    // Drawn in the colour of whatever it touches (the renderer borrows it); this is for the palette.
+    colour: [150, 140, 130],
+    colourJitter: 0.2,
+    update: mimicDust,
+    description: 'Eldritch: takes on the colour of whatever it touches, and never quite settles. Hard to spot until it moves.',
+  },
+  [M.WrongWater]: {
+    ...base,
+    name: 'Wrong water',
+    key: '',
+    category: 'eldritch',
+    kind: 'liquid',
+    density: 10,
+    colour: [70, 180, 150],
+    colourEnd: [40, 130, 160],
+    colourJitter: 0.06,
+    // (Unused: it moves itself, towards the nearest wall.)
+    dispersion: 3,
+    extinguishes: true,
+    update: wrongWater,
+    description: 'Eldritch: water that falls towards the nearest wall instead of down, and climbs it.',
+  },
+  [M.WatchingStone]: {
+    ...base,
+    name: 'Watching stone',
+    key: '',
+    category: 'eldritch',
+    kind: 'static',
+    density: 100,
+    colour: [70, 66, 82],
+    colourEnd: [110, 100, 130],
+    colourJitter: 0,
+    acidProof: true,
+    update: watchingStone,
+    description: 'Eldritch: only changes while nothing is watching it. Left alone, it slowly turns the rock and earth around it to more of itself; with the pointer over it, it stops. It can\'t cross water or salt.',
+  },
   [M.Root]: {
     ...base,
     name: 'Root',
@@ -3345,6 +3454,8 @@ export const PALETTE: readonly MaterialDef[] = [
   M.Earthworm, M.Termite, M.Fish, M.Firefly, M.Bee, M.Snail, M.Ant, M.Yeast, M.CoralPolyp, M.Seagull, M.Crow, M.PineCone,
   // anomalies
   M.ColdSun, M.LiftField, M.GravityKnot, M.StasisPocket, M.ArcNode, M.PhaseFault, M.LinkedGate, M.Transmuter,
+  // eldritch
+  M.UmbralOoze, M.Hush, M.CreepingBloom, M.MimicDust, M.WrongWater, M.WatchingStone,
 ].map((id) => MATERIALS[id]);
 
 /** Room temperature. Cells drift back towards it when nothing heats or cools them. */

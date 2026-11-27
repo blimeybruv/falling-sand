@@ -219,6 +219,13 @@ export const RECIPES: Readonly<Partial<Record<MaterialId, Recipe>>> = {
   [M.ArcNode]: { hint: 'Lightning, carbon and the sea.', recipe: 'Lightning striking graphite under salt water.' },
   [M.PhaseFault]: { hint: 'The fourth state of matter meets the liquid metal.', recipe: 'Plasma touching mercury.' },
   [M.LinkedGate]: { hint: 'Strike a broken insulator.', recipe: 'Lightning striking an arc node.' },
+  // Eldritch materials: wrong in a way the senses notice.
+  [M.UmbralOoze]: { hint: 'Something dark, shut away from the air in volcanic glass.', recipe: 'Ink sealed in obsidian, with no air around it.' },
+  [M.Hush]: { hint: 'A mist that has passed through the dark.', recipe: 'Fog drifting through umbral ooze.' },
+  [M.CreepingBloom]: { hint: 'Something that grows in the dark, grown in something darker.', recipe: 'A mushroom beside umbral ooze.' },
+  [M.MimicDust]: { hint: 'Sand where the states of matter come loose.', recipe: 'Sand caught in a phase fault.' },
+  [M.WrongWater]: { hint: 'Water that has been somewhere it shouldn\'t.', recipe: 'Water that has passed through linked gates.' },
+  [M.WatchingStone]: { hint: 'A burnt-out reward, walled in by volcanic glass.', recipe: 'A transmuter burning out walled in by obsidian.' },
 };
 
 /** The anomalies' own reward: the transmuter, once every other anomaly has been found. */

@@ -2752,6 +2752,11 @@ export function phaseFault(w: World, x: number, y: number, _i: number): boolean 
     if (j < 0 || w.burn[j] > 0) continue;
     const above = w.defAt(j % w.width, (j / w.width) | 0).above;
     if (!above) continue;
+    // Sand caught in it, now and then, comes out wrong: mimic dust.
+    if (w.mat[j] === M.Sand && w.rng.chance(0.15)) {
+      w.transform(j, M.MimicDust);
+      continue;
+    }
     w.transform(j, above.into);
     w.temp[j] = above.temp + 5;
   }
@@ -2785,7 +2790,10 @@ export function linkedGate(w: World, x: number, y: number, i: number): boolean {
     const tx = gx + dx;
     const t = w.get(tx, dx === 0 ? ty : gy);
     if (t === M.Empty) {
-      w.swap(src, w.idx(tx, dx === 0 ? ty : gy));
+      const dst = w.idx(tx, dx === 0 ? ty : gy);
+      w.swap(src, dst);
+      // Water that has been through a gate, now and then, comes out wrong.
+      if (w.mat[dst] === M.Water && w.rng.chance(0.2)) w.transform(dst, M.WrongWater);
       return true;
     }
   }
@@ -2817,14 +2825,165 @@ function transmuted(t: MaterialId): MaterialId | -1 {
 /**
  * Transmuter: conservation comes loose. Now and then it turns a neighbour one step along a chain
  * (rust to iron to copper to gold, coal to graphite to diamond, sand or stone to quartz), until it
- * burns out (its lifetime) into slag.
+ * burns out (its lifetime) into slag, or, walled in by obsidian, into watching stone.
  */
-export function transmuter(w: World, x: number, y: number, _i: number): boolean {
+export function transmuter(w: World, x: number, y: number, i: number): boolean {
+  // Burning out (its last frame) walled in by obsidian, it leaves watching stone instead of slag.
+  if (w.life[i] === 1 && countAround(w, x, y, M.Obsidian, M.Obsidian) >= 6) {
+    w.transform(i, M.WatchingStone);
+    return true;
+  }
   if (!w.rng.chance(0.03)) return true;
   const k = w.rng.int(0, 3);
   const nx = k === 0 ? x - 1 : k === 1 ? x + 1 : x;
   const ny = k === 2 ? y - 1 : k === 3 ? y + 1 : y;
+  // (Off the grid reads as stone: never transmute that, or the index would wrap round a row.)
+  if (!w.inBounds(nx, ny)) return true;
   const into = transmuted(w.get(nx, ny));
   if (into !== -1) w.transform(w.idx(nx, ny), into);
+  return true;
+}
+
+// ---------------------------------------------------------------- eldritch materials
+//
+// Wrong in a way the senses notice: they eat light, swallow sound, look like something they aren't,
+// or act only when you look away. Each spreads only by feeding, and light, heat or salt drives it
+// back, so none can overrun a scene.
+
+/** Umbral ooze: sealed away from the air beside obsidian, ink turns to it (see `inkInTheDark`); it does nothing itself but darken (in the renderer). */
+export function inkInTheDark(w: World, x: number, y: number, i: number): boolean {
+  if (!w.rng.chance(0.002)) return false;
+  // Sealed: nothing open around it, and obsidian beside it.
+  if (touches(w, x, y, M.Empty) || !touches(w, x, y, M.Obsidian)) return false;
+  w.transform(i, M.UmbralOoze);
+  return true;
+}
+
+/** Hush: fire inside it gutters out (burning cells it touches stop burning, flames die to smoke). */
+export function hush(w: World, x: number, y: number, _i: number): boolean {
+  for (let k = 0; k < 4; k++) {
+    const nx = k === 0 ? x - 1 : k === 1 ? x + 1 : x;
+    const ny = k === 2 ? y - 1 : k === 3 ? y + 1 : y;
+    if (!w.inBounds(nx, ny)) continue;
+    const n = w.idx(nx, ny);
+    if (w.burn[n] > 0) w.burn[n] = 0;
+    if (w.mat[n] === M.Fire) w.setCell(n, M.Smoke);
+  }
+  return false;
+}
+
+/** What creeping bloom feeds on: wood, plants and other dead organic matter, and bare stone. */
+function bloomFood(t: MaterialId): boolean {
+  return t === M.Wood || t === M.Leaf || t === M.Moss || t === M.Grass || t === M.Mushroom || t === M.Paper || t === M.Sawdust || t === M.Pulp || t === M.Stone;
+}
+
+/**
+ * Creeping bloom: in the dark it slowly spreads over what it feeds on, turning it into more of
+ * itself. In sunlight it withers (`sunlit`), heat kills it (`above`), and fire takes it readily.
+ * With nothing left to feed on, now and then a cell withers away into ash.
+ */
+export function creepingBloom(w: World, x: number, y: number, i: number): boolean {
+  if (!w.rng.chance(0.015)) return true;
+  if (w.inSunlight(x, y)) return true;
+  const k = w.rng.int(0, 3);
+  const nx = k === 0 ? x - 1 : k === 1 ? x + 1 : x;
+  const ny = k === 2 ? y - 1 : k === 3 ? y + 1 : y;
+  if (w.inBounds(nx, ny) && bloomFood(w.get(nx, ny))) {
+    w.transform(w.idx(nx, ny), M.CreepingBloom);
+  } else if (w.rng.chance(0.08) && !hasBloomFood(w, x, y)) {
+    w.transform(i, M.Ash);
+  }
+  return true;
+}
+
+function hasBloomFood(w: World, x: number, y: number): boolean {
+  return bloomFood(w.get(x - 1, y)) || bloomFood(w.get(x + 1, y)) || bloomFood(w.get(x, y - 1)) || bloomFood(w.get(x, y + 1));
+}
+
+/** Mimic dust: never quite settles. Now and then, even at rest, it shifts a cell sideways (its colour is borrowed in the renderer). */
+export function mimicDust(w: World, x: number, y: number, i: number): boolean {
+  if (!w.rng.chance(0.08)) return false;
+  const d = w.rng.sign();
+  const t = w.get(x + d, y);
+  if (t === M.Empty || (w.defAt(x + d, y).kind === 'gas')) {
+    w.swap(i, w.idx(x + d, y));
+    return true;
+  }
+  return false;
+}
+
+/** How far wrong water looks for a wall either side. */
+const WRONG_WATER_REACH = 30;
+
+/**
+ * Wrong water: gravity points to the nearest wall. It flows sideways towards whichever solid is
+ * closer, left or right (it remembers which, in `life`, and looks again now and then; with no wall
+ * within reach, it heads for the nearer edge of the grid), and once it reaches it, climbs. It never
+ * falls.
+ */
+export function wrongWater(w: World, x: number, y: number, i: number): boolean {
+  let dir = w.life[i];
+  if (dir === 0 || w.rng.chance(0.03)) {
+    let left = WRONG_WATER_REACH + 1;
+    let right = WRONG_WATER_REACH + 1;
+    for (let s = 1; s <= WRONG_WATER_REACH; s++) {
+      if (left > WRONG_WATER_REACH && w.isSolid(x - s, y)) left = s;
+      if (right > WRONG_WATER_REACH && w.isSolid(x + s, y)) right = s;
+    }
+    // No wall in reach: the grid's edges are walls too, so it heads for the nearer one.
+    if (left > WRONG_WATER_REACH) left = x + 1;
+    if (right > WRONG_WATER_REACH) right = w.width - x;
+    dir = left < right ? -1 : right < left ? 1 : w.rng.sign();
+    w.life[i] = dir;
+  }
+  if (openFor(w, x + dir, y)) {
+    w.swap(i, w.idx(x + dir, y));
+    return true;
+  }
+  if (w.isSolid(x + dir, y)) {
+    // At the wall: climb it, straight up or up the face.
+    if (openFor(w, x, y - 1)) {
+      w.swap(i, w.idx(x, y - 1));
+      return true;
+    }
+    if (openFor(w, x + dir, y - 1)) {
+      w.swap(i, w.idx(x + dir, y - 1));
+      return true;
+    }
+  }
+  // Blocked by more of itself: spread along the wall's face, up or down.
+  const v = w.rng.sign();
+  if (w.get(x + dir, y) === M.WrongWater && openFor(w, x, y + v)) w.swap(i, w.idx(x, y + v));
+  return true;
+}
+
+function openFor(w: World, x: number, y: number): boolean {
+  if (!w.inBounds(x, y)) return false;
+  const t = w.get(x, y);
+  return t === M.Empty || w.defAt(x, y).kind === 'gas';
+}
+
+/** What watching stone spreads into: rock and earth, never water or salt. */
+function stoneFood(t: MaterialId): boolean {
+  return t === M.Stone || t === M.Basalt || t === M.Obsidian || t === M.Brick || t === M.Concrete || t === M.Gravel || t === M.Sand || t === M.Earth || t === M.Clay;
+}
+
+/** How close the pointer must be to stop watching stone. */
+const WATCH_REACH = 12;
+
+/**
+ * Watching stone: it only changes while nothing is watching it. With the pointer away (the UI tells
+ * the world where it is: World.watchX/watchY), it slowly turns the rock and earth around it into
+ * more of itself; with the pointer over it, it stops. It can't cross water or salt.
+ */
+export function watchingStone(w: World, x: number, y: number, _i: number): boolean {
+  if (!w.rng.chance(0.004)) return true;
+  const dx = x - w.watchX;
+  const dy = y - w.watchY;
+  if (w.watchX >= 0 && dx * dx + dy * dy <= WATCH_REACH * WATCH_REACH) return true;
+  const k = w.rng.int(0, 3);
+  const nx = k === 0 ? x - 1 : k === 1 ? x + 1 : x;
+  const ny = k === 2 ? y - 1 : k === 3 ? y + 1 : y;
+  if (w.inBounds(nx, ny) && stoneFood(w.get(nx, ny))) w.transform(w.idx(nx, ny), M.WatchingStone);
   return true;
 }

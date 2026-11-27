@@ -457,14 +457,26 @@ after the anomalies. Best built after the anomalies.
 
 | | Material | What's wrong with it | What it does | How it might form | Effort |
 |---|---|---|---|---|---|
-| | Umbral ooze | Light | A slow black liquid that darkens everything near it (the renderer dims its surroundings); sunlight and heat lamps boil it away, so it pools in shadow | Ink in a sealed, unlit cave beside a sprite's ashes | F |
-| | Hush | Sound | A pale mist that swallows sound: the soundscape fades around it, explosions inside it are muffled, and fire inside it gutters out | Fog that has drifted through umbral ooze | F |
-| | Creeping bloom | Life | A faintly glowing growth that spreads over wood, flesh-free organics and stone in the dark, feeding on them; it withers in sunlight or a heat lamp's beam and burns readily, so light and fire keep it in check | Mushroom left in the dark beside umbral ooze | F |
-| | Mimic dust | Appearance | Takes on the colour of whatever it touches and behaves like a powder that won't settle: hard to spot until it moves | Sand caught in a phase fault | F |
-| | Watching stone | Attention | Only changes when the brush isn't over it: left alone, it slowly turns its neighbours to more of itself; hover over it and it stops (bounded: it can't cross water or salt) | A transmuter burning out inside obsidian | S |
-| | Wrong water | Direction | A liquid that flows towards the nearest wall instead of down, and climbs | Water passed through linked gates | F |
+| ✅ | Umbral ooze | Light | A slow black liquid that darkens everything near it (the renderer dims its surroundings); sunlight and heat lamps boil it away, so it pools in shadow | Ink in a sealed, unlit cave beside a sprite's ashes | F |
+| ✅ | Hush | Sound | A pale mist that swallows sound: the soundscape fades around it, explosions inside it are muffled, and fire inside it gutters out | Fog that has drifted through umbral ooze | F |
+| ✅ | Creeping bloom | Life | A faintly glowing growth that spreads over wood, flesh-free organics and stone in the dark, feeding on them; it withers in sunlight or a heat lamp's beam and burns readily, so light and fire keep it in check | Mushroom left in the dark beside umbral ooze | F |
+| ✅ | Mimic dust | Appearance | Takes on the colour of whatever it touches and behaves like a powder that won't settle: hard to spot until it moves | Sand caught in a phase fault | F |
+| ✅ | Watching stone | Attention | Only changes when the brush isn't over it: left alone, it slowly turns its neighbours to more of itself; hover over it and it stops (bounded: it can't cross water or salt) | A transmuter burning out inside obsidian | S |
+| ✅ | Wrong water | Direction | A liquid that flows towards the nearest wall instead of down, and climbs | Water passed through linked gates | F |
 | | Tolling glass | Time and sound | Rings softly (a low tone in the soundscape) a few seconds before anything near it changes: a fuse catching, a creature hatching, lightning charging | Glass struck by lightning inside hush | S |
 | | Worldtree | Growth limits | A giant tree that never stops: a thick trunk winding up to the top of the map, roots spreading through the ground, boughs wide enough to stand a forest on. It needs no water and won't burn down. A beanstalk is its climbing cousin | Very rarely, a pine cone opened by a lightning-struck fire on fertiliser | S |
+
+**Built 27 Nov (six of the eight)**, on their own palette tab, Eldritch. Differences from the plan:
+- **Umbral ooze**: made by ink sealed in obsidian with no air around it (the cave and the sprite's
+  ashes were too much to ask). The renderer dims everything within 3 cells of it, more where there's
+  more of it.
+- **Hush** muffles the whole soundscape by how much of it there is (up to four-fifths quieter),
+  rather than only sounds inside it.
+- **Creeping bloom** dies back into ash once there's nothing left beside it to eat, so a patch can't
+  linger for ever.
+- **Watching stone**: the UI tells the world where the pointer is each frame (`watchX`, `watchY`);
+  within 12 cells of it, the stone doesn't change. It spreads only into rock and earth.
+- Not yet: tolling glass and the Worldtree (both larger).
 
 ## Figures (design note, 22 Nov): only if the rule changes
 

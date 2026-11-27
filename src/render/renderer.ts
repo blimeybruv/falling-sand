@@ -69,6 +69,10 @@ const MAMMATUS_DROP = 3;
 const HALO_REACH = 3;
 const HALO_ALPHA = 0.22;
 const MAX_HALOS = 64;
+/** Umbral ooze eats the light within DARK_REACH of it: each nearby pixel is dimmed by DARK_FACTOR per ooze cell, up to MAX_DARK cells a frame. */
+const DARK_REACH = 3;
+const DARK_FACTOR = 0.78;
+const MAX_DARK = 512;
 
 const LITTLE_ENDIAN = new Uint8Array(new Uint32Array([0x0a0b0c0d]).buffer)[0] === 0x0d;
 
@@ -76,6 +80,17 @@ function pack(r: number, g: number, b: number): number {
   return LITTLE_ENDIAN
     ? ((255 << 24) | (b << 16) | (g << 8) | r) >>> 0
     : ((r << 24) | (g << 16) | (b << 8) | 255) >>> 0;
+}
+
+/** A packed colour (see pack), darkened by factor f (0..1), keeping it opaque. */
+function dim(p: number, f: number): number {
+  // Alpha is the top byte on little-endian machines, the bottom byte on big-endian ones.
+  const shift = LITTLE_ENDIAN ? 0 : 8;
+  const a = ((p >>> shift) & 0xff) * f;
+  const b = ((p >>> (shift + 8)) & 0xff) * f;
+  const c = ((p >>> (shift + 16)) & 0xff) * f;
+  const colour = ((c << 16) | (b << 8) | a) << shift;
+  return (colour | (LITTLE_ENDIAN ? 0xff000000 : 0xff)) >>> 0;
 }
 
 const clamp255 = (v: number): number => Math.max(0, Math.min(255, Math.round(v)));
@@ -125,6 +140,8 @@ export class Renderer {
   /** Anomalies seen while drawing this frame (cell indices), haloed afterwards. */
   private readonly halos = new Int32Array(MAX_HALOS);
   private readonly isAnomaly: Uint8Array;
+  /** Umbral ooze seen while drawing this frame (cell indices), whose surroundings are dimmed afterwards. */
+  private readonly darks = new Int32Array(MAX_DARK);
   private frame = 0;
   /** Air's own colour (Sun off, no day and night): the sky is tinted from this. */
   private readonly background: readonly [number, number, number];
@@ -281,6 +298,10 @@ export class Renderer {
     const stormLut = cloudBase[storm];
     const { halos, isAnomaly } = this;
     let haloCount = 0;
+    const darks = this.darks;
+    let darkCount = 0;
+    const ooze: number = M.UmbralOoze;
+    const mimic: number = M.MimicDust;
     // The column and row of cell i, kept as the loop goes (cheaper than a division per cell).
     let cx = -1;
     let cy = 0;
@@ -327,6 +348,7 @@ export class Renderer {
       seed ^= seed << 5;
 
       if (isAnomaly[m] && haloCount < MAX_HALOS) halos[haloCount++] = i;
+      else if (m === ooze && darkCount < MAX_DARK) darks[darkCount++] = i;
       if (litLut[m] !== 0 && life[i] > 0) {
         pixels[i] = litLut[m];
       } else if (burn[i] > 0 && (seed & 3) !== 0) {
@@ -374,7 +396,14 @@ export class Renderer {
           stormLevel[x] = level;
         }
       } else {
-        pixels[i] = lut[m * SHADES + shade[i]];
+        if (m === mimic) {
+          // Mimic dust borrows the colour of whatever it touches: below, beside or above.
+          let n = cy < world.height - 1 ? mat[i + width] : 0;
+          if (isAir[n] || n === mimic) n = cx > 0 ? mat[i - 1] : 0;
+          if (isAir[n] || n === mimic) n = cx < width - 1 ? mat[i + 1] : 0;
+          if (isAir[n] || n === mimic) n = cy > 0 ? mat[i - width] : 0;
+          pixels[i] = lut[(isAir[n] || n === mimic ? m : n) * SHADES + shade[i]];
+        } else pixels[i] = lut[m * SHADES + shade[i]];
         if (m === water && vel[i] > 2) {
           rain++;
           // A drop falling under a storm keeps its shaft going.
@@ -386,6 +415,23 @@ export class Renderer {
       }
     }
     this.seed = seed;
+    // Umbral ooze eats the light around it: everything nearby is dimmed, more where there's more of it.
+    for (let k = 0; k < darkCount; k++) {
+      const c = darks[k];
+      const ox = c % width;
+      const oy = (c - ox) / width;
+      for (let dy = -DARK_REACH; dy <= DARK_REACH; dy++) {
+        const y = oy + dy;
+        if (y < 0 || y >= world.height) continue;
+        for (let dx = -DARK_REACH; dx <= DARK_REACH; dx++) {
+          const x = ox + dx;
+          if (x < 0 || x >= width || dx * dx + dy * dy > DARK_REACH * DARK_REACH) continue;
+          const n = y * width + x;
+          if (mat[n] === ooze) continue;
+          pixels[n] = dim(pixels[n], DARK_FACTOR);
+        }
+      }
+    }
     // Each anomaly's halo: the air around it, faintly tinted its colour (fading with distance).
     for (let k = 0; k < haloCount; k++) {
       const c = halos[k];

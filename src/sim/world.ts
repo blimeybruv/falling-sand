@@ -199,6 +199,9 @@ export class World {
    * that don't move (static structure and pinned powders) use it, so swap() leaves it alone.
    */
   readonly support: Uint8Array;
+  /** Where the pointer is over the grid (-1: not over it), set by the UI each frame: watching stone stops when watched. */
+  watchX = -1;
+  watchY = -1;
   /** Structural collapse: unsupported stone, brick, glass and pinned powders give way (the Collapse button). */
   collapse = false;
   /** While set, powders drawn with the brush or the shape tools are pinned (see `pinned`). */

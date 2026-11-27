@@ -52,6 +52,7 @@ const CROW: number = M.Crow;
 const SPARK: number = M.Spark;
 const BOLT: number = M.Lightning;
 /** Anomalies throb: a low, wavering tone while any is on the grid. */
+const HUSH: number = M.Hush;
 const ANOMALY = Uint8Array.from(MATERIALS, (d) => (d.category === 'anomaly' ? 1 : 0));
 const LIQUID = Uint8Array.from(MATERIALS, (d) => (d.kind === 'liquid' ? 1 : 0));
 const POWDER = Uint8Array.from(MATERIALS, (d) => (d.kind === 'powder' ? 1 : 0));
@@ -117,6 +118,8 @@ interface Heard {
   crows: number;
   sparks: number;
   bolts: number;
+  /** Cells of hush (eldritch mist) on the grid. */
+  hush: number;
   /** Whether an anomaly was seen in the last full pass over the grid. */
   anomaly: boolean;
 }
@@ -133,6 +136,9 @@ export class Sound {
   volume = readVolume();
   private ctx: AudioContext | null = null;
   private out: GainNode | null = null;
+  /** Hush swallows sound: everything passes through this, which falls as there's more hush about. */
+  private hushGain: GainNode | null = null;
+  private hushLevel = 1;
   private white: AudioBuffer | null = null;
   private brown: AudioBuffer | null = null;
   private windGain: GainNode | null = null;
@@ -151,7 +157,7 @@ export class Sound {
   private offset = 0;
   private lastSample = 0;
   private lastSteam = 0;
-  private heard: Heard = { fire: 0, fallingLiquid: 0, fallingPowder: 0, lava: 0, charged: 0, bees: 0, gulls: 0, crows: 0, sparks: 0, bolts: 0, anomaly: false };
+  private heard: Heard = { fire: 0, fallingLiquid: 0, fallingPowder: 0, lava: 0, charged: 0, bees: 0, gulls: 0, crows: 0, sparks: 0, bolts: 0, hush: 0, anomaly: false };
   private lastCrack = 0;
   /** Samples left before an anomaly, last heard, goes quiet. */
   private anomalySeen = 0;
@@ -243,6 +249,12 @@ export class Sound {
       loops.buzz.target = 0.06 * Math.min(1, h.bees / 6);
       loops.throb.target = h.anomaly ? 0.07 : 0;
     }
+    // Hush swallows sound: a few hundred cells of it bring everything down to a fifth.
+    const hushed = 1 - 0.8 * Math.min(1, h.hush / 400);
+    if (this.hushGain && Math.abs(hushed - this.hushLevel) > 0.01) {
+      this.hushLevel = hushed;
+      this.hushGain.gain.setTargetAtTime(hushed, ctx.currentTime, 0.4);
+    }
     const crackles = Math.min(45, h.fire * 0.06);
     const drips = Math.min(70, h.fallingLiquid * 0.2);
     const bubbles = Math.min(2.5, h.lava * 0.004);
@@ -332,6 +344,7 @@ export class Sound {
     let sparks = 0;
     let bolts = 0;
     let anomalies = 0;
+    let hushes = 0;
     for (let i = this.offset; i < size; i += STRIDE) {
       const m = mat[i];
       if (m === EMPTY) continue;
@@ -347,6 +360,7 @@ export class Sound {
       else if (m === SPARK) sparks++;
       else if (m === BOLT) bolts++;
       else if (ANOMALY[m]) anomalies++;
+      else if (m === HUSH) hushes++;
       // (Above CHARGE_ACTIVE: a conducting liquid resting after a pulse, which is quiet.)
       if (charge[i] !== 0 && charge[i] <= CHARGE_ACTIVE) charged++;
     }
@@ -356,6 +370,7 @@ export class Sound {
     this.offset = (this.offset + 1) % STRIDE;
     const h = this.heard;
     h.anomaly = this.anomalySeen > 0;
+    h.hush = hushes * STRIDE;
     h.fire = fire * STRIDE;
     h.fallingLiquid = fallingLiquid * STRIDE;
     h.fallingPowder = fallingPowder * STRIDE;
@@ -401,9 +416,11 @@ export class Sound {
     compressor.attack.value = 0.002;
     compressor.release.value = 0.25;
     compressor.connect(ctx.destination);
+    this.hushGain = ctx.createGain();
+    this.hushGain.connect(compressor);
     this.out = ctx.createGain();
     this.out.gain.value = MASTER * this.volume * this.volume;
-    this.out.connect(compressor);
+    this.out.connect(this.hushGain);
     this.white = noiseBuffer(ctx, false);
     this.brown = noiseBuffer(ctx, true);
 

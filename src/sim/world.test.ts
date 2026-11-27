@@ -2143,6 +2143,15 @@ describe('anomalies', () => {
     expect(w.created[M.Slag]).toBeGreaterThan(0);
   });
 
+  it('a transmuter at the edge of the grid leaves the far edge alone', () => {
+    const w = new World(20, 20, 11);
+    fill(w, 0, 0, 20, 20, M.Stone);
+    w.set(0, 10, M.Transmuter);
+    run(w, 1500);
+    // Off the grid reads as stone; transmuting it once wrapped round to the far edge of the row above.
+    for (let y = 0; y < 20; y++) expect(w.get(19, y)).toBe(M.Stone);
+  });
+
   it('anomalies shrug off blasts', () => {
     const w = new World(30, 30, 6);
     for (const [k, m] of [M.ColdSun, M.LiftField, M.GravityKnot, M.StasisPocket, M.ArcNode].entries()) w.set(10 + k * 2, 15, m);
@@ -2402,3 +2411,116 @@ describe('liquid levels', () => {
   });
 });
 const LEVEL_TOLERANCE = 3;
+
+describe('eldritch materials', () => {
+  function fill(w: World, x0: number, y0: number, wd: number, ht: number, m: MaterialId): void {
+    for (let y = y0; y < y0 + ht; y++) for (let x = x0; x < x0 + wd; x++) w.set(x, y, m);
+  }
+
+  it('umbral ooze boils away in sunlight but pools in shadow', () => {
+    const left = (sun: boolean, roof: boolean): number => {
+      const w = new World(30, 30, 1);
+      fill(w, 0, 27, 30, 3, M.Stone);
+      fill(w, 0, 24, 30, 3, M.UmbralOoze);
+      if (roof) fill(w, 0, 10, 30, 1, M.Stone);
+      w.sun = sun ? 1 : 0;
+      run(w, 600);
+      return w.count(M.UmbralOoze);
+    };
+    expect(left(true, false)).toBeLessThan(90 * 0.5);
+    expect(left(true, true)).toBe(90);
+    expect(left(false, false)).toBe(90);
+  });
+
+  it('fire inside hush gutters out', () => {
+    const burning = (hushed: boolean): number => {
+      const w = new World(30, 30, 2);
+      fill(w, 0, 27, 30, 3, M.Stone);
+      fill(w, 10, 20, 10, 7, M.Wood);
+      if (hushed) fill(w, 8, 12, 14, 8, M.Hush);
+      w.ignite(w.idx(15, 20));
+      run(w, 200);
+      return w.count(M.Wood);
+    };
+    // With hush around it, the fire goes out and most of the wood is left.
+    expect(burning(true)).toBeGreaterThan(burning(false) + 20);
+  });
+
+  it('creeping bloom spreads over wood in the dark, and withers in the sun', () => {
+    const grow = (sun: boolean): World => {
+      const w = new World(30, 30, 3);
+      fill(w, 0, 20, 30, 10, M.Wood);
+      w.set(15, 19, M.CreepingBloom);
+      w.sun = sun ? 1 : 0;
+      run(w, 1500);
+      return w;
+    };
+    expect(grow(false).count(M.CreepingBloom)).toBeGreaterThan(10);
+    expect(grow(true).count(M.CreepingBloom)).toBe(0);
+  });
+
+  it('mimic dust never quite settles', () => {
+    const w = new World(30, 30, 4);
+    fill(w, 0, 27, 30, 3, M.Stone);
+    fill(w, 10, 22, 10, 5, M.MimicDust);
+    run(w, 200);
+    const before = Array.from(w.mat);
+    run(w, 200);
+    let moved = 0;
+    for (let i = 0; i < w.size; i++) if (w.mat[i] !== before[i]) moved++;
+    expect(moved).toBeGreaterThan(5);
+  });
+
+  it('wrong water falls towards the nearest wall, and climbs it', () => {
+    const w = new World(40, 40, 5);
+    fill(w, 0, 0, 2, 40, M.Stone); // a wall on the left
+    fill(w, 0, 38, 40, 2, M.Stone);
+    fill(w, 8, 30, 4, 4, M.WrongWater);
+    run(w, 400);
+    let atWall = 0;
+    let highest = 40;
+    for (let i = 0; i < w.size; i++) {
+      if (w.mat[i] !== M.WrongWater) continue;
+      if (i % 40 <= 3) atWall++;
+      highest = Math.min(highest, (i / 40) | 0);
+    }
+    expect(atWall).toBeGreaterThan(8);
+    expect(highest).toBeLessThan(25);
+  });
+
+  it('wrong water in open air heads for the nearer edge of the grid together, not scattering', () => {
+    const w = new World(100, 40, 8);
+    fill(w, 30, 20, 4, 4, M.WrongWater);
+    run(w, 200);
+    let left = 0;
+    for (let i = 0; i < w.size; i++) if (w.mat[i] === M.WrongWater && i % 100 < 3) left++;
+    expect(left).toBe(16);
+  });
+
+  it('watching stone spreads into rock only while nothing watches it', () => {
+    const spread = (watched: boolean): number => {
+      const w = new World(30, 30, 6);
+      fill(w, 0, 10, 30, 20, M.Stone);
+      w.set(15, 20, M.WatchingStone);
+      if (watched) {
+        w.watchX = 15;
+        w.watchY = 20;
+      }
+      run(w, 2000);
+      return w.count(M.WatchingStone);
+    };
+    expect(spread(false)).toBeGreaterThan(3);
+    expect(spread(true)).toBe(1);
+  });
+
+  it('watching stone can\'t cross water', () => {
+    const w = new World(30, 30, 7);
+    fill(w, 0, 10, 30, 20, M.Stone);
+    fill(w, 14, 10, 2, 20, M.Water);
+    w.set(5, 20, M.WatchingStone);
+    run(w, 6000);
+    let across = 0;
+    for (let y = 0; y < 30; y++) for (let x = 16; x < 30; x++) if (w.get(x, y) === M.WatchingStone) across++;
+    expect(across).toBe(0);
+  });
+});
