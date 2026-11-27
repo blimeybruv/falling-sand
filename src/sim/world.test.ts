@@ -2282,6 +2282,64 @@ describe('structural collapse', () => {
     expect(w.count(M.Iron)).toBe(50);
   });
 
+  it('a glass floor over a gap holds a little sand, but a deep pile crushes it', () => {
+    const floor = (depth: number): number => {
+      const w = new World(30, 60, 6);
+      w.collapse = true;
+      fill(w, 10, 40, 2, 20, M.Stone);
+      fill(w, 16, 40, 2, 20, M.Stone);
+      fill(w, 10, 39, 8, 1, M.Glass);
+      fill(w, 12, 39 - depth, 4, depth, M.Sand);
+      run(w, 120);
+      return w.count(M.Glass);
+    };
+    expect(floor(4)).toBe(8); // 4 rows of sand: 80, under glass's 250
+    expect(floor(20)).toBeLessThan(8); // 20 rows: 400
+  });
+
+  it('the same pile on a stone floor, or on glass resting on the ground, is fine', () => {
+    const w = new World(30, 60, 7);
+    w.collapse = true;
+    fill(w, 10, 40, 2, 20, M.Stone);
+    fill(w, 16, 40, 2, 20, M.Stone);
+    fill(w, 10, 39, 8, 1, M.Stone);
+    fill(w, 12, 19, 4, 20, M.Sand);
+    fill(w, 20, 59, 8, 1, M.Glass);
+    fill(w, 22, 39, 4, 20, M.Sand);
+    run(w, 120);
+    expect(w.count(M.Stone)).toBe(88);
+    expect(w.count(M.Glass)).toBe(8);
+  });
+
+  it('weight only counts with collapse on', () => {
+    const w = new World(30, 60, 6);
+    fill(w, 10, 40, 2, 20, M.Stone);
+    fill(w, 16, 40, 2, 20, M.Stone);
+    fill(w, 10, 39, 8, 1, M.Glass);
+    fill(w, 12, 19, 4, 20, M.Sand);
+    run(w, 120);
+    expect(w.count(M.Glass)).toBe(8);
+  });
+
+  it('a pinned sand bridge holds itself up, but gives way under a heap', () => {
+    const bridge = (heap: number): number => {
+      const w = new World(30, 40, 8);
+      w.collapse = true;
+      fill(w, 10, 20, 2, 20, M.Stone);
+      fill(w, 15, 20, 2, 20, M.Stone);
+      w.drawFixed = true;
+      for (let x = 12; x < 15; x++) w.paint(x, 20, 0, M.Sand);
+      w.drawFixed = false;
+      if (heap > 0) fill(w, 12, 20 - heap, 3, heap, M.Gravel);
+      run(w, 120);
+      let pinned = 0;
+      for (let i = 0; i < w.size; i++) pinned += w.pinned[i];
+      return pinned;
+    };
+    expect(bridge(0)).toBe(3);
+    expect(bridge(6)).toBe(0); // 6 rows of gravel: 144, over a pinned powder's 60
+  });
+
   it('a pinned sand ledge sticks out only a couple of cells from a wall before the rest falls', () => {
     const w = new World(40, 40, 5);
     w.collapse = true;
@@ -2297,3 +2355,50 @@ describe('structural collapse', () => {
     expect(w.count(M.Sand)).toBe(12);
   });
 });
+
+describe('liquid levels', () => {
+  function fill(w: World, x0: number, y0: number, wd: number, ht: number, m: MaterialId): void {
+    for (let y = y0; y < y0 + ht; y++) for (let x = x0; x < x0 + wd; x++) w.set(x, y, m);
+  }
+  /** The top row of water in columns x0..x1. */
+  const level = (w: World, x0: number, x1: number): number => {
+    for (let y = 0; y < w.height; y++) for (let x = x0; x < x1; x++) if (w.get(x, y) === M.Water) return y;
+    return w.height;
+  };
+
+  it('water finds its level through a U-bend', { timeout: 30000 }, () => {
+    // A U of stone: two arms 4 wide joined by a channel along the bottom.
+    const w = new World(40, 50, 1);
+    fill(w, 0, 0, 40, 50, M.Stone);
+    fill(w, 8, 10, 4, 36, M.Empty);
+    fill(w, 28, 10, 4, 36, M.Empty);
+    fill(w, 8, 42, 24, 4, M.Empty);
+    // Water in the left arm and the channel only.
+    fill(w, 8, 15, 4, 31, M.Water);
+    fill(w, 12, 42, 20, 4, M.Water);
+    expect(level(w, 28, 32)).toBe(42);
+    run(w, 1500);
+    expect(Math.abs(level(w, 8, 12) - level(w, 28, 32))).toBeLessThanOrEqual(LEVEL_TOLERANCE);
+    expect(level(w, 28, 32)).toBeLessThan(35);
+  });
+
+  it('a still tank of water stays still, and a waterfall still falls', () => {
+    const w = new World(40, 50, 2);
+    fill(w, 0, 45, 40, 5, M.Stone);
+    fill(w, 0, 35, 40, 10, M.Water);
+    const before = Array.from(w.mat);
+    run(w, 200);
+    let moved = 0;
+    for (let i = 0; i < w.size; i++) if (w.mat[i] !== before[i]) moved++;
+    expect(moved).toBeLessThan(20);
+    // A stream pouring in from above lands rather than vanishing into the pond.
+    for (let f = 0; f < 60; f++) {
+      if (w.get(20, 2) === M.Empty) w.set(20, 2, M.Water);
+      w.step();
+    }
+    let falling = 0;
+    for (let y = 5; y < 30; y++) if (w.get(20, y) === M.Water || w.get(19, y) === M.Water || w.get(21, y) === M.Water) falling++;
+    expect(falling).toBeGreaterThanOrEqual(8); // the same as with levelling off
+  });
+});
+const LEVEL_TOLERANCE = 3;

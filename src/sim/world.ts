@@ -113,6 +113,16 @@ const PINNABLE = Uint8Array.from(MATERIALS, (d) => (d.kind === 'powder' && d.cat
 const SPAN = Uint8Array.from(MATERIALS, (d) => d.strength?.span ?? 0);
 /** ...and a powder drawn fixed (pinned): it holds together only a little way. */
 const PINNED_SPAN = 2;
+/** ...the weight each can carry from above over open space (see `strength.load`), and a pinned powder's. */
+const LOAD = Float32Array.from(MATERIALS, (d) => d.strength?.load ?? 0);
+const PINNED_LOAD = 60;
+/**
+ * Liquid levels (connected vessels): every LEVEL_EVERY frames, each body of one liquid whose highest
+ * resting surface stands LEVEL_DIFF or more rows above its lowest sends a cell from the top of the
+ * high side to the low side, as pressure would push it round a U-bend.
+ */
+const LEVEL_EVERY = 3;
+const LEVEL_DIFF = 3;
 const NO_SUPPORT = 255;
 /** Impacts: fall speed counts up to this many frames of falling (a terminal velocity). */
 const IMPACT_TERMINAL = 16;
@@ -287,6 +297,10 @@ export class World {
   openEdges = false;
   /** Frame number in which each cell last moved or was created; such cells are skipped. */
   private readonly stamp: Uint32Array;
+  /** Scratch for levelLiquids: the body each liquid cell was found in this pass, and a queue. */
+  private readonly levelMark: Uint32Array;
+  private readonly levelQueue: Int32Array;
+  private levelPass = 0;
   private explosionsThisFrame = 0;
   /** How many more cells vents may release this frame (refilled by step(); see MAX_VENT_CELLS_PER_FRAME). */
   ventBudget = 0;
@@ -314,6 +328,8 @@ export class World {
     this.temp = new Float32Array(this.size).fill(AMBIENT_TEMP);
     this.tempBack = new Float32Array(this.size).fill(AMBIENT_TEMP);
     this.stamp = new Uint32Array(this.size);
+    this.levelMark = new Uint32Array(this.size);
+    this.levelQueue = new Int32Array(this.size);
     this.rng = new Rng(seed);
   }
 
@@ -696,7 +712,11 @@ export class World {
     if (this.gusty) this.wind = gustAt(this.frame);
     if (this.sun !== 0) this.updateSunlight();
     if (this.openEdges) this.drainEdges();
-    if (this.collapse) this.updateSupport();
+    if (this.collapse) {
+      this.updateSupport();
+      this.updateLoad();
+    }
+    if (this.frame % LEVEL_EVERY === 0) this.levelLiquids();
     // The stasis pockets that registered last frame slow time around them this frame.
     this.stasisX.set(this.stasisNextX);
     this.stasisY.set(this.stasisNextY);
@@ -839,6 +859,118 @@ export class World {
           }
         }
       }
+    }
+  }
+
+  /**
+   * Weight on top: down each column, add up the weight resting on each cell (the densities of
+   * everything above it, back to the last gap of air or gas). A structural cell with open space
+   * (air, liquid or gas) beneath it, the underside of a floor or bridge, gives way if that's more
+   * than it can carry. Structure passes the load down without adding its own (it holds itself up:
+   * that's what the span is for), and anything resting on something solid passes it straight on.
+   */
+  private updateLoad(): void {
+    const { width: w, height: h, mat, pinned } = this;
+    for (let x = 0; x < w; x++) {
+      let carry = 0;
+      for (let y = 0; y < h; y++) {
+        const i = y * w + x;
+        const m = mat[i];
+        const kind = KIND[m];
+        if (kind === KIND_EMPTY || kind === KIND_GAS) {
+          carry = 0;
+          continue;
+        }
+        const pin = pinned[i] !== 0;
+        if (SPAN[m] === 0 && !pin) {
+          carry += DENSITY[m];
+          continue;
+        }
+        if (carry === 0 || y === h - 1) continue;
+        const below = KIND[mat[i + w]];
+        if (below !== KIND_EMPTY && below !== KIND_LIQUID && below !== KIND_GAS) continue;
+        if (carry > (SPAN[m] !== 0 ? LOAD[m] : PINNED_LOAD)) {
+          if (SPAN[m] !== 0) {
+            if (GLASSY[m]) this.noise.shatters++;
+            this.transform(i, MATS[m].strength!.into);
+          } else {
+            pinned[i] = 0;
+          }
+          carry = 0;
+        }
+      }
+    }
+  }
+
+  /**
+   * Connected vessels. Finds each body of one liquid (cells of the same material touching, through
+   * cells at rest only, so a stream pouring from one pool into another doesn't join them), and
+   * where its highest resting surface (a cell with air or gas above) stands LEVEL_DIFF or more rows
+   * above its lowest, moves the cell at the top of the high side to just above the low side. So
+   * water finds its level through a U-bend or a pipe between two tanks. Ripples (a row or two)
+   * and flowing or falling water are left to ordinary movement.
+   */
+  private levelLiquids(): void {
+    const { width: w, height: h, mat, vel, levelMark: mark, levelQueue: queue } = this;
+    const pass = ++this.levelPass;
+    const size = this.size;
+    for (let start = 0; start < size; start++) {
+      const m = mat[start];
+      if (KIND[m] !== KIND_LIQUID || mark[start] === pass || vel[start] > 1) continue;
+      // Flood the body from here, noting its highest and lowest resting surface cells.
+      let head = 0;
+      let tail = 0;
+      queue[tail++] = start;
+      mark[start] = pass;
+      let high = -1;
+      let highY = h;
+      let low = -1;
+      let lowY = -1;
+      while (head < tail) {
+        const i = queue[head++];
+        const y = (i / w) | 0;
+        const x = i - y * w;
+        if (y > 0) {
+          const above = KIND[mat[i - w]];
+          if ((above === KIND_EMPTY || above === KIND_GAS) && (y === h - 1 || !FLUID[mat[i + w]] || mat[i + w] === m)) {
+            if (y < highY) {
+              highY = y;
+              high = i;
+            }
+            if (y > lowY) {
+              lowY = y;
+              low = i;
+            }
+          }
+          const n = i - w;
+          if (mat[n] === m && mark[n] !== pass && vel[n] <= 1) {
+            mark[n] = pass;
+            queue[tail++] = n;
+          }
+        }
+        if (x > 0) {
+          const n = i - 1;
+          if (mat[n] === m && mark[n] !== pass && vel[n] <= 1) {
+            mark[n] = pass;
+            queue[tail++] = n;
+          }
+        }
+        if (x < w - 1) {
+          const n = i + 1;
+          if (mat[n] === m && mark[n] !== pass && vel[n] <= 1) {
+            mark[n] = pass;
+            queue[tail++] = n;
+          }
+        }
+        if (y < h - 1) {
+          const n = i + w;
+          if (mat[n] === m && mark[n] !== pass && vel[n] <= 1) {
+            mark[n] = pass;
+            queue[tail++] = n;
+          }
+        }
+      }
+      if (high >= 0 && lowY - highY >= LEVEL_DIFF && mat[low - w] === EMPTY) this.swap(high, low - w);
     }
   }
 

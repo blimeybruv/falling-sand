@@ -499,8 +499,8 @@ through lighter liquids. Missing, easiest first:
 |---|---|---|---|---|
 | ✅ | Impacts | Sand or gravel dropped from a height (or hail) smashes glass; a pebble breaks thin ice; fruit dropped from high up bursts into pulp; a grain hitting water fast splashes it up | On landing, force = the faller's density times its fall speed (up to a terminal 16 frames): `brittle` and `splats` in the table. Powders only: liquids splash rather than smash | T |
 | ✅ | Structural collapse | Stone, brick, glass and pinned powders reach only so far from support; past that they crumble and fall, in a ripple | A per-cell support distance, relaxed once a frame (below free, sideways or hanging a step each); `strength` in the table. A toggle, off by default | F |
-| | Weight on top | A glass floor crushed under a sand pile, a beam snapping under lava, ice cracking under rock | A pass down each column adding up the weight resting on each structural cell; past its capacity it's crushed. Vertical load only: a real stress solver (arches, beams) costs far more for little visible gain | F |
-| | Liquid pressure | Water finding its level through a U-bend, fountains from a tank on a hill, dams bursting | A pressure value per liquid cell, relaxed like heat; liquid flows from high to low, upwards too. Tends to jitter, and liquids are already the costliest thing to move | S |
+| ✅ | Weight on top | A glass floor crushed under a sand pile, a beam snapping under lava, ice cracking under rock | A pass down each column adding up the weight resting on each structural cell; past its capacity it's crushed. Vertical load only: a real stress solver (arches, beams) costs far more for little visible gain | F |
+| ½ | Liquid pressure | Water finding its level through a U-bend, fountains from a tank on a hill, dams bursting | A pressure value per liquid cell, relaxed like heat; liquid flows from high to low, upwards too. Tends to jitter, and liquids are already the costliest thing to move | S |
 | | Gas pressure | Steam building in a sealed pot until it bursts it; a blast in a closed room hitting harder | Tracking how much gas is in each sealed region. Best after liquid pressure | S |
 | | Momentum for everything | Waves that slosh, landslides that run on, liquids that carry through bends | Every cell keeps a velocity, not just thrown ones. Changes the feel of everything and roughly doubles the cost of movement | S+ |
 | | Rigid bodies | Blocks that fall, topple and lever as one piece | Multi-cell objects: against how the game is built. Not planned | - |
@@ -512,6 +512,20 @@ stone and basalt span 10, concrete and obsidian 8, brick 6, ice 5, glass 3, thin
 powders 2; metal, wood and everything else never collapse (so trees stand, and an iron girder
 bridges any gap). Loose powder supports what rests on it but doesn't hold a beam from the side.
 Not saved in scenes (like the Edges setting).
+
+**Built 27 Nov, morning.**
+- **Weight on top** (with collapse on): one pass down each column adds up the densities resting on
+  each structural cell, back to the last gap of air. A structural cell with open space beneath it
+  gives way when that passes its `strength.load`: glass 250 (about 12 rows of sand), ice 400, brick
+  1200, concrete 1600, obsidian 1500, stone and basalt 2000, thin ice 30, pinned powders 60.
+  Structure passes load down without adding its own, and anything resting on something solid passes
+  it straight on, so only floors and bridges over a gap can be crushed.
+- **Connected vessels** (always on), the first half of liquid pressure: every third frame, each body
+  of one liquid (flooded through cells at rest, so a stream doesn't join two pools) whose highest
+  resting surface stands 3 or more rows above its lowest moves a cell from the top of the high side
+  to just above the low side. Water finds its level through a U-bend or a pipe between tanks; ripples
+  and flowing water are left alone. Not yet: fountains (water spurting above its level) and dams
+  bursting, which need real pressure. About 0.1-0.2 ms a frame on a grid half full of water.
 
 ## Load-bearing materials (design note)
 

@@ -40,7 +40,8 @@ src/main.ts  creates World + Renderer + UI and runs the requestAnimationFrame lo
   then, if `world.sun` isn't 0, shines sunlight (`updateSunlight`: straight down every 4th column in
   turn, warming the first cell that isn't `transparent` and applying its `sunlit` change; when
   `sun` is below 0 it's a clear night, which instead chills that cell and applies its `night`
-  change), then updates cells. With `dayLength` set, `sun` follows the time of day (`sunAt`); with
+  change), then, with structural collapse on, relaxes support and checks weight (`updateSupport`, `updateLoad`),
+  then every third frame levels connected bodies of liquid (`levelLiquids`), then updates cells. With `dayLength` set, `sun` follows the time of day (`sunAt`); with
   `gusty` set, `wind` follows `gustAt`. Start a pulse with `world.electrify(i)`. Use `transform(i, m)`
   instead of `setCell` for phase changes (melting, boiling), so the cell keeps its temperature (unless
   the new material has a `startTemp`, which it takes instead). Burning cells don't melt until they stop.

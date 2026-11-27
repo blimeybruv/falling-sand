@@ -1381,16 +1381,16 @@ describe('round 4', () => {
         const w = new World(30, 50, seed);
         fillRect(w, 0, 45, 30, 5, M.Lava);
         if (underwater) fillRect(w, 0, 10, 30, 35, M.Water);
-        run(w, 1500);
+        run(w, 400);
         n += w.created[M.Basalt];
       }
       return n;
     };
-    // Boiling water keeps opening brief gaps of air above the lava, so it does crust a little:
-    // measured over 1500 frames, 0-13 cells a world under water against 11-19 in the open (24
-    // worlds: 153 against 352). It once looked better than that only because ice frozen out of the
-    // steam hung at the top of the sky, so the clouds snowed on the lava and set some of it as stone.
-    expect(basalt(true)).toBeLessThan(basalt(false) / 2);
+    // Boiling water keeps opening brief gaps of air above the lava, so it does crust a little.
+    // Measured over 400 frames, while the lava is still covered (the pool mostly boils away within
+    // half a minute, after which it's lava in open air): 4 cells under water against 36 in the open,
+    // over these six worlds.
+    expect(basalt(true)).toBeLessThan(basalt(false) / 3);
   });
 
   it('molten glass with no wind stays molten glass (until it cools)', () => {
