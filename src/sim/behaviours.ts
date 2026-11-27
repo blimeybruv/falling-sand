@@ -1595,6 +1595,8 @@ export function updateBolt(w: World, x: number, y: number, _i: number): boolean 
     // striking graphite under salt water, insulation fails (an arc node).
     else if (t === M.Magnet && countAround(w, nx, ny, M.Plasma, M.Plasma) > 0 && w.rng.chance(0.3)) w.transform(n, M.LiftField);
     else if (t === M.Graphite && countAround(w, nx, ny, M.SaltWater, M.SaltWater) > 0 && w.rng.chance(0.3)) w.transform(n, M.ArcNode);
+    // Lightning through glass inside hush leaves it tolling.
+    else if (t === M.Glass && countAround(w, nx, ny, M.Hush, M.Hush) > 0 && w.rng.chance(0.3)) w.transform(n, M.TollingGlass);
     // Lightning striking an arc node tears it open into a gate, linked to every other gate.
     else if (t === M.ArcNode && w.rng.chance(0.15)) w.transform(n, M.LinkedGate);
     else if (t === M.Iron && w.rng.chance(0.05)) w.transform(n, M.Magnet);
@@ -2518,6 +2520,8 @@ export function updateCrow(w: World, x: number, y: number, i: number): boolean {
   return true;
 }
 
+/** The chance that a pine cone opening on fertiliser drops a worldtree seed instead of a pine seed. */
+const WORLDTREE_CHANCE = 0.3;
 /** A pine cone opens once it has been cool (under this temperature) for CONE_OPEN frames. */
 const CONE_COOL = 60;
 const CONE_OPEN = 240;
@@ -2527,9 +2531,14 @@ const CONE_OPEN = 240;
  * fire has passed), it opens into a seed, which can sprout in the ash around it. (Opening any
  * earlier, the seed would pop in the heat.) The time cool is counted in `life`.
  */
-export function openCone(w: World, _x: number, _y: number, i: number): boolean {
+export function openCone(w: World, x: number, y: number, i: number): boolean {
   if (w.temp[i] >= CONE_COOL) w.life[i] = 0;
   else if (++w.life[i] >= CONE_OPEN) {
+    // Opening on fertiliser, now and then, the seed it drops is something else entirely.
+    if (w.get(x, y + 1) === M.Fertiliser && w.rng.chance(WORLDTREE_CHANCE)) {
+      w.setCell(i, M.Worldtree);
+      return true;
+    }
     // The seed it drops grows into a pine.
     w.setCell(i, M.Seed);
     w.life[i] = PINE_SEED;
@@ -2985,5 +2994,142 @@ export function watchingStone(w: World, x: number, y: number, _i: number): boole
   const nx = k === 0 ? x - 1 : k === 1 ? x + 1 : x;
   const ny = k === 2 ? y - 1 : k === 3 ? y + 1 : y;
   if (w.inBounds(nx, ny) && stoneFood(w.get(nx, ny))) w.transform(w.idx(nx, ny), M.WatchingStone);
+  return true;
+}
+
+// ---------------------------------------------------------------- the worldtree
+//
+// A tree that never stops: a thick, winding trunk of worldwood climbing to the top of the map, with
+// boughs every so often wide enough to stand a forest on, roots deep in the ground, and a crown of
+// leaves. It needs no water, and worldwood doesn't burn. The growing tip keeps its height in `life`;
+// a bough's tip keeps the length still to grow in `life` and its direction in `vel` (1: left, 2: right).
+
+/** Rows of trunk between boughs. */
+const WORLD_BOUGH_EVERY = 20;
+
+/** Can the worldtree grow into this cell (not through rock, metal or other solid structure)? */
+function worldCanTake(w: World, x: number, y: number): boolean {
+  if (!w.inBounds(x, y)) return false;
+  const t = w.get(x, y);
+  // It pushes through foliage, but not through rock, metal or other solid structure.
+  return t === M.Leaf || t === M.Needles || w.defAt(x, y).kind !== 'static';
+}
+
+/** Put worldwood at (x, y) if there's room. */
+function worldwood(w: World, x: number, y: number): void {
+  if (worldCanTake(w, x, y)) w.setCell(w.idx(x, y), M.Worldwood);
+}
+
+/** A cluster of leaves round (x, y), into open air. */
+function worldLeaves(w: World, x: number, y: number, r: number): void {
+  for (let dy = -r; dy <= r; dy++) {
+    for (let dx = -r - 2; dx <= r + 2; dx++) {
+      if (dx * dx * 0.6 + dy * dy * 1.4 > r * r || !w.inBounds(x + dx, y + dy)) continue;
+      if (w.get(x + dx, y + dy) === M.Empty && w.rng.chance(0.85)) w.set(x + dx, y + dy, M.Leaf);
+    }
+  }
+}
+
+/** Worldtree seed: falls like any seed (through foliage too); landing on something solid, it puts down deep roots and starts to grow. */
+export function worldtreeSeed(w: World, x: number, y: number, i: number): boolean {
+  // It drops through foliage to the ground.
+  const below = w.get(x, y + 1);
+  if (below === M.Leaf || below === M.Needles) {
+    w.swap(i, w.idx(x, y + 1));
+    return true;
+  }
+  if (!w.isSolid(x, y + 1)) return false;
+  growRoots(w, x, y + 1, 14);
+  growRoots(w, x - 2, y + 1, 14);
+  growRoots(w, x + 2, y + 1, 14);
+  w.transform(i, M.WorldTip);
+  w.life[i] = 0;
+  return true;
+}
+
+/** The worldtree's growing tip: climbs a row at a time, laying down the trunk. */
+export function worldTip(w: World, x: number, y: number, i: number): boolean {
+  if (!w.rng.chance(0.25)) return true;
+  const height = w.life[i];
+  // Thick at the base, thinner towards the top.
+  const r = height < 40 ? 2 : height < 100 ? 2 : 1;
+  for (let dx = -r; dx <= r; dx++) if (dx !== 0) worldwood(w, x + dx, y);
+  // Boughs, one each way, every so often.
+  if (height > 12 && height % WORLD_BOUGH_EVERY === WORLD_BOUGH_EVERY / 2) {
+    for (const dir of [-1, 1]) {
+      const bx = x + dir * (r + 1);
+      if (!worldCanTake(w, bx, y)) continue;
+      w.setCell(w.idx(bx, y), M.WorldBough);
+      const b = w.idx(bx, y);
+      w.life[b] = 14 + w.rng.int(0, 16);
+      w.vel[b] = dir < 0 ? 1 : 2;
+    }
+  }
+  // Winding: now and then the trunk steps a cell to one side.
+  const shift = height % 7 === 6 ? (Math.sin(height * 0.07 + x * 0.3) < 0 ? -1 : 1) : 0;
+  const nx = x + shift;
+  const ny = y - 1;
+  if (ny < 1 || !worldCanTake(w, nx, ny)) {
+    // The top of the map, or rock in the way: it crowns.
+    w.transform(i, M.Worldwood);
+    worldLeaves(w, x, y - 2, 6);
+    return true;
+  }
+  const next = w.idx(nx, ny);
+  w.setCell(next, M.WorldTip);
+  w.life[next] = Math.min(32000, height + 1);
+  w.transform(i, M.Worldwood);
+  return true;
+}
+
+/** A bough's growing tip: reaches out sideways, rising a little, two cells thick, and leafs out at the end. */
+export function worldBough(w: World, x: number, y: number, i: number): boolean {
+  if (!w.rng.chance(0.3)) return true;
+  const left = w.life[i];
+  const dir = w.vel[i] === 1 ? -1 : 1;
+  worldwood(w, x, y + 1);
+  const nx = x + dir;
+  const ny = w.rng.chance(0.2) ? y - 1 : y;
+  if (left <= 0 || !worldCanTake(w, nx, ny)) {
+    w.transform(i, M.Worldwood);
+    worldLeaves(w, x, y - 3, 4);
+    return true;
+  }
+  const next = w.idx(nx, ny);
+  w.setCell(next, M.WorldBough);
+  w.life[next] = left - 1;
+  w.vel[next] = w.vel[i];
+  w.transform(i, M.Worldwood);
+  return true;
+}
+
+// ---------------------------------------------------------------- tolling glass
+
+const TOLL_REACH = 8;
+/** Frames a tolling glass glows (and won't toll again) after it rings. */
+const TOLL_RING = 120;
+
+/**
+ * Tolling glass: rings softly (a bell in the soundscape, world.noise.tolls) and glows a few seconds
+ * before something near it changes: a lit fuse burning down towards its charge, a storm cloud
+ * charging up for a strike. `life` counts down the ring.
+ */
+export function tollingGlass(w: World, x: number, y: number, i: number): boolean {
+  if (w.life[i] > 0) {
+    w.life[i]--;
+    return true;
+  }
+  for (let k = 0; k < 8; k++) {
+    const j = within(w, x, y, TOLL_REACH);
+    if (j < 0) continue;
+    const m = w.mat[j];
+    const fuse = w.burn[j] > 0 && w.defAt(j % w.width, (j / w.width) | 0).explosive !== undefined;
+    const charging = m === M.StormCloud && w.vel[j] > 0;
+    if (fuse || charging) {
+      w.noise.tolls++;
+      w.life[i] = TOLL_RING;
+      return true;
+    }
+  }
   return true;
 }

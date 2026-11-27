@@ -226,6 +226,8 @@ export const RECIPES: Readonly<Partial<Record<MaterialId, Recipe>>> = {
   [M.MimicDust]: { hint: 'Sand where the states of matter come loose.', recipe: 'Sand caught in a phase fault.' },
   [M.WrongWater]: { hint: 'Water that has been somewhere it shouldn\'t.', recipe: 'Water that has passed through linked gates.' },
   [M.WatchingStone]: { hint: 'A burnt-out reward, walled in by volcanic glass.', recipe: 'A transmuter burning out walled in by obsidian.' },
+  [M.TollingGlass]: { hint: 'Lightning through glass, in a silence.', recipe: 'Lightning striking glass inside hush.' },
+  [M.Worldtree]: { hint: 'A cone that opens on the richest ground drops, now and then, something far bigger than a pine.', recipe: 'A pine cone opening on fertiliser (now and then).' },
 };
 
 /** The anomalies' own reward: the transmuter, once every other anomaly has been found. */

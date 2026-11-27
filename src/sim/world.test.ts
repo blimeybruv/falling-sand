@@ -2513,6 +2513,58 @@ describe('eldritch materials', () => {
     expect(spread(true)).toBe(1);
   });
 
+  it('a worldtree grows a winding trunk to the top of the map, with roots, boughs and leaves', { timeout: 60000 }, () => {
+    const w = new World(80, 120, 9);
+    fill(w, 0, 110, 80, 10, M.Earth);
+    w.set(40, 100, M.Worldtree);
+    run(w, 3000);
+    let top = 120;
+    let reach = 0;
+    for (let i = 0; i < w.size; i++) {
+      const m = w.mat[i];
+      if (m !== M.Worldwood && m !== M.WorldTip && m !== M.WorldBough) continue;
+      top = Math.min(top, (i / 80) | 0);
+      reach = Math.max(reach, Math.abs((i % 80) - 40));
+    }
+    expect(top).toBeLessThan(5);
+    expect(reach).toBeGreaterThan(12); // boughs reach well out from the trunk
+    expect(w.count(M.Leaf)).toBeGreaterThan(30);
+    expect(w.count(M.Root)).toBeGreaterThan(5);
+    // Fire takes the leaves, never the wood.
+    const wood = w.count(M.Worldwood);
+    for (let i = 0; i < w.size; i++) if (w.mat[i] === M.Worldwood && w.rng.chance(0.2)) w.ignite(i);
+    run(w, 300);
+    expect(w.count(M.Worldwood)).toBe(wood);
+  });
+
+  it('a worldtree seed dropped on a tree\'s crown falls through the leaves and grows up through them', { timeout: 60000 }, () => {
+    const w = new World(60, 100, 12);
+    fill(w, 0, 90, 60, 10, M.Earth);
+    fill(w, 30, 75, 1, 15, M.Wood);
+    fill(w, 24, 66, 13, 9, M.Leaf);
+    w.set(30, 60, M.Worldtree);
+    run(w, 2500);
+    let top = 100;
+    for (let i = 0; i < w.size; i++) if (w.mat[i] === M.Worldwood || w.mat[i] === M.WorldTip) top = Math.min(top, (i / 60) | 0);
+    expect(top).toBeLessThan(10);
+  });
+
+  it('tolling glass rings before a lit fuse goes off, and stays quiet otherwise', () => {
+    const w = new World(40, 40, 10);
+    fill(w, 0, 38, 40, 2, M.Stone);
+    w.set(20, 30, M.TollingGlass);
+    fill(w, 24, 34, 3, 4, M.Dynamite);
+    run(w, 200);
+    expect(w.noise.tolls).toBe(0);
+    w.ignite(w.idx(25, 34));
+    let tolledBeforeBlast = false;
+    for (let f = 0; f < 400 && w.noise.blasts === 0; f++) {
+      w.step();
+      if (w.noise.tolls > 0 && w.noise.blasts === 0) tolledBeforeBlast = true;
+    }
+    expect(tolledBeforeBlast).toBe(true);
+  });
+
   it('watching stone can\'t cross water', () => {
     const w = new World(30, 30, 7);
     fill(w, 0, 10, 30, 20, M.Stone);

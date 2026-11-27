@@ -159,6 +159,7 @@ export class Sound {
   private lastSteam = 0;
   private heard: Heard = { fire: 0, fallingLiquid: 0, fallingPowder: 0, lava: 0, charged: 0, bees: 0, gulls: 0, crows: 0, sparks: 0, bolts: 0, hush: 0, anomaly: false };
   private lastCrack = 0;
+  private lastToll = 0;
   /** Samples left before an anomaly, last heard, goes quiet. */
   private anomalySeen = 0;
   private lastBoom = 0;
@@ -209,7 +210,7 @@ export class Sound {
     const noise = world.noise;
     const ctx = this.ctx;
     if (!ctx || !this.enabled || document.hidden) {
-      noise.blasts = noise.blastRadius = noise.strikes = noise.corona = noise.fizzes = noise.bursts = noise.pops = noise.shatters = noise.cracks = 0;
+      noise.blasts = noise.blastRadius = noise.strikes = noise.corona = noise.fizzes = noise.bursts = noise.pops = noise.shatters = noise.cracks = noise.tolls = 0;
       this.lastSteam = world.created[M.Steam];
       return;
     }
@@ -232,7 +233,8 @@ export class Sound {
     const pops = noise.pops;
     const shatters = noise.shatters;
     const cracks = noise.cracks;
-    noise.blasts = noise.blastRadius = noise.strikes = noise.corona = noise.fizzes = noise.bursts = noise.pops = noise.shatters = noise.cracks = 0;
+    const tolls = noise.tolls;
+    noise.blasts = noise.blastRadius = noise.strikes = noise.corona = noise.fizzes = noise.bursts = noise.pops = noise.shatters = noise.cracks = noise.tolls = 0;
 
     const h = this.heard;
     if (running) this.sample(world);
@@ -265,7 +267,7 @@ export class Sound {
     const busy =
       strength > 0 ||
       crackles + drips + bubbles + pings + cries + caws > 0 ||
-      blasts + strikes + bursts + pops + corona + shatters + cracks + h.bolts > 0 ||
+      blasts + strikes + bursts + pops + corona + shatters + cracks + tolls + h.bolts > 0 ||
       (loops !== null && Object.values(loops).some((l) => l.target > 0.001));
 
     if (busy) {
@@ -306,6 +308,11 @@ export class Sound {
     if (cracks > 0 && t - this.lastCrack > 0.15 + Math.random() * 0.5) {
       this.crack(ahead);
       this.lastCrack = t;
+    }
+    // Tolling glass: a soft bell, at most every couple of seconds however many panes ring.
+    if (tolls > 0 && t - this.lastToll > 2) {
+      this.toll(ahead);
+      this.lastToll = t;
     }
     for (let k = Math.min(6, pops); k > 0; k--) this.kernel(ahead + Math.random() * dt);
     // The strike a corona warned of thunders at the distance chosen for it. Any other strike, or a
@@ -635,6 +642,23 @@ export class Sound {
     osc.connect(env).connect(this.out!);
     osc.start(t);
     osc.stop(t + 0.16);
+  }
+
+  /** Tolling glass: a soft, low bell, a fundamental and two inharmonic partials dying away over a few seconds. */
+  private toll(t: number): void {
+    const ctx = this.ctx!;
+    for (const [ratio, level, decay] of [[1, 0.06, 3.5], [2.76, 0.025, 2], [5.4, 0.012, 1.2]] as const) {
+      const osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(196 * ratio, t);
+      const env = ctx.createGain();
+      env.gain.setValueAtTime(0.0001, t);
+      env.gain.exponentialRampToValueAtTime(level, t + 0.02);
+      env.gain.exponentialRampToValueAtTime(0.0001, t + decay);
+      osc.connect(env).connect(this.out!);
+      osc.start(t);
+      osc.stop(t + decay + 0.05);
+    }
   }
 
   /** A firework bursting: a small, bright pop. */

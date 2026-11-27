@@ -366,7 +366,7 @@ drop cones. Roots (a new internal material, grown into the soil as a tree sprout
 | ✅ | Palm | trees + salt water + sand | A tall bare trunk with a tuft of fronds on top, on sandy shores by the sea; drops coconuts | From a seed on sand near salt water | F |
 | ✅ | Giant tree | trees | Rarely (one seed in a few hundred, on rich ground), a tree that grows far bigger and thicker than the rest and lives for ages | Rare variant of a pine or broadleaf | F |
 | | Autumn | trees + seasons | Leaves turn yellow and red and fall, then grow back (needs seasons) | | S |
-| | Worldtree (eldritch) | see the eldritch table | A tree that grows to the size of the map | | S |
+| ✅ | Worldtree (eldritch) | see the eldritch table | A tree that grows to the size of the map | | S |
 
 ## Fire ecology (built 23 Nov, at the player's suggestion)
 
@@ -463,8 +463,8 @@ after the anomalies. Best built after the anomalies.
 | ✅ | Mimic dust | Appearance | Takes on the colour of whatever it touches and behaves like a powder that won't settle: hard to spot until it moves | Sand caught in a phase fault | F |
 | ✅ | Watching stone | Attention | Only changes when the brush isn't over it: left alone, it slowly turns its neighbours to more of itself; hover over it and it stops (bounded: it can't cross water or salt) | A transmuter burning out inside obsidian | S |
 | ✅ | Wrong water | Direction | A liquid that flows towards the nearest wall instead of down, and climbs | Water passed through linked gates | F |
-| | Tolling glass | Time and sound | Rings softly (a low tone in the soundscape) a few seconds before anything near it changes: a fuse catching, a creature hatching, lightning charging | Glass struck by lightning inside hush | S |
-| | Worldtree | Growth limits | A giant tree that never stops: a thick trunk winding up to the top of the map, roots spreading through the ground, boughs wide enough to stand a forest on. It needs no water and won't burn down. A beanstalk is its climbing cousin | Very rarely, a pine cone opened by a lightning-struck fire on fertiliser | S |
+| ✅ | Tolling glass | Time and sound | Rings softly (a low tone in the soundscape) a few seconds before anything near it changes: a fuse catching, a creature hatching, lightning charging | Glass struck by lightning inside hush | S |
+| ✅ | Worldtree | Growth limits | A giant tree that never stops: a thick trunk winding up to the top of the map, roots spreading through the ground, boughs wide enough to stand a forest on. It needs no water and won't burn down. A beanstalk is its climbing cousin | Very rarely, a pine cone opened by a lightning-struck fire on fertiliser | S |
 
 **Built 27 Nov (six of the eight)**, on their own palette tab, Eldritch. Differences from the plan:
 - **Umbral ooze**: made by ink sealed in obsidian with no air around it (the cave and the sprite's
@@ -476,7 +476,12 @@ after the anomalies. Best built after the anomalies.
   linger for ever.
 - **Watching stone**: the UI tells the world where the pointer is each frame (`watchX`, `watchY`);
   within 12 cells of it, the stone doesn't change. It spreads only into rock and earth.
-- Not yet: tolling glass and the Worldtree (both larger).
+- **Tolling glass and the Worldtree** followed the same evening. Tolling glass rings for lit fuses on
+  explosives and storm clouds charging a strike (it doesn't foresee creatures hatching). The
+  Worldtree's recipe is simpler than planned: any pine cone opening on fertiliser drops a worldtree
+  seed three times in ten. Its trunk is worldwood (internal, fireproof), climbing a row at a time and
+  winding a cell aside every seven rows; boughs every 20 rows reach 14-30 cells out; it crowns at the
+  top of the map or at rock. It grows through anything that isn't solid structure.
 
 ## Figures (design note, 22 Nov): only if the rule changes
 

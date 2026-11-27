@@ -272,7 +272,7 @@ export class World {
    * building before a strike (corona), acid eating something, fireworks bursting, popcorn popping,
    * glass shattering in a blast, ice cracking (melting, or a pond skinning over).
    */
-  readonly noise = { blasts: 0, blastRadius: 0, strikes: 0, corona: 0, fizzes: 0, bursts: 0, pops: 0, shatters: 0, cracks: 0 };
+  readonly noise = { blasts: 0, blastRadius: 0, strikes: 0, corona: 0, fizzes: 0, bursts: 0, pops: 0, shatters: 0, cracks: 0, tolls: 0 };
   /**
    * Sunshine, 0 (none) to 1 (full). Light comes straight down each column and warms the first thing
    * it reaches, which may also change (`sunlit` in the material table): water evaporates, clouds burn off.

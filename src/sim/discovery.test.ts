@@ -788,6 +788,16 @@ describe('every recipe works in the simulation', () => {
       fillRect(w, 17, 17, 5, 5, M.Obsidian);
       w.set(19, 19, M.Transmuter);
     }],
+    ['tolling glass (eldritch): lightning striking glass inside hush', M.TollingGlass, 60, (w) => {
+      fillRect(w, 0, 39, 40, 1, M.Stone);
+      fillRect(w, 10, 20, 20, 1, M.Glass);
+      fillRect(w, 10, 18, 20, 2, M.Hush);
+      fillRect(w, 10, 21, 20, 1, M.Lightning);
+    }],
+    ['worldtree (eldritch): a pine cone opening on fertiliser', M.Worldtree, 600, (w) => {
+      fillRect(w, 0, 36, 40, 4, M.Fertiliser);
+      for (let x = 4; x < 40; x += 5) w.set(x, 35, M.PineCone);
+    }],
     ['arc node (anomaly): lightning striking graphite under salt water', M.ArcNode, 60, (w) => {
       fillRect(w, 0, 39, 40, 1, M.Stone);
       fillRect(w, 0, 25, 40, 14, M.SaltWater);

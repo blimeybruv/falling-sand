@@ -189,6 +189,11 @@ export const M = {
   MimicDust: 181,
   WrongWater: 182,
   WatchingStone: 183,
+  Worldtree: 184,
+  Worldwood: 185,
+  WorldTip: 186,
+  WorldBough: 187,
+  TollingGlass: 188,
 } as const;
 
 export type MaterialId = (typeof M)[keyof typeof M];
