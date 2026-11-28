@@ -71,6 +71,8 @@ Discovery progress is kept for when you switch back.
 | Sun menu | Sunlight from above warms whatever it reaches first: it evaporates water (which rises and makes clouds), dries mud and salt water, burns off clouds and melts snow, but not in the shade. Glass lets it through. Plants grow faster in sunlight and slower in shade (moss the other way round). Sun on falling rain draws a faint rainbow. Vapour rising against a roof condenses on it, so a shallow tray of salt water under glass in the sun makes a solar still: fresh water drips back, salt is left behind. Night is a clear night that lasts (for watching the glow of algae and the stars). Day/night runs a three-minute day: the sky brightens, warms at dawn and dusk and fills with stars; clear nights chill whatever is open to the sky (a cloud or a roof keeps it warm), mist rises off water, ponds skin over with thin ice, and fog settling on frozen ground leaves frost. The morning sun melts it all |
 | Scene menu | Undo and redo, save in this browser, load it again, download or open a scene file, or copy a share link. Also seven example scenes: a primordial wilderness (a new one each time: sea, hills and a peat bog, a smouldering volcano, and ore, coal, oil and a cave in the rock below), a volcano island, a fuse and charges, pond life, a thunderstorm, a forest to set alight, and five kinds of tree to watch grow |
 | `J` or Journal button | The journal: fourteen goals to aim for (grow a forest, boil a pond dry, have a storm strike three times, set off twenty explosions, grow a worldtree to the top...), ticked off as you meet them in either mode and remembered between visits; then the materials, what you've found and hints for the rest. (in Sandbox mode, press `J`) |
+| `Shift+K` | Keyboard brush, for drawing without a mouse: the arrow keys move it (`Shift`+arrows five cells at a time), `Enter` draws with the selected material and brush size, `Delete` or `Backspace` erases. `Shift+K` again to stop |
+| `Shift+C` | High contrast: stronger, more saturated colours on the canvas on a black background, and brighter text and bolder outlines on the controls; also a button in the help panel. Remembered between visits |
 | Mode menu | Discovery or Sandbox |
 | Clear button | Empty the whole grid |
 | `?` or `H` | Show or hide the controls panel |
@@ -336,7 +338,6 @@ estimates.
 - [ ] **More pressure**: liquids already find their level through a U-bend; real pressure would add fountains from a high tank and dams bursting, and gas pressure a sealed pot bursting. See "Physics depth" in [`docs/elements.md`](docs/elements.md).
 - [ ] **More materials**: pick one from [`docs/elements.md`](docs/elements.md). Each is a table entry, usually a `Reaction`, and a line in `RECIPES`; the tests check every one can be discovered.
 - [ ] **Run the simulation in a Web Worker**: move `World.step()` off the main thread and pass the arrays across, so bigger grids stay smooth.
-- [ ] **Accessibility**: a high-contrast palette option, and keyboard control of the brush position.
 
 ## Licence
 

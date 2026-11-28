@@ -86,9 +86,9 @@ export class PointerInput {
     }
   }
 
-  /** Grid cell under the pointer (or the finger, while touching), or null. */
+  /** The keyboard brush's cell while it's on; otherwise the grid cell under the pointer (or the finger, while touching), or null. */
   cursor(): { x: number; y: number } | null {
-    return this.hover;
+    return this.state.keyCursor ?? this.hover;
   }
 
   /** While a shape is being dragged: the cells it will cover, to draw as a preview. */

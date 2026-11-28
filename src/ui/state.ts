@@ -49,8 +49,12 @@ export interface GameState {
   heatView: boolean;
   /** Discovery: unlock materials by making them. Sandbox: everything available. */
   mode: Mode;
+  /** The keyboard brush's cell (Shift+K), or null when it's off. */
+  keyCursor: { x: number; y: number } | null;
+  /** Stronger colours and contrast, on the canvas and in the controls (Shift+C). */
+  highContrast: boolean;
 }
 
 export function createState(mode: Mode): GameState {
-  return { tool: M.Sand, drawTool: 'brush', fill: false, brush: 4, paused: false, speed: 1, pendingSteps: 0, heatView: false, mode };
+  return { tool: M.Sand, drawTool: 'brush', fill: false, brush: 4, paused: false, speed: 1, pendingSteps: 0, heatView: false, mode, keyCursor: null, highContrast: false };
 }

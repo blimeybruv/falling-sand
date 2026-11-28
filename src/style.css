@@ -752,3 +752,25 @@ button.quiet {
     display: none;
   }
 }
+
+/* ---- help panel buttons, and high contrast */
+.help-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+body.high-contrast {
+  --text: #ffffff;
+  --muted: #d4d8e6;
+  --border: #9aa0bc;
+  --panel: #0c0d12;
+  --panel-2: #1a1c26;
+}
+
+body.high-contrast button,
+body.high-contrast select,
+body.high-contrast input {
+  border-width: 2px;
+}

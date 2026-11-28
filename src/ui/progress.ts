@@ -7,6 +7,7 @@ const MODE_KEY = 'falling-sand.mode';
 const SORT_KEY = 'falling-sand.sort';
 const PROGRESS_KEY = 'falling-sand.discovered';
 const GOALS_KEY = 'falling-sand.goals';
+const CONTRAST_KEY = 'falling-sand.contrast';
 
 function read(key: string): string | null {
   try {
@@ -67,4 +68,13 @@ export function loadGoals(): Goals {
 
 export function saveGoals(goals: Goals): void {
   write(GOALS_KEY, JSON.stringify(goals.toJSON()));
+}
+
+/** High contrast, if it was turned on on an earlier visit. */
+export function loadHighContrast(): boolean {
+  return read(CONTRAST_KEY) === 'high';
+}
+
+export function saveHighContrast(on: boolean): void {
+  write(CONTRAST_KEY, on ? 'high' : 'normal');
 }

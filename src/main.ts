@@ -96,7 +96,7 @@ function frame(now: number): void {
   }
   sound.update(world, !state.paused);
 
-  renderer.render(world, { heatView: state.heatView, cursor: c && { x: c.x, y: c.y, radius: state.brush }, preview: input.preview() });
+  renderer.render(world, { heatView: state.heatView, cursor: c && { x: c.x, y: c.y, radius: state.brush }, preview: input.preview(), highContrast: state.highContrast });
 
   hover.update(now, state.heatView);
 

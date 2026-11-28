@@ -5,7 +5,7 @@
 import { EXAMPLES, M, PALETTE, type Discovery, type MaterialId, type World } from '../sim';
 import { Journal } from './journal';
 import { ERASER_KEY, Palette } from './palette';
-import { loadGoals, saveDiscovery, saveGoals, saveMode, type Mode } from './progress';
+import { loadGoals, loadHighContrast, saveDiscovery, saveGoals, saveHighContrast, saveMode, type Mode } from './progress';
 import { downloadScene, loadFromBrowser, loadFromFile, saveToBrowser, shareLink } from './scenes';
 import { heatColour } from '../render/renderer';
 import { DAY_LENGTH, MAX_BRUSH, MIN_BRUSH, SPEEDS, SUNS, WINDS, type GameState } from './state';
@@ -438,6 +438,30 @@ export function setupControls(state: GameState, world: World, discovery: Discove
     if (e.target === help) setHelp(false);
   });
 
+  // --- accessibility: high contrast, and a brush moved and used from the keyboard
+  const contrastBtn = byId<HTMLButtonElement>('contrast');
+  const setHighContrast = (on: boolean): void => {
+    state.highContrast = on;
+    saveHighContrast(on);
+    document.body.classList.toggle('high-contrast', on);
+    contrastBtn.setAttribute('aria-pressed', String(on));
+    contrastBtn.textContent = on ? 'High contrast: on' : 'High contrast: off';
+  };
+  contrastBtn.addEventListener('click', () => setHighContrast(!state.highContrast));
+  setHighContrast(loadHighContrast());
+
+  const setKeyBrush = (on: boolean): void => {
+    state.keyCursor = on ? (state.keyCursor ?? { x: world.width >> 1, y: world.height >> 1 }) : null;
+    toast(on ? 'Keyboard brush: arrows move it (Shift: five cells), Enter draws, Delete erases, Shift+K to stop' : 'Keyboard brush off');
+  };
+  /** Draw (or erase) with the brush at the keyboard brush's cell; a new change unless the key is held. */
+  const keyPaint = (erase: boolean, repeat: boolean): void => {
+    const c = state.keyCursor;
+    if (!c) return;
+    if (!repeat) history.push();
+    world.paint(c.x, c.y, state.brush, erase ? M.Empty : state.tool);
+  };
+
   // --- keyboard
   const keyToTool = new Map<string, MaterialId>(PALETTE.filter((d) => d.key).map((d) => [d.key, d.id]));
   keyToTool.set(ERASER_KEY, M.Empty);
@@ -461,7 +485,21 @@ export function setupControls(state: GameState, world: World, discovery: Discove
     }
     const key = e.key.toLowerCase();
     const tool = keyToTool.get(key);
-    if (key === '=' || key === '+') {
+    const kc = state.keyCursor;
+    if (kc && key.startsWith('arrow')) {
+      // The keyboard brush: arrows move it (Shift: five cells at a time).
+      const d = e.shiftKey ? 5 : 1;
+      kc.x = Math.max(0, Math.min(world.width - 1, kc.x + (key === 'arrowleft' ? -d : key === 'arrowright' ? d : 0)));
+      kc.y = Math.max(0, Math.min(world.height - 1, kc.y + (key === 'arrowup' ? -d : key === 'arrowdown' ? d : 0)));
+    } else if (kc && key === 'enter') {
+      keyPaint(false, e.repeat);
+    } else if (kc && (key === 'delete' || key === 'backspace')) {
+      keyPaint(true, e.repeat);
+    } else if (e.shiftKey && key === 'k') {
+      setKeyBrush(state.keyCursor === null);
+    } else if (e.shiftKey && key === 'c') {
+      setHighContrast(!state.highContrast);
+    } else if (key === '=' || key === '+') {
       view.zoomIn();
     } else if (key === '_') {
       view.zoomOut();

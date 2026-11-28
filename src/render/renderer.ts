@@ -12,7 +12,14 @@ export interface RenderOptions {
   cursor: { x: number; y: number; radius: number } | null;
   /** A shape being dragged out: the cells it will cover, lightened as a preview. */
   preview?: { cells: Int32Array; count: number } | null;
+  /** Stronger colours and contrast (an accessibility setting). */
+  highContrast?: boolean;
 }
+
+/** High contrast: colours are pushed this far from their own grey (more saturated), then through a steeper curve. */
+const HC_SATURATION = 1.45;
+/** The curve: darks darker, lights lighter, around this middle. */
+const HC_CURVE = Uint8Array.from({ length: 256 }, (_, v) => Math.max(0, Math.min(255, Math.round((v - 96) * 1.5 + 96))));
 
 /** Gases fade out over their last FADE_FRAMES frames of life. */
 const FADE_FRAMES = 40;
@@ -267,9 +274,28 @@ export class Renderer {
     this.frame++;
     if (options.heatView) this.renderHeat(world);
     else this.renderMaterials(world);
+    if (options.highContrast) this.contrast();
     if (options.preview) this.drawPreview(options.preview);
     else if (options.cursor) this.drawCursor(world, options.cursor);
     this.ctx.putImageData(this.image, 0, 0);
+  }
+
+  /** High contrast: every pixel more saturated and through a steeper curve. Only runs when it's on. */
+  private contrast(): void {
+    const { pixels } = this;
+    const shift = LITTLE_ENDIAN ? 0 : 8;
+    const alpha = LITTLE_ENDIAN ? 0xff000000 : 0xff;
+    for (let i = 0; i < pixels.length; i++) {
+      const p = pixels[i];
+      const r = (p >>> shift) & 0xff;
+      const g = (p >>> (shift + 8)) & 0xff;
+      const b = (p >>> (shift + 16)) & 0xff;
+      const grey = (r + g + b) / 3;
+      const r2 = HC_CURVE[clamp255(grey + (r - grey) * HC_SATURATION)];
+      const g2 = HC_CURVE[clamp255(grey + (g - grey) * HC_SATURATION)];
+      const b2 = HC_CURVE[clamp255(grey + (b - grey) * HC_SATURATION)];
+      pixels[i] = ((((b2 << 16) | (g2 << 8) | r2) << shift) | alpha) >>> 0;
+    }
   }
 
   private renderMaterials(world: World): void {
