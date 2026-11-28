@@ -12,11 +12,12 @@ export const WINDS: readonly (readonly [string, number])[] = [
   ['Strong →', 1],
   ['Gusty', NaN],
 ];
-/** Sun settings offered in the sun menu: label and World.sun value; NaN means Day and night. */
+/** Sun settings offered in the sun menu: label and World.sun value (below 0: a clear night); NaN means Day and night. */
 export const SUNS: readonly (readonly [string, number])[] = [
   ['Off', 0],
   ['Weak', 0.5],
   ['Strong', 1],
+  ['Night', -1],
   ['Day/night', NaN],
 ];
 /** With Day and night on, frames in a whole day and night: three minutes at normal speed. */

@@ -197,6 +197,8 @@ export const M = {
   Corona: 189,
   GlowWorm: 190,
   BallLightning: 191,
+  Owl: 192,
+  Bat: 193,
 } as const;
 
 export type MaterialId = (typeof M)[keyof typeof M];

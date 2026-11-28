@@ -226,6 +226,8 @@ export const RECIPES: Readonly<Partial<Record<MaterialId, Recipe>>> = {
   [M.MimicDust]: { hint: 'Sand where the states of matter come loose.', recipe: 'Sand caught in a phase fault.' },
   [M.WrongWater]: { hint: 'Water that has been somewhere it shouldn\'t.', recipe: 'Water that has passed through linked gates.' },
   [M.WatchingStone]: { hint: 'A burnt-out reward, walled in by volcanic glass.', recipe: 'A transmuter burning out walled in by obsidian.' },
+  [M.Owl]: { hint: 'A crow keeps hours by day. Who comes for the worms after dark?', recipe: 'An earthworm out on the surface at night.' },
+  [M.Bat]: { hint: 'Little lights in the night attract a hunter.', recipe: 'Fireflies out at night.' },
   [M.GlowWorm]: { hint: 'A light that wanders into a damp cave and stays.', recipe: 'A firefly finding its way to a stalactite.' },
   [M.BallLightning]: { hint: 'Lightning, through what an earlier strike left hanging in the air.', recipe: 'Lightning through ozone.' },
   [M.TollingGlass]: { hint: 'Lightning through glass, in a silence.', recipe: 'Lightning striking glass inside hush.' },

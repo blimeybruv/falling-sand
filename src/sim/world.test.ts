@@ -2665,3 +2665,69 @@ describe('night and storm', () => {
     expect(w.count(M.BallLightning)).toBe(0);
   });
 });
+
+describe('night creatures and snow', () => {
+  function fill(w: World, x0: number, y0: number, wd: number, ht: number, m: MaterialId): void {
+    for (let y = y0; y < y0 + ht; y++) for (let x = x0; x < x0 + wd; x++) w.set(x, y, m);
+  }
+
+  it('worms out on the surface draw crows by day and owls by night', { timeout: 30000 }, () => {
+    const draws = (sun: number): World => {
+      const w = new World(40, 60, 1);
+      w.sun = sun;
+      fill(w, 0, 50, 40, 10, M.Loam);
+      for (let x = 2; x < 40; x += 4) w.set(x, 49, M.Earthworm);
+      run(w, 8000);
+      return w;
+    };
+    const night = draws(-1);
+    expect(night.created[M.Owl]).toBeGreaterThan(0);
+    expect(night.created[M.Crow]).toBe(0);
+    const day = draws(1);
+    expect(day.created[M.Crow]).toBeGreaterThan(0);
+    expect(day.created[M.Owl]).toBe(0);
+  });
+
+  it('an owl hunts worms at night, and sits tight by day', () => {
+    const hunt = (sun: number): number => {
+      const w = new World(40, 40, 2);
+      w.sun = sun;
+      fill(w, 0, 30, 40, 10, M.Loam);
+      w.set(20, 29, M.Earthworm);
+      w.set(14, 28, M.Owl);
+      run(w, 300);
+      return w.count(M.Earthworm);
+    };
+    expect(hunt(-1)).toBe(0);
+    expect(hunt(1)).toBe(1);
+  });
+
+  it('a bat snaps up fireflies at night, and roosts under a ceiling by day', () => {
+    const w = new World(40, 40, 3);
+    w.sun = -1;
+    fill(w, 0, 0, 40, 4, M.Stone);
+    fill(w, 0, 36, 40, 4, M.Grass);
+    for (let x = 10; x < 30; x += 4) w.set(x, 20, M.Firefly);
+    w.set(20, 15, M.Bat);
+    run(w, 600);
+    expect(w.count(M.Firefly)).toBeLessThan(5);
+    // Daybreak: it flits up and hangs under the ceiling.
+    w.sun = 1;
+    run(w, 600);
+    let roosting = 0;
+    for (let x = 0; x < 40; x++) if (w.get(x, 4) === M.Bat) roosting++;
+    expect(roosting).toBeGreaterThan(0);
+  });
+
+  it('snow deep under a drift packs into ice; a light covering does not', { timeout: 30000 }, () => {
+    const drift = (depth: number): number => {
+      const w = new World(20, 40, 4);
+      fill(w, 0, 38, 20, 2, M.Stone);
+      fill(w, 0, 38 - depth, 20, depth, M.Snow);
+      run(w, 3000);
+      return w.created[M.Ice];
+    };
+    expect(drift(14)).toBeGreaterThan(0);
+    expect(drift(5)).toBe(0);
+  });
+});

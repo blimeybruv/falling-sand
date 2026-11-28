@@ -1927,7 +1927,7 @@ export function updateWorm(w: World, x: number, y: number, i: number): boolean {
   }
   if (!soil) return false; // in the open: it falls
   // Out at the surface (rain brings worms up), it now and then draws a crow.
-  if (w.rng.chance(BIRD_DRAW) && touches(w, x, y, M.Empty)) drawBird(w, x, y, M.Crow);
+  if (w.rng.chance(BIRD_DRAW) && touches(w, x, y, M.Empty)) drawBird(w, x, y, w.sun < 0 ? M.Owl : M.Crow);
   // Ash lying on the soil beside it: it works it in as loam.
   if (w.rng.chance(0.02)) {
     const a = neighbourOf(w, x, y, M.Ash, M.Ash);
@@ -2033,6 +2033,8 @@ export function updateFirefly(w: World, x: number, y: number, i: number): boolea
     w.setCell(i, M.Empty);
     return true;
   }
+  // Out at night, now and then it draws a bat.
+  if (w.sun < 0 && w.rng.chance(BIRD_DRAW)) drawBird(w, x, y, M.Bat);
   // Finding its way into a cave, to a stalactite, it settles there as a glow worm.
   if (touches(w, x, y, M.Stalactite) && w.rng.chance(0.05)) {
     w.transform(i, M.GlowWorm);
@@ -2525,13 +2527,27 @@ export function updateSeagull(w: World, x: number, y: number, i: number): boolea
  * so, falling as compost.
  */
 export function updateCrow(w: World, x: number, y: number, i: number): boolean {
+  return hunter(w, x, y, i, M.Crow);
+}
+
+/**
+ * Owl: the crow's night-time counterpart, drawn by worms out on the surface after dark. It hunts
+ * them by night; by day it sits tight wherever it's perched.
+ */
+export function updateOwl(w: World, x: number, y: number, i: number): boolean {
+  if (w.sun >= 0 && w.isSolid(x, y + 1)) return true;
+  return hunter(w, x, y, i, M.Owl);
+}
+
+/** A worm-hunting bird (crow or owl): swoops on worms out in the open, perches, flies low. */
+function hunter(w: World, x: number, y: number, i: number, kind: MaterialId): boolean {
   if (birdHunger(w, i)) return true;
   if (w.rng.chance(0.3)) {
     if (spotPrey(w, x, y, M.Earthworm, true)) {
       if (Math.abs(preyX - x) <= 1 && Math.abs(preyY - y) <= 1) {
         w.transform(w.idx(preyX, preyY), M.Loam);
         w.vel[i] = 0;
-        birdBreeds(w, x, y, M.Crow);
+        birdBreeds(w, x, y, kind);
       } else {
         flyTowards(w, x, y, i, preyX, preyY, false);
       }
@@ -2543,9 +2559,49 @@ export function updateCrow(w: World, x: number, y: number, i: number): boolean {
   if (!w.rng.chance(0.5)) return true;
   let drop = 1;
   while (drop < 30 && w.get(x, y + drop) === M.Empty) drop++;
-  // Flap about, drifting down towards the ground (crows fly low, and land).
+  // Flap about, drifting down towards the ground (they fly low, and land).
   const want = drop > 12 ? 1 : drop > 3 && w.rng.chance(0.3) ? 1 : w.rng.int(-1, 1);
   flyTowards(w, x, y, i, x + w.rng.sign(), y + want, false);
+  return true;
+}
+
+/**
+ * Bat: drawn by fireflies out at night. After dark it flits about erratically and snaps up any
+ * firefly it spots (well fed, now and then it raises another); by day it looks for somewhere dark
+ * to hang (under a ceiling, out of the sun) and roosts there without growing hungry. Without
+ * fireflies it starves within a minute or so of night-time, falling as compost.
+ */
+export function updateBat(w: World, x: number, y: number, i: number): boolean {
+  const roosting = w.isSolid(x, y - 1) && !w.inSunlight(x, y);
+  if (w.sun >= 0) {
+    if (roosting) return true;
+    // Day: flit upwards, looking for a ceiling to hang from.
+    if (w.rng.chance(0.5)) flyTowards(w, x, y, i, x + w.rng.int(-1, 1), y - 1, false);
+    return true;
+  }
+  if (birdHunger(w, i)) return true;
+  if (w.rng.chance(0.4) && spotPrey(w, x, y, M.Firefly, false)) {
+    if (Math.abs(preyX - x) <= 1 && Math.abs(preyY - y) <= 1) {
+      w.setCell(w.idx(preyX, preyY), M.Empty);
+      w.vel[i] = 0;
+      birdBreeds(w, x, y, M.Bat);
+    } else {
+      flyTowards(w, x, y, i, preyX, preyY, false);
+    }
+    return true;
+  }
+  if (w.rng.chance(0.6)) flyTowards(w, x, y, i, x + w.rng.int(-1, 1), y + w.rng.int(-1, 1), false);
+  return true;
+}
+
+/** Snow buried under at least this much snow (straight up) packs into ice, as a glacier forms. */
+const SNOW_PACK_DEPTH = 8;
+
+/** Snow: deep under a drift, now and then it packs into ice. */
+export function packSnow(w: World, x: number, y: number, i: number): boolean {
+  if (!w.rng.chance(0.002)) return false;
+  for (let k = 1; k <= SNOW_PACK_DEPTH; k++) if (w.get(x, y - k) !== M.Snow) return false;
+  w.transform(i, M.Ice);
   return true;
 }
 

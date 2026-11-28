@@ -413,10 +413,14 @@ so a fresh round from systems meeting each other: night, weather, impacts, caves
 | ✅ | Hail strips leaves | impacts + weather + trees | Hail (or anything heavy dropped from a height) knocks leaves off as litter | (behaviour) | T |
 | ✅ | Glow worms | caves + darkness + creatures | Single-cell creatures clinging under a damp cave ceiling, glowing; they spread slowly along it in the dark and die in light or when the cave dries out | A firefly finding its way to a stalactite | F |
 | ✅ | Ball lightning | lightning + ozone + electricity | A glowing orb that drifts erratically for a few seconds, sparking metal and lighting what it touches, and vanishes with a pop | Lightning through the ozone a strike leaves behind | F |
-| | Owls and bats | night + creatures + caves | Night-time counterparts to the crows: bats roosting under cave ceilings fly out at dusk, owls hunt worms in the dark | Worms out at night; a cave by dusk | F |
+| ✅ | Owls and bats | night + creatures + caves | Night-time counterparts to the crows: bats roosting under cave ceilings fly out at dusk, owls hunt worms in the dark | Worms out at night; a cave by dusk | F |
 | | Mudslides | rain + slopes + collapse | Soaked earth on a steep slope slumps downhill as a slide of mud (mud flows already: this is soaked earth giving way all at once) | (behaviour) | F |
-| | Snow load | weather + weight on top | With collapse on, a roof gathers snow until its weight brings it down (weight on top counts snow already; needs lighter roofs or heavier snow) | (tuning) | T |
+| ✅ | Snow load | weather + weight on top | Built instead as snow packing into ice: snow under 8 or more cells of snow now and then turns to ice, so a deep drift grows a glacier at its base. (Snow is too light, 4 a cell, for a roof's load limit to matter.) | (behaviour) | T |
 | | Burning glass, again | sunlight + glass + fire | Still open from the weather round: sunlight through a lens of glass focusing to a hot point | (behaviour) | S |
+
+**Mudslides** are left open: soaked earth already turns to mud (earth touching water) and flows downhill as a liquid, so a slope under rain slumps already, a cell at a time; a sudden slide would need the slope to give way all at once.
+
+**Also built 28 Nov:** a Night setting in the Sun menu (a clear night that lasts), so the night-time glow, dew, owls and bats can be seen without waiting for nightfall.
 
 ## Anomalies (design note, 21 Nov)
 

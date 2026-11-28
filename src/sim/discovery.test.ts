@@ -788,6 +788,16 @@ describe('every recipe works in the simulation', () => {
       fillRect(w, 17, 17, 5, 5, M.Obsidian);
       w.set(19, 19, M.Transmuter);
     }],
+    ['owl: an earthworm out on the surface at night', M.Owl, 8000, (w) => {
+      w.sun = -1;
+      fillRect(w, 0, 30, 40, 10, M.Loam);
+      for (let x = 2; x < 40; x += 4) w.set(x, 29, M.Earthworm);
+    }],
+    ['bat: fireflies out at night', M.Bat, 8000, (w) => {
+      w.sun = -1;
+      fillRect(w, 0, 36, 40, 4, M.Grass);
+      for (let x = 2; x < 40; x += 4) w.set(x, 30, M.Firefly);
+    }],
     ['glow worm: a firefly finding its way to a stalactite', M.GlowWorm, 400, (w) => {
       fillRect(w, 0, 0, 40, 10, M.Stone);
       for (let x = 2; x < 40; x += 3) w.set(x, 10, M.Stalactite);

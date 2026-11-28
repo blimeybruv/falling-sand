@@ -47,6 +47,9 @@ import {
   worldBough,
   tollingGlass,
   glowWorm,
+  updateOwl,
+  updateBat,
+  packSnow,
   ballLightning,
   formAlcohol,
   formBattery,
@@ -991,6 +994,8 @@ const defs: Record<MaterialId, Def> = {
     drifts: 0.04,
     // Powder snow, lighter than sand, blows off a heap even more readily.
     lofts: 0.15,
+    // Deep under a drift it packs into ice, as a glacier forms.
+    update: packSnow,
     description: 'Light, cold powder. Melts into water near anything warm.',
   },
   [M.Moss]: {
@@ -3512,6 +3517,43 @@ const defs: Record<MaterialId, Def> = {
     update: ballLightning,
     description: 'A glowing orb of charge that drifts erratically for a few seconds, sparking metal and lighting what it touches, then vanishes with a pop.',
   },
+  [M.Owl]: {
+    ...base,
+    name: 'Owl',
+    key: '',
+    category: 'life',
+    kind: 'static',
+    density: 100,
+    // Tawny, pale enough to show against the night sky.
+    colour: [178, 146, 110],
+    colourEnd: [128, 100, 74],
+    colourJitter: 0.06,
+    lifetime: [10800, 18000],
+    decay: { into: M.Compost, chance: 1 },
+    flammability: 0.6,
+    burnTime: [2, 4],
+    burnsInto: M.Ash,
+    update: updateOwl,
+    description: 'Creature: drawn by earthworms out on the surface at night. Hunts them after dark; by day it sits tight on its perch. Starves without them.',
+  },
+  [M.Bat]: {
+    ...base,
+    name: 'Bat',
+    key: '',
+    category: 'life',
+    kind: 'static',
+    density: 100,
+    colour: [110, 92, 104],
+    colourEnd: [84, 70, 80],
+    colourJitter: 0.06,
+    lifetime: [10800, 18000],
+    decay: { into: M.Compost, chance: 1 },
+    flammability: 0.6,
+    burnTime: [2, 4],
+    burnsInto: M.Ash,
+    update: updateBat,
+    description: 'Creature: drawn by fireflies out at night. Flits about after dark snapping them up; by day it roosts somewhere dark, hanging under a ceiling. Starves without fireflies.',
+  },
   [M.Root]: {
     ...base,
     name: 'Root',
@@ -3581,7 +3623,7 @@ export const PALETTE: readonly MaterialDef[] = [
   // life
   M.Seed, M.Grass, M.Wood, M.Flower, M.Mushroom, M.Moss, M.Algae, M.Vine, M.Seaweed, M.Cactus, M.Sap, M.Sugar, M.Caramel, M.Toffee, M.CandyFloss, M.Popcorn, M.Fruit, M.Pulp, M.Paper, M.Bamboo, M.Amber, M.Honeydew, M.Honey, M.Sawdust,
   // creatures
-  M.Earthworm, M.Termite, M.Fish, M.Firefly, M.Bee, M.Snail, M.Ant, M.Yeast, M.CoralPolyp, M.Seagull, M.Crow, M.PineCone, M.GlowWorm,
+  M.Earthworm, M.Termite, M.Fish, M.Firefly, M.Bee, M.Snail, M.Ant, M.Yeast, M.CoralPolyp, M.Seagull, M.Crow, M.Owl, M.Bat, M.PineCone, M.GlowWorm,
   // anomalies
   M.ColdSun, M.LiftField, M.GravityKnot, M.StasisPocket, M.ArcNode, M.PhaseFault, M.LinkedGate, M.Transmuter,
   // eldritch
