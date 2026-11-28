@@ -61,6 +61,7 @@ fit();
 let last = performance.now();
 let acc = 0;
 let frames = 0;
+let goalTick = 0;
 let fpsTime = last;
 
 function frame(now: number): void {
@@ -88,6 +89,11 @@ function frame(now: number): void {
   world.watchX = c ? c.x : -1;
   world.watchY = c ? c.y : -1;
   controls.checkDiscoveries();
+  // Goals are worth checking about once a second, not every frame (some scan the whole grid).
+  if (++goalTick >= 60) {
+    goalTick = 0;
+    controls.checkGoals();
+  }
   sound.update(world, !state.paused);
 
   renderer.render(world, { heatView: state.heatView, cursor: c && { x: c.x, y: c.y, radius: state.brush }, preview: input.preview() });

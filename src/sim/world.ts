@@ -272,6 +272,8 @@ export class World {
    * building before a strike (corona), acid eating something, fireworks bursting, popcorn popping,
    * glass shattering in a blast, ice cracking (melting, or a pond skinning over).
    */
+  /** Running totals of one-off events since the world was made (the sound zeroes `noise` every frame; goals read these). */
+  readonly totals = { blasts: 0, strikes: 0 };
   readonly noise = { blasts: 0, blastRadius: 0, strikes: 0, corona: 0, fizzes: 0, bursts: 0, pops: 0, shatters: 0, cracks: 0, tolls: 0 };
   /**
    * Sunshine, 0 (none) to 1 (full). Light comes straight down each column and warms the first thing
@@ -654,6 +656,7 @@ export class World {
 
     const r = Math.max(1, Math.min(Math.round(radius), MAX_BLAST_RADIUS));
     this.noise.blasts++;
+    this.totals.blasts++;
     if (r > this.noise.blastRadius) this.noise.blastRadius = r;
     const outer = r + Math.ceil(r * 0.75);
     const r2 = r * r;

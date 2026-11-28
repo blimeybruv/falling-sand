@@ -17,3 +17,4 @@ export { Rng } from './rng';
 export { ANOMALY_REWARD, Discovery, RECIPES, REWARD, STARTERS, type Recipe } from './discovery';
 export { rasterShape, type Shape } from './shapes';
 export { EXAMPLES, type Example } from './examples';
+export { GOALS, Goals, type Goal } from './goals';

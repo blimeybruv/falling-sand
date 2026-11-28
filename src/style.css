@@ -555,6 +555,24 @@ input:focus-visible {
   background: var(--panel-2);
 }
 
+.journal-card h3 {
+  margin: 14px 0 2px;
+  font-size: 14px;
+}
+
+.goal-mark {
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--bg);
+  background: var(--accent);
+}
+
+.journal-list li.unknown .goal-mark {
+  background: var(--panel-2);
+}
+
 .journal-actions {
   display: flex;
   justify-content: space-between;
@@ -621,6 +639,17 @@ button.quiet {
 }
 
 /* ---- medium screens: drop the title so the toolbar stays on one row */
+@media (max-width: 1400px) {
+  /* Room for everything on one row at laptop widths: the journal button shows just its count
+     ("6 / 175"), and the brush and mode lose their text labels (the slider, its number and
+     "Discovery"/"Sandbox" speak for themselves; titles and aria-labels still name them). */
+  #journal-button .label,
+  .brush > span,
+  .mode-group > span {
+    display: none;
+  }
+}
+
 @media (max-width: 1600px) {
   .toolbar {
     gap: 8px 6px;

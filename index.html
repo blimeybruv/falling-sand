@@ -20,9 +20,9 @@
           <input id="brush" type="range" step="1" aria-label="Brush size" />
           <output id="brush-value"></output>
         </label>
-        <button id="journal-button" type="button" title="Discovery journal (J)">Journal</button>
+        <button id="journal-button" type="button" title="Journal: goals and materials (J)">Journal</button>
         <div class="secondary">
-          <label class="group" title="Discovery: start with a few materials and unlock the rest by making them. Sandbox: everything.">
+          <label class="group mode-group" title="Discovery: start with a few materials and unlock the rest by making them. Sandbox: everything.">
             <span>Mode</span>
             <select id="mode" aria-label="Game mode">
               <option value="discovery">Discovery</option>
@@ -110,7 +110,7 @@
             <tr><th>Collapse button</th><td>Structural collapse: stone, brick and glass reach only so far from support, and pinned powders only a couple of cells; past that they crumble and fall. Columns stand at any height; metal and wood never collapse. Floors and bridges over a gap also have a weight limit</td></tr>
             <tr><th>Speaker button</th><td>Sound on or off: wind, fire, explosions, thunder, rain and more, and a chime for each discovery</td></tr>
             <tr><th>Scene menu</th><td>Undo, redo, save, load, download, open, or copy a link to your scene; or load one of the example scenes</td></tr>
-            <tr><th>J</th><td>Discovery journal</td></tr>
+            <tr><th>J</th><td>Journal: goals to aim for, and the materials found</td></tr>
             <tr><th>? or H</th><td>Show / hide this panel</td></tr>
           </tbody>
         </table>
@@ -122,7 +122,11 @@
 
     <div id="journal" class="help" hidden role="dialog" aria-modal="true" aria-labelledby="journal-title">
       <div class="help-card journal-card">
-        <h2 id="journal-title">Discovery journal</h2>
+        <h2 id="journal-title">Journal</h2>
+        <h3>Goals</h3>
+        <p id="goal-progress"></p>
+        <ul id="goal-list" class="journal-list"></ul>
+        <h3>Materials</h3>
         <p id="journal-progress"></p>
         <ul id="journal-list" class="journal-list"></ul>
         <div class="journal-actions">

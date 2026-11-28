@@ -1,11 +1,12 @@
 /** Saves the game mode and Discovery progress in localStorage (silently skipped if unavailable). */
-import { Discovery } from '../sim';
+import { Discovery, Goals } from '../sim';
 
 export type Mode = 'discovery' | 'sandbox';
 
 const MODE_KEY = 'falling-sand.mode';
 const SORT_KEY = 'falling-sand.sort';
 const PROGRESS_KEY = 'falling-sand.discovered';
+const GOALS_KEY = 'falling-sand.goals';
 
 function read(key: string): string | null {
   try {
@@ -52,4 +53,18 @@ export function loadSortAZ(): boolean {
 
 export function saveSortAZ(az: boolean): void {
   write(SORT_KEY, az ? 'az' : 'default');
+}
+
+/** Goals met on earlier visits. */
+export function loadGoals(): Goals {
+  try {
+    const saved: unknown = JSON.parse(read(GOALS_KEY) ?? '[]');
+    return new Goals(Array.isArray(saved) ? saved.filter((v): v is string => typeof v === 'string') : []);
+  } catch {
+    return new Goals();
+  }
+}
+
+export function saveGoals(goals: Goals): void {
+  write(GOALS_KEY, JSON.stringify(goals.toJSON()));
 }

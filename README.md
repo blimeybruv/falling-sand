@@ -70,7 +70,7 @@ Discovery progress is kept for when you switch back.
 | Speaker button | Sound on or off; hover over it (or tab to it) for a volume slider, which sits beside it on phones. Wind (following the Wind setting, gusting), crackling fire, booming explosions, thunder after lightning (with a corona sizzle as the charge builds before a near strike), hissing steam and acid, rain and pouring sand, bubbling lava, humming electricity, fireworks, buzzing bees, crying gulls and cawing crows, glass shattering in a blast and ice cracking as it melts or freezes over, a low throb near an anomaly (and everything muffled by hush), the bell of tolling glass, and a chime for each discovery. All made live with the Web Audio API, no sound files |
 | Sun menu | Sunlight from above warms whatever it reaches first: it evaporates water (which rises and makes clouds), dries mud and salt water, burns off clouds and melts snow, but not in the shade. Glass lets it through. Plants grow faster in sunlight and slower in shade (moss the other way round). Sun on falling rain draws a faint rainbow. Vapour rising against a roof condenses on it, so a shallow tray of salt water under glass in the sun makes a solar still: fresh water drips back, salt is left behind. Night is a clear night that lasts (for watching the glow of algae and the stars). Day/night runs a three-minute day: the sky brightens, warms at dawn and dusk and fills with stars; clear nights chill whatever is open to the sky (a cloud or a roof keeps it warm), mist rises off water, ponds skin over with thin ice, and fog settling on frozen ground leaves frost. The morning sun melts it all |
 | Scene menu | Undo and redo, save in this browser, load it again, download or open a scene file, or copy a share link. Also seven example scenes: a primordial wilderness (a new one each time: sea, hills and a peat bog, a smouldering volcano, and ore, coal, oil and a cave in the rock below), a volcano island, a fuse and charges, pond life, a thunderstorm, a forest to set alight, and five kinds of tree to watch grow |
-| `J` or Journal button | Discovery journal: what you've found, and hints for the rest |
+| `J` or Journal button | The journal: fourteen goals to aim for (grow a forest, boil a pond dry, have a storm strike three times, set off twenty explosions, grow a worldtree to the top...), ticked off as you meet them in either mode and remembered between visits; then the materials, what you've found and hints for the rest. (in Sandbox mode, press `J`) |
 | Mode menu | Discovery or Sandbox |
 | Clear button | Empty the whole grid |
 | `?` or `H` | Show or hide the controls panel |
@@ -307,6 +307,7 @@ src/
     materials.ts   the material table (density, flammability, heat, colours, ...)
     behaviours.ts  small per-material functions (fire, steam, grass, trees, acid, lava, ice, mixing)
     discovery.ts   Discovery mode: starters, recipes and hints, the rewards, progress
+    goals.ts       goals to aim for, each checked against the world
     world.ts       grid storage, the update loop, temperature, explosions
     scene.ts       compact scene format for saving and sharing
     rng.ts         seedable random numbers, so tests are deterministic
@@ -334,7 +335,6 @@ estimates.
 - [ ] **A wind pass over every material** (later, no hurry): go through the table and give each material wind values that match how it really behaves (`wind` for things in the air, `drifts` and `lofts` for powders on the ground), measured in the sim, so seeds, leaves, feathers, flour-like powders, smoke and spray all respond in proportion. Sand stays as it is until then: when it was made to loft like sawdust, a wind reshaped the example scenes too drastically, so it only rolls along the surface. A player's suggestion.
 - [ ] **More pressure**: liquids already find their level through a U-bend; real pressure would add fountains from a high tank and dams bursting, and gas pressure a sealed pot bursting. See "Physics depth" in [`docs/elements.md`](docs/elements.md).
 - [ ] **More materials**: pick one from [`docs/elements.md`](docs/elements.md). Each is a table entry, usually a `Reaction`, and a line in `RECIPES`; the tests check every one can be discovered.
-- [ ] **Discovery goals**: small challenges once everything is unlocked ("grow a forest of 5 trees", "boil a whole pond").
 - [ ] **Run the simulation in a Web Worker**: move `World.step()` off the main thread and pass the arrays across, so bigger grids stay smooth.
 - [ ] **Accessibility**: a high-contrast palette option, and keyboard control of the brush position.
 

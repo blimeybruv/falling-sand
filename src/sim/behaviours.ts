@@ -1544,6 +1544,7 @@ function fuseSand(w: World, x: number, y: number): void {
 
 function strike(w: World, x: number, y: number): void {
   w.noise.strikes++;
+  w.totals.strikes++;
   if (w.rng.chance(0.35)) spawnSprites(w, x, y);
   // A lightning rod nearby draws the bolt: it bends towards it as it comes down.
   const rod = findRod(w, x, y);

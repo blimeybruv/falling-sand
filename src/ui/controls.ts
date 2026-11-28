@@ -5,7 +5,7 @@
 import { EXAMPLES, M, PALETTE, type Discovery, type MaterialId, type World } from '../sim';
 import { Journal } from './journal';
 import { ERASER_KEY, Palette } from './palette';
-import { saveDiscovery, saveMode, type Mode } from './progress';
+import { loadGoals, saveDiscovery, saveGoals, saveMode, type Mode } from './progress';
 import { downloadScene, loadFromBrowser, loadFromFile, saveToBrowser, shareLink } from './scenes';
 import { heatColour } from '../render/renderer';
 import { DAY_LENGTH, MAX_BRUSH, MIN_BRUSH, SPEEDS, SUNS, WINDS, type GameState } from './state';
@@ -33,6 +33,8 @@ export function toast(message: string, ms = 2600): void {
 export interface Controls {
   /** Call after World.step() in Discovery mode: unlocks and announces anything newly made. */
   checkDiscoveries(): void;
+  /** Call now and then (about once a second): announces goals newly met, in either mode. */
+  checkGoals(): void;
 }
 
 export function setupControls(state: GameState, world: World, discovery: Discovery, sound: Sound, history: History, view: View): Controls {
@@ -129,8 +131,11 @@ export function setupControls(state: GameState, world: World, discovery: Discove
   // --- discovery
   const modeSel = byId<HTMLSelectElement>('mode');
   const journalBtn = byId<HTMLButtonElement>('journal-button');
-  const journal = new Journal(byId('journal'), byId('journal-list'), byId('journal-progress'), discovery);
+  const goals = loadGoals();
+  const journal = new Journal(byId('journal'), byId('journal-list'), byId('journal-progress'), discovery, goals, byId('goal-list'), byId('goal-progress'), () => state.mode !== 'discovery');
   const syncDiscovery = (): void => {
+    // Shown in Discovery mode only (there's no room for it beside Sandbox's toolbar at laptop
+    // widths); J opens the journal, with its goals, in either mode.
     journalBtn.hidden = state.mode !== 'discovery';
     journalBtn.innerHTML = `<span class="label">Journal </span>${journal.summary()}`;
     modeSel.value = state.mode;
@@ -151,9 +156,11 @@ export function setupControls(state: GameState, world: World, discovery: Discove
     if (e.target === e.currentTarget) journal.setOpen(false);
   });
   byId<HTMLButtonElement>('journal-reset').addEventListener('click', () => {
-    if (!confirm('Forget all your discoveries and start again?')) return;
+    if (!confirm('Forget all your discoveries and goals and start again?')) return;
     discovery.reset();
     saveDiscovery(discovery);
+    goals.reset();
+    saveGoals(goals);
     world.created.fill(0);
     syncDiscovery();
   });
@@ -171,6 +178,15 @@ export function setupControls(state: GameState, world: World, discovery: Discove
     toast(`Discovered ${names.join(', ')}! (${journal.summary()})${reward}`);
     if (reward) sound.reward();
     else sound.discovery();
+  };
+
+  const checkGoals = (): void => {
+    const fresh = goals.check(world);
+    if (fresh.length === 0) return;
+    saveGoals(goals);
+    syncDiscovery();
+    toast(`Goal met: ${fresh.map((g) => g.name).join(', ')}! (${journal.goalSummary()}: J for the journal)`);
+    sound.discovery();
   };
 
   // --- toolbar
@@ -470,7 +486,7 @@ export function setupControls(state: GameState, world: World, discovery: Discove
       setBrush(state.brush + 1);
     } else if (key === 't') {
       toggleHeat();
-    } else if (key === 'j' && state.mode === 'discovery') {
+    } else if (key === 'j') {
       journal.setOpen(!journal.open);
     } else if (key === '?' || key === 'h') {
       setHelp(!helpOpen());
@@ -484,5 +500,5 @@ export function setupControls(state: GameState, world: World, discovery: Discove
     e.preventDefault();
   });
 
-  return { checkDiscoveries };
+  return { checkDiscoveries, checkGoals };
 }
