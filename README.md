@@ -98,7 +98,7 @@ debris start fresh when a scene loads.
 | | Compost | Rots down into loam | Mushroom in grass or leaves |
 | 3 | Stone | Static and indestructible (only burning thermite melts it); conducts heat well | Starter |
 | B | Brick | Static; insulates, never burns, and acid can't eat it | Fire clay in a kiln |
-| Q | Glass | Static; acid can't eat it. Sand or gravel dropped on it from a height, or hail, smashes it into sand | Melt sand with lava or a charcoal fire |
+| Q | Glass | Static; acid can't eat it. Sand or gravel dropped on it from a height, or hail, smashes it into sand (and hail knocks leaves off trees) | Melt sand with lava or a charcoal fire |
 | N | Obsidian | Black volcanic glass; indestructible | Lava meets ice |
 | I | Ice | Static and cold; melts near heat, slowly freezes neighbouring water. Steam reaching the top of the sky now and then freezes into a crystal, which falls and melts where it lands (unless the ground is frozen) | Steam reaching the top |
 | | Icicle | Grows downward where water drips past ice; melts when warm | Water dripping past ice |
@@ -179,7 +179,7 @@ debris start fresh when a scene loads.
 | | Chlorine | Heavy yellow-green gas; wilts plants | Electrified salt water |
 | | Bleach | Kills algae, moss and mushrooms; clears stained glass | Chlorine meets lye |
 | | Sulfur dioxide | Heavy choking gas; makes water acidic and clouds rain acid | Burning sulfur |
-| | Fog | Thin mist that lingers low over the ground and pools in hollows, then evaporates | Steam meets snow or ice, or a clear night over water |
+| | Fog | Thin mist that lingers low over the ground and pools in hollows, then evaporates; on ground that's cold but not frozen it condenses into dew (on frozen ground, frost) | Steam meets snow or ice, or a clear night over water |
 | | Ink | Deep blue-black liquid that burns | Soot meets oil |
 | | Ozone | Faint gas left by lightning; bleaches | Lightning fades |
 | | Neon | Glows bright pink while electricity passes through it (keep it in a glass tube) | Plasma touching glass |
@@ -204,7 +204,8 @@ debris start fresh when a scene loads.
 | | Dynamite | Stable explosive: ignores knocks, needs a flame, big blast | Nitroglycerin soaked into clay |
 | | Swamp gas | Bubbles up from rotting weeds; flashes into fire | Drowned grass |
 | | Soot | Black powder smoke leaves on cold surfaces; burns | Smoke meets cold stone, iron or ice |
-| | Lightning | A short, hot bolt: sparks wires, sets things alight; draw it on a wire. Strikes bend to the highest metal nearby, so a copper or iron spire is a lightning rod | A storm cloud strikes |
+| | Lightning | A short, hot bolt: sparks wires, sets things alight; draw it on a wire. Strikes bend to the highest metal nearby, so a copper or iron spire is a lightning rod (while a storm charges up, St Elmo's fire flickers off its tip). Through the ozone an earlier strike left behind, now and then it balls up into ball lightning | A storm cloud strikes |
+| | Ball lightning | A glowing orb of charge drifting erratically for a few seconds, sparking metal and lighting what it touches; vanishes with a pop, or at once in water | Lightning through ozone |
 | | Red sprite | Eerie red jellyfish of light flashing high above a storm | Lightning from a thick cloud with open sky above |
 | | Battery | Sends pulses of electricity into touching metal or salt water | Iron and charcoal in salt water |
 | | Solar cell | Silicon: sends pulses into touching metal while the sun shines on it (works under glass, not in shade) | Lightning through quartz touching graphite |
@@ -221,7 +222,7 @@ debris start fresh when a scene loads.
 | 5 | Grass | Weeds and grass: spreads over damp ground and loam, and into water; burns | A sandy shore |
 | 4 | Wood | Static; burns slowly; buried under sand it slowly turns to oil | Grow a tree |
 | | Flower | Blooms on trees grown in loam; now and then drops a seed | A tree rooted in loam |
-| | Mushroom | Grows in buried damp wood and slowly eats through wood and leaves; sprouts on loam in damp shade after rain; rots into compost after a minute or so | Wood buried in damp ground, or rain on loam in the shade |
+| | Mushroom | Grows in buried damp wood and slowly eats through wood and leaves; sprouts on loam in damp shade after rain; glows faintly on a dark night (foxfire); rots into compost after a minute or so | Wood buried in damp ground, or rain on loam in the shade |
 | | Vine | Climbs wood, stone and brick walls | Grass meets wood |
 | | Seaweed | Kelp: grows up through salt water in wavering stalks of mixed heights, putting out fronds | Grass meets salt water |
 | | Cactus | Grows in the desert; burning releases water | A seed on dry sand far from water |
@@ -243,6 +244,7 @@ debris start fresh when a scene loads.
 | | Termite | Creature: eats wood into sawdust; dies out in the open | Rotting wood (mushrooms) |
 | | Fish | Creature: swims, eats algae, breeds; can't survive out of water; stunned by a nearby blast, it floats up and comes round | Water under algae |
 | | Firefly | Creature: drifts over grass, glowing | Grass with open air above |
+| | Glow worm | Creature: clings under a damp cave ceiling, glowing, and spreads slowly along it in the dark; dies in sunlight, when the cave dries out (no water within 8 cells) or when its ceiling goes | A firefly finding its way to a stalactite |
 | | Bee | Creature: turns honeydew into honey | Flowers draw them |
 | | Snail | Creature: creeps over damp stone eating algae and moss; withdraws into its shell in strong dry sun | Moss beside water |
 | | Seagull | Creature: wheels over open water, floats on it and dives for fish; cries now and then. Starves without fish | A fish near the surface of open water |
@@ -252,7 +254,7 @@ debris start fresh when a scene loads.
 | | Yeast | In water, ferments sugar into alcohol and bubbles of carbon dioxide, multiplying while fed | Fruit soaking in water |
 | | Coral polyp | Fixed in salt water, slowly builds a reef of coral rock, faster when warm; bleaches when too hot | Algae on sun-warmed salt water |
 | R | Moss | Creeps over damp stone and brick | Grass touching stone |
-| Y | Algae | Floats and spreads across the surface of water in drifting rafts (never a solid mat), now and then dying back; fish eat it | Weeds reaching the surface |
+| Y | Algae | Glows blue-green on a dark night. Floats and spreads across the surface of water in drifting rafts (never a solid mat), now and then dying back; fish eat it | Weeds reaching the surface |
 | | **Tools** | | |
 | E | Eraser | Clears cells | Always available |
 | **Anomalies** | | | |

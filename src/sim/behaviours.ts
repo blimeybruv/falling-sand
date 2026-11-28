@@ -1330,6 +1330,7 @@ export function stormCloud(w: World, x: number, y: number, i: number): boolean {
     w.noise.corona++;
     w.vel[i] = charging - 1;
     if (charging === 1) strike(w, x, y);
+    else if (w.rng.chance(0.3)) stElmo(w, x, y);
   } else if (
     (w.frame >= nextStrikeFrame || w !== strikeWorld) &&
     w.rng.chance(0.00004) &&
@@ -1494,6 +1495,21 @@ const ROD_REACH = 12;
  * The lightning rod a strike from (x, y) heads for: the highest solid conductor standing within
  * ROD_REACH columns, where there's height enough to bend over to it. Returns its column, or -1.
  */
+/**
+ * St Elmo's fire: while a storm charges up for a strike, a pale glow (corona, harmless) flickers in
+ * the air just above the tip of the lightning rod it's going for.
+ */
+function stElmo(w: World, x: number, y: number): void {
+  const rx = findRod(w, x, y);
+  if (rx < 0) return;
+  // The rod's tip: the first solid below the cloud in its column.
+  let ry = y + 1;
+  while (ry < w.height && (w.defAt(rx, ry).kind === 'empty' || w.defAt(rx, ry).kind === 'gas' || w.defAt(rx, ry).kind === 'liquid')) ry++;
+  const gx = rx + w.rng.int(-1, 1);
+  const gy = ry - 1 - w.rng.int(0, 1);
+  if (w.get(gx, gy) === M.Empty) w.set(gx, gy, M.Corona);
+}
+
 function findRod(w: World, x: number, y: number): number {
   let best = -1;
   let bestY = w.height;
@@ -1591,6 +1607,8 @@ export function updateBolt(w: World, x: number, y: number, _i: number): boolean 
     const t = w.get(nx, ny);
     // Lightning through hydrogen strips it into plasma, and now and then magnetises iron.
     if (t === M.Hydrogen) w.transform(n, M.Plasma);
+    // Through the ozone an earlier strike left behind, now and then the charge balls up.
+    else if (t === M.Ozone && w.rng.chance(0.05)) w.transform(n, M.BallLightning);
     // Anomalies: lightning striking a magnet wrapped in plasma turns gravity round (a lift field);
     // striking graphite under salt water, insulation fails (an arc node).
     else if (t === M.Magnet && countAround(w, nx, ny, M.Plasma, M.Plasma) > 0 && w.rng.chance(0.3)) w.transform(n, M.LiftField);
@@ -2015,6 +2033,11 @@ export function updateFirefly(w: World, x: number, y: number, i: number): boolea
     w.setCell(i, M.Empty);
     return true;
   }
+  // Finding its way into a cave, to a stalactite, it settles there as a glow worm.
+  if (touches(w, x, y, M.Stalactite) && w.rng.chance(0.05)) {
+    w.transform(i, M.GlowWorm);
+    return true;
+  }
   if (w.rng.chance(0.3)) crawl(w, x, y, i, M.Empty, M.Empty);
   return true;
 }
@@ -2362,10 +2385,16 @@ export function filament(w: World, x: number, y: number, i: number): boolean {
  * as frost (rime). Otherwise it drifts as an ordinary gas.
  */
 export function updateFog(w: World, x: number, y: number, i: number): boolean {
-  if (y + 1 >= w.height || !w.rng.chance(0.05) || w.temp[i + w.width] >= 0 || !w.isSolid(x, y + 1)) return false;
-  w.transform(i, M.Frost);
+  if (y + 1 >= w.height || !w.rng.chance(0.05) || !w.isSolid(x, y + 1)) return false;
+  const ground = w.temp[i + w.width];
+  // On frozen ground it leaves frost; on ground that's cold but not frozen, dew.
+  if (ground < 0) w.transform(i, M.Frost);
+  else if (ground < DEW_POINT) w.transform(i, M.Water);
+  else return false;
   return true;
 }
+/** Fog lying on ground colder than this (but above freezing) condenses into dew. */
+const DEW_POINT = 6;
 
 /** Thin ice: while it's well below freezing, the water just under it freezes on, so the skin thickens slowly through a cold night. */
 export function thickenIce(w: World, x: number, y: number, i: number): boolean {
@@ -3131,5 +3160,62 @@ export function tollingGlass(w: World, x: number, y: number, i: number): boolean
       return true;
     }
   }
+  return true;
+}
+
+// ---------------------------------------------------------------- night and storm creatures
+
+/** What a glow worm can cling under: a cave ceiling of rock or earth (or a stalactite). */
+function caveCeiling(t: MaterialId): boolean {
+  return t === M.Stone || t === M.Basalt || t === M.Stalactite || t === M.Earth || t === M.Loam || t === M.Clay || t === M.Obsidian;
+}
+
+/** How far a glow worm can be from water and still find the cave damp enough. */
+const GLOW_DAMP = 8;
+
+/**
+ * Glow worm: clings under a damp cave ceiling, glowing. Out of the light, it spreads slowly along
+ * the ceiling (never crowding); in sunlight, with the ceiling gone, or with the cave dried out, it
+ * dies into compost.
+ */
+export function glowWorm(w: World, x: number, y: number, i: number): boolean {
+  if (!caveCeiling(w.get(x, y - 1)) || w.inSunlight(x, y) || (w.rng.chance(0.002) && !w.near(x, y, GLOW_DAMP, M.Water))) {
+    w.transform(i, M.Compost);
+    return true;
+  }
+  if (!w.rng.chance(0.0015)) return true;
+  const nx = x + w.rng.sign();
+  if (w.get(nx, y) === M.Empty && caveCeiling(w.get(nx, y - 1)) && countAround(w, nx, y, M.GlowWorm, M.GlowWorm) < 2) w.set(nx, y, M.GlowWorm);
+  return true;
+}
+
+/**
+ * Ball lightning: a glowing orb of charge drifting erratically through the air (never far in one
+ * go, sinking a little), sparking any conductor it touches and lighting what will burn. It lasts a
+ * few seconds (its lifetime), vanishing with a pop, or at once if it touches water.
+ */
+export function ballLightning(w: World, x: number, y: number, i: number): boolean {
+  for (let k = 0; k < 4; k++) {
+    const nx = k === 0 ? x - 1 : k === 1 ? x + 1 : x;
+    const ny = k === 2 ? y - 1 : k === 3 ? y + 1 : y;
+    if (!w.inBounds(nx, ny)) continue;
+    const n = w.idx(nx, ny);
+    const t = w.mat[n];
+    if (t === M.Water || t === M.SaltWater) {
+      w.noise.bursts++;
+      w.setCell(i, M.Empty);
+      return true;
+    }
+    if (!w.electrify(n) && w.defAt(nx, ny).flammability > 0 && w.rng.chance(0.2)) w.ignite(n);
+  }
+  if (w.life[i] <= 1) {
+    w.noise.bursts++;
+    w.setCell(i, M.Ozone);
+    return true;
+  }
+  if (!w.rng.chance(0.4)) return true;
+  const nx = x + w.rng.int(-1, 1);
+  const ny = y + (w.rng.chance(0.55) ? 1 : w.rng.int(-1, 0));
+  if (w.inBounds(nx, ny) && (w.get(nx, ny) === M.Empty || w.defAt(nx, ny).kind === 'gas')) w.swap(i, w.idx(nx, ny));
   return true;
 }

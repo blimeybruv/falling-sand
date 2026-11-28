@@ -565,12 +565,14 @@ describe('noise (audible events for the UI)', () => {
 });
 
 describe('lightning', () => {
-  it('builds charge (corona) for most of a second before it strikes', () => {
+  it('builds charge (corona) for most of a second before it strikes', { timeout: 30000 }, () => {
     const w = new World(60, 120, 12);
     for (let y = 22; y < 42; y++) for (let x = 0; x < 60; x++) w.set(x, y, M.Cloud);
     let charging = -1;
     let struck = -1;
-    for (let f = 0; f < 4000 && struck < 0; f++) {
+    // (The first strike in this world comes at about frame 6200: a charge earlier on is lost when
+    // its storm cell clears back into cloud.)
+    for (let f = 0; f < 8000 && struck < 0; f++) {
       w.step();
       if (charging < 0 && w.noise.corona > 0) charging = f;
       if (w.noise.strikes > 0) struck = f;
@@ -2574,5 +2576,92 @@ describe('eldritch materials', () => {
     let across = 0;
     for (let y = 0; y < 30; y++) for (let x = 16; x < 30; x++) if (w.get(x, y) === M.WatchingStone) across++;
     expect(across).toBe(0);
+  });
+});
+
+describe('night and storm', () => {
+  function fill(w: World, x0: number, y0: number, wd: number, ht: number, m: MaterialId): void {
+    for (let y = y0; y < y0 + ht; y++) for (let x = x0; x < x0 + wd; x++) w.set(x, y, m);
+  }
+
+  it('fog on cold ground leaves dew; on warm ground it does not', () => {
+    const dew = (groundTemp: number): number => {
+      const w = new World(30, 20, 1);
+      fill(w, 0, 15, 30, 5, M.Stone);
+      for (let i = 15 * 30; i < w.size; i++) w.temp[i] = groundTemp;
+      fill(w, 0, 13, 30, 2, M.Fog);
+      for (let f = 0; f < 100; f++) {
+        for (let i = 15 * 30; i < w.size; i++) w.temp[i] = groundTemp;
+        w.step();
+      }
+      return w.created[M.Water];
+    };
+    expect(dew(3)).toBeGreaterThan(5);
+    expect(dew(20)).toBe(0);
+  });
+
+  it('st elmo\'s fire flickers off a lightning rod while a storm charges', () => {
+    const w = new World(40, 60, 2);
+    fill(w, 0, 58, 40, 2, M.Stone);
+    fill(w, 20, 35, 1, 23, M.Copper);
+    fill(w, 5, 5, 30, 8, M.StormCloud);
+    for (let i = 0; i < w.size; i++) if (w.mat[i] === M.StormCloud) w.vel[i] = 0;
+    w.vel[w.idx(20, 12)] = 60;
+    for (let f = 0; f < 50; f++) w.step();
+    expect(w.created[M.Corona]).toBeGreaterThan(0);
+    // Every flicker is right over the rod's tip (rows 33-34, columns 19-21).
+    let elsewhere = 0;
+    for (let i = 0; i < w.size; i++) {
+      if (w.mat[i] !== M.Corona) continue;
+      const x = i % 40;
+      const y = (i - x) / 40;
+      if (y < 32 || y > 34 || x < 19 || x > 21) elsewhere++;
+    }
+    expect(elsewhere).toBe(0);
+  });
+
+  it('hail falling on a crown knocks leaves off as litter', () => {
+    const w = new World(40, 80, 3);
+    fill(w, 0, 78, 40, 2, M.Stone);
+    fill(w, 10, 60, 20, 6, M.Leaf);
+    for (let x = 11; x < 29; x += 2) w.set(x, 2, M.Hail);
+    run(w, 120);
+    expect(w.created[M.Compost]).toBeGreaterThan(3);
+  });
+
+  it('glow worms spread along a damp cave ceiling, and die when it dries out', () => {
+    const cave = (water: boolean): number => {
+      const w = new World(40, 30, 4);
+      fill(w, 0, 0, 40, 8, M.Stone);
+      fill(w, 0, 16, 40, 14, M.Stone);
+      if (water) fill(w, 0, 13, 40, 3, M.Water);
+      w.set(20, 8, M.GlowWorm);
+      run(w, 4000);
+      return w.count(M.GlowWorm);
+    };
+    expect(cave(true)).toBeGreaterThan(2);
+    expect(cave(false)).toBe(0);
+  });
+
+  it('ball lightning drifts, sparks the metal it touches, and goes with a pop', () => {
+    const w = new World(30, 30, 5);
+    fill(w, 0, 28, 30, 2, M.Copper);
+    w.set(15, 20, M.BallLightning);
+    let sparked = 0;
+    for (let f = 0; f < 600; f++) {
+      w.step();
+      for (let i = 28 * 30; i < w.size; i++) if (w.charge[i] !== 0) sparked++;
+    }
+    expect(w.count(M.BallLightning)).toBe(0);
+    expect(sparked).toBeGreaterThan(0);
+    expect(w.noise.bursts).toBeGreaterThan(0);
+  });
+
+  it('ball lightning touching water is gone at once', () => {
+    const w = new World(20, 20, 6);
+    fill(w, 0, 15, 20, 5, M.Water);
+    w.set(10, 14, M.BallLightning);
+    run(w, 3);
+    expect(w.count(M.BallLightning)).toBe(0);
   });
 });

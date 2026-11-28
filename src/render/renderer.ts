@@ -140,6 +140,10 @@ export class Renderer {
   /** Anomalies seen while drawing this frame (cell indices), haloed afterwards. */
   private readonly halos = new Int32Array(MAX_HALOS);
   private readonly isAnomaly: Uint8Array;
+  /** Night glow colour per material (nightGlow), red channel -1 where it has none. */
+  private readonly nightR: Int16Array;
+  private readonly nightG: Uint8Array;
+  private readonly nightB: Uint8Array;
   /** Umbral ooze seen while drawing this frame (cell indices), whose surroundings are dimmed afterwards. */
   private readonly darks = new Int32Array(MAX_DARK);
   private frame = 0;
@@ -246,6 +250,9 @@ export class Renderer {
     this.cloudDepth = new Uint16Array(world.width);
     this.cloudDist = new Uint8Array(world.size);
     this.isAnomaly = Uint8Array.from(MATERIALS, (d) => (d.category === 'anomaly' ? 1 : 0));
+    this.nightR = Int16Array.from(MATERIALS, (d) => (d.nightGlow ? d.nightGlow[0] : -1));
+    this.nightG = Uint8Array.from(MATERIALS, (d) => (d.nightGlow ? d.nightGlow[1] : 0));
+    this.nightB = Uint8Array.from(MATERIALS, (d) => (d.nightGlow ? d.nightGlow[2] : 0));
     this.shaft = new Float32Array(world.width);
     this.stormRow = new Int32Array(world.width);
     this.stormLevel = new Uint8Array(world.width);
@@ -296,7 +303,7 @@ export class Renderer {
       shaftLut[k] = pack(bgR + (SHAFT_GREY[0] - bgR) * a, bgG + (SHAFT_GREY[1] - bgG) * a, bgB + (SHAFT_GREY[2] - bgB) * a);
     }
     const stormLut = cloudBase[storm];
-    const { halos, isAnomaly } = this;
+    const { halos, isAnomaly, nightR, nightG, nightB } = this;
     let haloCount = 0;
     const darks = this.darks;
     let darkCount = 0;
@@ -396,7 +403,12 @@ export class Renderer {
           stormLevel[x] = level;
         }
       } else {
-        if (m === mimic) {
+        if (starlight > 0 && nightR[m] >= 0) {
+          // Glowing in the dark (bioluminescent algae, foxfire), more as the night deepens, shimmering.
+          const j = m * SHADES + shade[i];
+          const a = starlight * (0.55 + ((shade[i] + glowShift) & 7) * 0.05);
+          pixels[i] = pack(lutR[j] + (nightR[m] - lutR[j]) * a, lutG[j] + (nightG[m] - lutG[j]) * a, lutB[j] + (nightB[m] - lutB[j]) * a);
+        } else if (m === mimic) {
           // Mimic dust borrows the colour of whatever it touches: below, beside or above.
           let n = cy < world.height - 1 ? mat[i + width] : 0;
           if (isAir[n] || n === mimic) n = cx > 0 ? mat[i - 1] : 0;

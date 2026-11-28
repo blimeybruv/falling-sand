@@ -194,6 +194,9 @@ export const M = {
   WorldTip: 186,
   WorldBough: 187,
   TollingGlass: 188,
+  Corona: 189,
+  GlowWorm: 190,
+  BallLightning: 191,
 } as const;
 
 export type MaterialId = (typeof M)[keyof typeof M];

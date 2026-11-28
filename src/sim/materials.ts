@@ -46,6 +46,8 @@ import {
   worldTip,
   worldBough,
   tollingGlass,
+  glowWorm,
+  ballLightning,
   formAlcohol,
   formBattery,
   pulseBattery,
@@ -311,6 +313,8 @@ export interface MaterialDef {
   cloudShading?: boolean;
   /** Renderer: the colour it glows while its `life` counter is above zero (a lit lamp). */
   litColour?: readonly [number, number, number];
+  /** On a dark night, drawn glowing in this colour instead (bioluminescent algae, foxfire on mushrooms). */
+  nightGlow?: readonly [number, number, number];
   /** Renderer: the colour it glows while carrying a pulse (instead of the usual spark), e.g. neon. */
   chargeColour?: readonly [number, number, number];
   /** Two-material reactions; see Reaction. */
@@ -695,6 +699,8 @@ const defs: Record<MaterialId, Def> = {
     ignitesAt: 200,
     burnsInto: M.Smoke,
     update: fossilise,
+    // Hail, or anything heavy dropped from a height, knocks leaves off as litter.
+    brittle: { force: 300, into: M.Compost },
     description: 'Part of a tree. Burns quickly.',
   },
   [M.Earth]: {
@@ -1029,6 +1035,8 @@ const defs: Record<MaterialId, Def> = {
       // On warm salt water (the sun warms it), algae and polyp make a coral.
       { with: M.SaltWater, minTemp: 26, chance: 0.002, otherInto: M.CoralPolyp },
     ],
+    // On a dark night it glows blue-green (bioluminescence).
+    nightGlow: [80, 230, 210],
     description: 'Green scum that floats and spreads across the surface of water.',
   },
   [M.SwampGas]: {
@@ -1252,6 +1260,8 @@ const defs: Record<MaterialId, Def> = {
       // Beside umbral ooze, it grows wrong: creeping bloom.
       { with: M.UmbralOoze, chance: 0.03, into: M.CreepingBloom },
     ],
+    // Foxfire: a faint glow on a dark night.
+    nightGlow: [150, 220, 140],
     description: 'Grows in wood shut away in the damp dark, slowly eating through it, and sprouts on loam in damp shade after rain. Rots into compost.',
   },
   [M.Flower]: {
@@ -3452,6 +3462,56 @@ const defs: Record<MaterialId, Def> = {
     update: tollingGlass,
     description: 'Eldritch: glass that rings softly a few seconds before anything near it changes: a fuse burning down, a storm charging up to strike.',
   },
+  [M.Corona]: {
+    ...base,
+    name: 'St Elmo\'s fire',
+    key: '',
+    // It clings to the tip, flickering where it appears, rather than drifting off.
+    kind: 'static',
+    density: 100,
+    transparent: true,
+    colour: [170, 190, 255],
+    colourEnd: [220, 170, 255],
+    colourJitter: 0,
+    lifetime: [6, 14],
+    fadeFrames: 6,
+    glow: true,
+    description: 'A pale glow flickering off the tip of a lightning rod while a storm charges up for a strike.',
+  },
+  [M.GlowWorm]: {
+    ...base,
+    name: 'Glow worm',
+    key: '',
+    category: 'life',
+    kind: 'static',
+    density: 100,
+    colour: [120, 255, 230],
+    colourEnd: [50, 170, 200],
+    colourJitter: 0,
+    glow: true,
+    flammability: 0.3,
+    burnTime: [5, 10],
+    burnsInto: M.Ash,
+    update: glowWorm,
+    description: 'Creature: clings under a damp cave ceiling, glowing; spreads slowly along it in the dark. Dies in sunlight, or if the cave dries out or its ceiling goes.',
+  },
+  [M.BallLightning]: {
+    ...base,
+    name: 'Ball lightning',
+    key: '',
+    category: 'fire',
+    kind: 'static',
+    density: 100,
+    colour: [255, 240, 200],
+    colourEnd: [200, 220, 255],
+    colourJitter: 0,
+    glow: true,
+    lifetime: [240, 480],
+    decay: { into: M.Ozone, chance: 1 },
+    heat: { temp: 600, rate: 0.2 },
+    update: ballLightning,
+    description: 'A glowing orb of charge that drifts erratically for a few seconds, sparking metal and lighting what it touches, then vanishes with a pop.',
+  },
   [M.Root]: {
     ...base,
     name: 'Root',
@@ -3517,11 +3577,11 @@ export const PALETTE: readonly MaterialDef[] = [
   M.CarbonDioxide, M.Hydrogen, M.Mercury, M.Alcohol, M.Vinegar, M.Chlorine, M.Bleach, M.SulfurDioxide, M.Fog, M.Ink, M.Ozone, M.Neon, M.RedPaint, M.MoltenGlass, M.MoltenIron, M.MoltenCopper, M.Brimstone, M.Bubble,
   // fire and blasts
   M.Fire, M.Charcoal, M.Coal, M.Ash, M.Sulfur, M.Saltpetre, M.Gunpowder, M.Fireworks, M.Thermite,
-  M.Napalm, M.Nitro, M.Dynamite, M.SwampGas, M.Soot, M.Lightning, M.Battery, M.Accumulator, M.SolarCell, M.Dynamo, M.Thermocouple, M.HeatLamp, M.Plasma, M.Briquette, M.Peat, M.SmokeBomb, M.Sprite,
+  M.Napalm, M.Nitro, M.Dynamite, M.SwampGas, M.Soot, M.Lightning, M.Battery, M.Accumulator, M.SolarCell, M.Dynamo, M.Thermocouple, M.HeatLamp, M.Plasma, M.Briquette, M.Peat, M.SmokeBomb, M.Sprite, M.BallLightning,
   // life
   M.Seed, M.Grass, M.Wood, M.Flower, M.Mushroom, M.Moss, M.Algae, M.Vine, M.Seaweed, M.Cactus, M.Sap, M.Sugar, M.Caramel, M.Toffee, M.CandyFloss, M.Popcorn, M.Fruit, M.Pulp, M.Paper, M.Bamboo, M.Amber, M.Honeydew, M.Honey, M.Sawdust,
   // creatures
-  M.Earthworm, M.Termite, M.Fish, M.Firefly, M.Bee, M.Snail, M.Ant, M.Yeast, M.CoralPolyp, M.Seagull, M.Crow, M.PineCone,
+  M.Earthworm, M.Termite, M.Fish, M.Firefly, M.Bee, M.Snail, M.Ant, M.Yeast, M.CoralPolyp, M.Seagull, M.Crow, M.PineCone, M.GlowWorm,
   // anomalies
   M.ColdSun, M.LiftField, M.GravityKnot, M.StasisPocket, M.ArcNode, M.PhaseFault, M.LinkedGate, M.Transmuter,
   // eldritch

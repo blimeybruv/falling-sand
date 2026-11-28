@@ -788,6 +788,15 @@ describe('every recipe works in the simulation', () => {
       fillRect(w, 17, 17, 5, 5, M.Obsidian);
       w.set(19, 19, M.Transmuter);
     }],
+    ['glow worm: a firefly finding its way to a stalactite', M.GlowWorm, 400, (w) => {
+      fillRect(w, 0, 0, 40, 10, M.Stone);
+      for (let x = 2; x < 40; x += 3) w.set(x, 10, M.Stalactite);
+      for (let x = 3; x < 40; x += 6) w.set(x, 12, M.Firefly);
+    }],
+    ['ball lightning: lightning through ozone', M.BallLightning, 30, (w) => {
+      fillRect(w, 5, 15, 30, 6, M.Ozone);
+      fillRect(w, 20, 10, 1, 15, M.Lightning);
+    }],
     ['tolling glass (eldritch): lightning striking glass inside hush', M.TollingGlass, 60, (w) => {
       fillRect(w, 0, 39, 40, 1, M.Stone);
       fillRect(w, 10, 20, 20, 1, M.Glass);

@@ -400,6 +400,24 @@ standing alone.
 | ✅ | Stunned fish | explosions + creatures | Fish caught at the edge of a blast float up, stunned, and may recover | (behaviour) | F |
 | ✅ | Lightning feeds the soil | lightning + earth + plants | A strike on loam leaves a little saltpetre (nitrates), so grass flourishes after a storm | (behaviour) | F |
 
+## Interplay ideas, round 9 (brainstormed 28 Nov)
+
+The lists above were nearly built out, apart from large systems (full pressure, seasons, momentum),
+so a fresh round from systems meeting each other: night, weather, impacts, caves, electricity.
+
+| | Idea | Mechanics that meet | What it does | Discovered by | Effort |
+|---|---|---|---|---|---|
+| ✅ | Dew | night + fog + temperature | Fog lying on ground that's cold but not frozen condenses into water drops; the morning sun takes them back up (frost already forms on frozen ground) | (behaviour) | T |
+| ✅ | Sea glow | night + algae | Algae glows blue-green on a dark night, and mushrooms faintly (foxfire) | (behaviour, renderer) | T |
+| ✅ | St Elmo's fire | storms + lightning rods | While a storm charges up for a strike, a pale glow flickers off the tip of the lightning rod it's going for | (behaviour) | T |
+| ✅ | Hail strips leaves | impacts + weather + trees | Hail (or anything heavy dropped from a height) knocks leaves off as litter | (behaviour) | T |
+| ✅ | Glow worms | caves + darkness + creatures | Single-cell creatures clinging under a damp cave ceiling, glowing; they spread slowly along it in the dark and die in light or when the cave dries out | A firefly finding its way to a stalactite | F |
+| ✅ | Ball lightning | lightning + ozone + electricity | A glowing orb that drifts erratically for a few seconds, sparking metal and lighting what it touches, and vanishes with a pop | Lightning through the ozone a strike leaves behind | F |
+| | Owls and bats | night + creatures + caves | Night-time counterparts to the crows: bats roosting under cave ceilings fly out at dusk, owls hunt worms in the dark | Worms out at night; a cave by dusk | F |
+| | Mudslides | rain + slopes + collapse | Soaked earth on a steep slope slumps downhill as a slide of mud (mud flows already: this is soaked earth giving way all at once) | (behaviour) | F |
+| | Snow load | weather + weight on top | With collapse on, a roof gathers snow until its weight brings it down (weight on top counts snow already; needs lighter roofs or heavier snow) | (tuning) | T |
+| | Burning glass, again | sunlight + glass + fire | Still open from the weather round: sunlight through a lens of glass focusing to a hot point | (behaviour) | S |
+
 ## Anomalies (design note, 21 Nov)
 
 Suggested by the user: rare cells where one law of physics goes wrong, in the spirit of anomaly
